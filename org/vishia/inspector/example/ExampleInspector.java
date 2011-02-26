@@ -13,7 +13,11 @@ public class ExampleInspector
 		short s1, s2;
 		float f1, f2;
 		double d1, d2;
-	  Data(int val){ x = val; y = val +10; }
+		String t1, t2;
+	  Data(int val){ 
+	  	x = val; y = val +10;
+	  	t1 = "testString"; t2 = "y=" + y; 
+	  }
 	}
 	
 	private final WorkingThread workingThread = new WorkingThread();
