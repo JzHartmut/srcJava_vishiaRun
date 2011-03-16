@@ -1,1 +1,1 @@
-bzr_call.bat .bzr_SES explorer
+bzr_call.bat this explorer
