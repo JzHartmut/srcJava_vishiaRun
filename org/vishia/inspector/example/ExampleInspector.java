@@ -3,6 +3,7 @@ package org.vishia.inspector.example;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.vishia.communication.InterProcessCommFactoryAccessor;
 import org.vishia.inspector.Inspector;
 import org.vishia.util.Java4C;
 
@@ -47,6 +48,9 @@ public class ExampleInspector
 	
 	public final static void main(String[] args)
 	{
+		//This class is loaded yet. It has only static members. 
+		//The static member instance of the baseclass InterProcessCommFactoryAccessor is set.
+		//For C-compiling it is adequate a static linking.
 		new org.vishia.communication.InterProcessCommFactorySocket();
 		ExampleInspector main = new ExampleInspector();
 		main.setExampleData();

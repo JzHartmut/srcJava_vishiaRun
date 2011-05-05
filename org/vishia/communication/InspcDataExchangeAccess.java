@@ -77,6 +77,7 @@ public class InspcDataExchangeAccess
 		
 		public final void setHead(int entrant, int seqNr, int encryption){
 			setInt16(knrofBytes, sizeofHead);
+			setInt16(knEntrant, entrant);
 			setInt32(kseqnr,seqNr);
 			setInt16(kanswerNr, 0x1);
 			//int encryption = (int)(((0x10000 * Math.random())-0x8000) * 0x10000);
@@ -269,6 +270,9 @@ public class InspcDataExchangeAccess
 		
 	//}
 	
+/**Datagram from accessor to Target to set a value.
+ * It is a derived Info. (?)		
+ */
 public final static class SetValue extends ByteDataAccess{
 	
 	public final static int sizeofElement = 16;

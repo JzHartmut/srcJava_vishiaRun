@@ -97,7 +97,7 @@ implements Address_InterProcessComm
 		if(port <=0){
 	  	int posPort = addr.indexOf(':');
 	  	if(posPort <0) throw new IllegalArgumentException
-	  		("param addr needs a port in form \"URL:port\" where port is a number or hexNumber with \"0x\"-prefix.");
+	  		("param addr needs a port in form \"UDP:URL:port\" where port is a number or hexNumber with \"0x\"-prefix.");
 	  	if(addr.substring(posPort+1).startsWith("0x")){
 			  port = Integer.parseInt(addr.substring(posPort+3),16);
 			} else {

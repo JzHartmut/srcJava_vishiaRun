@@ -38,6 +38,7 @@ import java.net.InetSocketAddress;
 public class InterProcessComm_SocketImpl implements InterProcessComm
 {
 
+	
 
   private static final int kDataBufferSize = 1500;
 
@@ -196,6 +197,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
 	@Override
 	public int checkConnection() {
 		// TODO Auto-generated method stub
+		if(rxSocket == null){ return -1; }
 		return 0;
 	}
 
