@@ -12,11 +12,24 @@ import org.vishia.inspector.*;
 public class InspectorAccessor
 {
 	
-	GenerateOrder orderGenerator = new GenerateOrder();
+	private GenerateOrder orderGenerator = new GenerateOrder();
 	
-	final byte[] txBuffer = new byte[1400];
+	private final byte[] txBuffer = new byte[1400];
 
-	final InspcDataExchangeAccess.Datagram txAccess = new InspcDataExchangeAccess.Datagram();
+	private final CheckerRxTelg checkerRxTelg = new CheckerRxTelg();
+	
+	/**If true, then a TelgHead is prepared already and some more info can be taken into the telegram.
+	 * If false then the txBuffer is unused yet.
+	 */
+	private boolean bFillTelg = false;
+	
+	
+	/**True if a second datagram is prepared and sent yet.
+	 * 
+	 */
+	private boolean bIsSentTelg = false;
+	
+	private final InspcDataExchangeAccess.Datagram txAccess = new InspcDataExchangeAccess.Datagram();
 	
 	/**The entrant is the sub-consumer of a telegram on the device with given IP.
 	 * A negative number is need because compatibility with oder telegram structures.
@@ -34,12 +47,10 @@ public class InspectorAccessor
 	
 	int nEncryption = 0;
 	
+	
+	
 	final InterProcessComm ipc;
 	
-	
-	int cmdGetValueByPath(String sPath){
-		return 0;
-	}
 	
 	InspectorAccessor()
 	{
@@ -54,67 +65,105 @@ public class InspectorAccessor
 		  receiveThread.start();   //start it after ipc is ok.
 		}
 	}
+
 	
 	
-	
-	
-	Runnable testRun = new Runnable()
-	{
-		@Override public void run()
-		{
-			//Build a telegram
-	    txAccess.setHead(nEntrant, nSeqNumber, nEncryption);
-	    Datagrams.CmdGetValue infoGetValue = new Datagrams.CmdGetValue();
-	    txAccess.addChild(infoGetValue);
-			int order = orderGenerator.getNewOrder();
-			infoGetValue.set("_DSP_.data1.bitfield.bits-bit11", order);
-			int lengthDatagram = txAccess.getLength();
-			txAccess.setLengthDatagram(order);
-			//send the telegram:
-			ipc.send(txBuffer, lengthDatagram, targetAddr);
-			
-			try{ infoGetValue.wait(1000); } catch(InterruptedException exc){}
-			
-			try{ Thread.sleep(1000);} catch(InterruptedException exc){}
-			
-		}
-	};
-	
-	
-	
-	
-	Runnable receiveRun = new Runnable()
-	{	@Override public void run()
-		{ receiveFromTarget();
-		}
-	};
-	
-	Thread receiveThread = new Thread(receiveRun, "inspcRxThread");
-	
-	
-	
-	void receiveFromTarget()
-	{
-		int[] result = new int[1];
-		byte[] rxBuffer = ipc.receive(result, targetAddr);
-    stop();
-	}
-	
-	
-	/**The main method is only for test.
-	 * @param args
+	/**Checks whether the head of the datagram should be created and filled. Does that if necessary.
+	 * Elsewhere if the datagram hasn't place for the new info, it will be sent and a new head
+	 * will be created. 
+	 * @param zBytesInfo
 	 */
-	public static void main(String[] args)
-	{
-		
-	  //This class is loaded yet. It has only static members. 
-		//The static member instance of the baseclass InterProcessCommFactoryAccessor is set.
-		//For C-compiling it is adequate a static linking.
-		new org.vishia.communication.InterProcessCommFactorySocket();
-		InspectorAccessor main = new InspectorAccessor();
-		main.testRun.run();
+	private void checkSendAndFillHead(int zBytesInfo)
+	{ if(!bFillTelg){
+	    txAccess.setHead(nEntrant, nSeqNumber, nEncryption);
+	    bFillTelg = true;
+	  } else {
+	    int lengthDatagram = txAccess.getLength();
+	    if(lengthDatagram + zBytesInfo > txBuffer.length){
+	      send();
+	      assert(!bFillTelg);
+	      txAccess.setHead(nEntrant, nSeqNumber, nEncryption);
+	      bFillTelg = true;
+	    }
+	  }
 	}
 	
+	/**Returns true if enough information blocks are given, so that a telegram was sent already.
+	 * A second telegram may be started to prepare with the last call. 
+	 * But it should be waited for the answer firstly.  
+	 * @return true if a telegram is sent but the answer isn't received yet.
+	 */
+	boolean checkIsSent()
+	{
+	  return bIsSentTelg;
+	}
+	
+	
+	
+	/**Adds the info block to send 'get value by path'
+	 * @param sPathInTarget
+	 * @return The order number.
+	 */
+	int cmdGetValueByPath(String sPathInTarget)
+	{
+	  checkSendAndFillHead(sPathInTarget.length() + 8 + 4);
+    Datagrams.CmdGetValue infoGetValue = new Datagrams.CmdGetValue();
+    txAccess.addChild(infoGetValue);
+    int order = orderGenerator.getNewOrder();
+    infoGetValue.set(sPathInTarget, order);
+    return order;
+	}
+	
+	
+	
+	void send()
+	{
+    int lengthDatagram = txAccess.getLength();
+    txAccess.setLengthDatagram(lengthDatagram);
+    //send the telegram:
+    checkerRxTelg.setAwait(nSeqNumber);
+    ipc.send(txBuffer, lengthDatagram, targetAddr);
+	  bFillTelg = false;
+	  bIsSentTelg = true;
+	}
+	
+	
+	
+	InspcDataExchangeAccess.Datagram  awaitAnswer(int timeout){ return checkerRxTelg.waitForAnswer(timeout); }
+	
+	
+	
+	
+  
+  Runnable receiveRun = new Runnable()
+  { @Override public void run()
+    { receiveFromTarget();
+    }
+  };
+  
+  /**A receive thread should be used anyway if a socket receiving or other receiving is given.
+   * Because: Anytime any telegram can be received, the receiver buffer should be cleared,
+   * also if the telegram is unexpected.
+   */
+  Thread receiveThread = new Thread(receiveRun, "inspcRxThread");
+  
+  
+  
+  void receiveFromTarget()
+  {
+    int[] result = new int[1];
+    while(true){
+      byte[] rxBuffer = ipc.receive(result, targetAddr);
+      if(result[0]>0){
+        checkerRxTelg.applyReceivedTelg(rxBuffer, result[0]);
+      } else {
+        System.out.append("receive error");
+      }
+    }//while
+  }
+  
+  
+  
 	
 	void stop(){}
 }
