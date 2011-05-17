@@ -43,9 +43,9 @@ public class InspcAccessEvaluatorRxTelg
    */
   String evaluate(InspcDataExchangeAccess.Datagram telgHead, InspcAccessExecRxOrder executer)
   { String sError = null;
-    int currentPos = telgHead.getLength();  //length from ByteDataAccess-management.
-    assert(currentPos == InspcDataExchangeAccess.Datagram.sizeofHead);
-    int nrofBytesTelg = telgHead.getLengthDatagram();
+    int currentPos = InspcDataExchangeAccess.Datagram.sizeofHead;
+    int nrofBytesTelgInHead = telgHead.getLengthDatagram();
+    int nrofBytesTelg = telgHead.getLength();  //length from ByteDataAccess-management.
     while(sError == null && currentPos + InspcDataExchangeAccess.Info.sizeofHead <= nrofBytesTelg){
       telgHead.addChild(infoAccess);
       int nrofBytesInfo = infoAccess.getLength();
@@ -61,10 +61,50 @@ public class InspcAccessEvaluatorRxTelg
           //
           //search the order whether it is expected:
         }
+        telgHead.setLengthCurrentChildElement(nrofBytesInfo); //to add the next.
+        currentPos += nrofBytesInfo;  //the same as stored in telgHead-access
+        
       }
     }
     return sError;
   }
+  
+  
+  
+  public static float valueFloatFromRxValue(InspcDataExchangeAccess.Info info)
+  {
+    float ret = 0;
+    int type = (int)info.getChildInteger(1);
+    if(type >= InspcDataExchangeAccess.kScalarTypes){
+      switch(type - InspcDataExchangeAccess.kScalarTypes){
+        case org.vishia.reflect.ClassJc.REFLECTION_char16: ret = (float)(char)info.getChildInteger(2); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_char8: ret = (float)(char)info.getChildInteger(1); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_double: ret = (float)info.getChildDouble(); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_float: ret = (float)info.getChildFloat(); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int8: ret = (float)info.getChildInteger(-1); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int16: ret = (float)info.getChildInteger(-2); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int32: ret = (float)info.getChildInteger(-4); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int64: ret = (float)info.getChildInteger(-8); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int: ret = (float)info.getChildInteger(-4); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint8: ret = (float)info.getChildInteger(1); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint16: ret = (float)info.getChildInteger(2); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint32: ret = (float)info.getChildInteger(4); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint64: ret = (float)info.getChildInteger(8); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint: ret = (float)info.getChildInteger(4); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_boolean: ret = info.getChildInteger(1) == 0 ? 0.0f: 1.0f; break;
+      }      
+    } else if(type <= InspcDataExchangeAccess.maxNrOfChars){
+      try{
+        String sValue = info.getChildString(type);
+        ret = Float.parseFloat(sValue);
+      } catch(Exception exc){ ret = 0; }
+    }
+
+    return ret;
+  }
+  
+  
+  
   
   
 }

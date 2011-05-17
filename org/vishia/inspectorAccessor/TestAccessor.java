@@ -28,14 +28,15 @@ public class TestAccessor
   
   void execute()
   {
-    int order = inspcAccessor.cmdGetValueByPath("_DSP_.data1.bitField.bits-bit11.");    
-    inspcRxEval.setExpectedOrder(order, null);
-    inspcAccessor.send();
-    InspcDataExchangeAccess.Datagram answer = inspcAccessor.awaitAnswer(0);
-    String sError = inspcRxEval.evaluate(answer, testExec);
-    stop();
-    try{ Thread.sleep(1000);} catch(InterruptedException exc){}
-    
+    while(true){
+      int order = inspcAccessor.cmdGetValueByPath("_DSP_.data1.bitField.bits-bit11.");    
+      inspcRxEval.setExpectedOrder(order, null);
+      inspcAccessor.send();
+      InspcDataExchangeAccess.Datagram answer = inspcAccessor.awaitAnswer(1000);
+      String sError = inspcRxEval.evaluate(answer, testExec);
+      stop();
+      try{ Thread.sleep(1000);} catch(InterruptedException exc){}
+    }
 
     
   }
@@ -51,15 +52,8 @@ public class TestAccessor
       int cmd = info.getCmd();
       try{
         if(cmd == InspcDataExchangeAccess.Info.kAnswerValue){
-          int type = (int)info.getChildInteger(1);
-          if(type >= InspcDataExchangeAccess.kScalarTypes){
-            switch(type - InspcDataExchangeAccess.kScalarTypes){
-            case org.vishia.reflect.ClassJc.REFLECTION_bitfield:{
-              
-            } break;
-            
-          }
-          }
+          float value = InspcAccessEvaluatorRxTelg.valueFloatFromRxValue(info);
+          System.out.println("" + value);
         }
       } catch(Exception exc){
         stop();
