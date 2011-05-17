@@ -8,12 +8,12 @@ package org.vishia.inspectorAccessor;
  * @author Hartmut Schorrig
  *
  */
-public class GenerateOrder
+public class InspcAccessGenerateOrder
 {
 
 	int nLastOrder;
 	
-	GenerateOrder()
+	InspcAccessGenerateOrder()
 	{
 		nLastOrder = (int)((System.currentTimeMillis() & 0x0fffffff));
 	}

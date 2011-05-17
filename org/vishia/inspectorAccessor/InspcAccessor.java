@@ -9,14 +9,14 @@ import org.vishia.communication.InterProcessCommFactory;
 import org.vishia.communication.InterProcessCommFactoryAccessor;
 import org.vishia.inspector.*;
 
-public class InspectorAccessor
+public class InspcAccessor
 {
 	
-	private GenerateOrder orderGenerator = new GenerateOrder();
+	private InspcAccessGenerateOrder orderGenerator = new InspcAccessGenerateOrder();
 	
 	private final byte[] txBuffer = new byte[1400];
 
-	private final CheckerRxTelg checkerRxTelg = new CheckerRxTelg();
+	private final InspcAccessCheckerRxTelg checkerRxTelg = new InspcAccessCheckerRxTelg();
 	
 	/**If true, then a TelgHead is prepared already and some more info can be taken into the telegram.
 	 * If false then the txBuffer is unused yet.
@@ -52,7 +52,7 @@ public class InspectorAccessor
 	final InterProcessComm ipc;
 	
 	
-	InspectorAccessor()
+	InspcAccessor()
 	{
 		
 		txAccess.assignEmpty(txBuffer);
@@ -75,7 +75,7 @@ public class InspectorAccessor
 	 */
 	private void checkSendAndFillHead(int zBytesInfo)
 	{ if(!bFillTelg){
-	    txAccess.setHead(nEntrant, nSeqNumber, nEncryption);
+	    txAccess.setHead(nEntrant, ++nSeqNumber, nEncryption);
 	    bFillTelg = true;
 	  } else {
 	    int lengthDatagram = txAccess.getLength();
