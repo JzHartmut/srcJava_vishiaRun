@@ -12,7 +12,7 @@ import org.vishia.communication.InspcDataExchangeAccess;
 public class InspcAccessEvaluatorRxTelg
 {
 
-  final Map<Integer, InspcAccessExecRxOrder> ordersExpected = new TreeMap<Integer, InspcAccessExecRxOrder>();
+  final Map<Integer, InspcAccessExecRxOrder_ifc> ordersExpected = new TreeMap<Integer, InspcAccessExecRxOrder_ifc>();
   
   
   /**Reused instance to evaluate any info blocks.
@@ -27,7 +27,7 @@ public class InspcAccessEvaluatorRxTelg
   }
   
   
-  void setExpectedOrder(int order, InspcAccessExecRxOrder exec)
+  public void setExpectedOrder(int order, InspcAccessExecRxOrder_ifc exec)
   {
     ordersExpected.put(order, exec);
   }
@@ -35,35 +35,41 @@ public class InspcAccessEvaluatorRxTelg
   
   /**Evaluates a received telegram.
    * @param telgHead The telegram
-   * @param executer if given, than the {@link InspcAccessExecRxOrder#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Info)}
+   * @param executer if given, than the {@link InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Info)}
    *        -method is called for any info block.<br>
-   *        If null, then the order is searched like given with {@link #setExpectedOrder(int, InspcAccessExecRxOrder)}
+   *        If null, then the order is searched like given with {@link #setExpectedOrder(int, InspcAccessExecRxOrder_ifc)}
    *        and that special routine is executed.
    * @return null if no error, if not null then it is an error description. 
    */
-  String evaluate(InspcDataExchangeAccess.Datagram telgHead, InspcAccessExecRxOrder executer)
+  public String evaluate(InspcDataExchangeAccess.Datagram[] telgHeads, InspcAccessExecRxOrder_ifc executer)
   { String sError = null;
     int currentPos = InspcDataExchangeAccess.Datagram.sizeofHead;
-    int nrofBytesTelgInHead = telgHead.getLengthDatagram();
-    int nrofBytesTelg = telgHead.getLength();  //length from ByteDataAccess-management.
-    while(sError == null && currentPos + InspcDataExchangeAccess.Info.sizeofHead <= nrofBytesTelg){
-      telgHead.addChild(infoAccess);
-      int nrofBytesInfo = infoAccess.getLength();
-      if(nrofBytesTelg < currentPos + nrofBytesInfo){
-        sError = "to less bytes in telg at " + currentPos + ": " 
-               + nrofBytesInfo + " / " + (nrofBytesTelg - currentPos);
-      } else {
-        if(executer !=null){
-          executer.execInspcRxOrder(infoAccess);
+    for(InspcDataExchangeAccess.Datagram telgHead: telgHeads){
+      int nrofBytesTelgInHead = telgHead.getLengthDatagram();
+      int nrofBytesTelg = telgHead.getLength();  //length from ByteDataAccess-management.
+      while(sError == null && currentPos + InspcDataExchangeAccess.Info.sizeofHead <= nrofBytesTelg){
+        telgHead.addChild(infoAccess);
+        int nrofBytesInfo = infoAccess.getLenInfo();
+        if(nrofBytesTelg < currentPos + nrofBytesInfo){
+          sError = "to less bytes in telg at " + currentPos + ": " 
+                 + nrofBytesInfo + " / " + (nrofBytesTelg - currentPos);
         } else {
-          int cmd = infoAccess.getCmd();
-          int order = infoAccess.getOrder();
-          //
-          //search the order whether it is expected:
+          if(executer !=null){
+            executer.execInspcRxOrder(infoAccess);
+          } else {
+            int cmd = infoAccess.getCmd();
+            int order = infoAccess.getOrder();
+            InspcAccessExecRxOrder_ifc orderExec = ordersExpected.remove(order);
+            if(orderExec !=null){
+              orderExec.execInspcRxOrder(infoAccess);
+            }
+            //
+            //search the order whether it is expected:
+          }
+          telgHead.setLengthCurrentChildElement(nrofBytesInfo); //to add the next.
+          currentPos += nrofBytesInfo;  //the same as stored in telgHead-access
+          
         }
-        telgHead.setLengthCurrentChildElement(nrofBytesInfo); //to add the next.
-        currentPos += nrofBytesInfo;  //the same as stored in telgHead-access
-        
       }
     }
     return sError;

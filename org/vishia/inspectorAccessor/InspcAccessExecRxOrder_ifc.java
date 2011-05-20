@@ -7,7 +7,7 @@ import org.vishia.communication.InspcDataExchangeAccess;
  * @author Hartmut Schorrig
  *
  */
-public interface InspcAccessExecRxOrder
+public interface InspcAccessExecRxOrder_ifc
 {
 
   void execInspcRxOrder(InspcDataExchangeAccess.Info info);

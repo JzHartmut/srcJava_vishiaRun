@@ -28,22 +28,33 @@ public class TestAccessor
   
   void execute()
   {
-    while(true){
-      int order = inspcAccessor.cmdGetValueByPath("_DSP_.data1.bitField.bits-bit11.");    
-      inspcRxEval.setExpectedOrder(order, null);
-      inspcAccessor.send();
-      InspcDataExchangeAccess.Datagram answer = inspcAccessor.awaitAnswer(1000);
-      String sError = inspcRxEval.evaluate(answer, testExec);
-      stop();
-      try{ Thread.sleep(1000);} catch(InterruptedException exc){}
+    String sIpOwn = "UDP:0.0.0.0:60099";
+    String sIpTarget = "UDP:127.0.0.1:60080";
+    
+    String sPathInTarget = "workingThread.data.yCos.";
+    //String sPathInTarget2 = "_DSP_.data1.bitField.bits-bit11."; 
+    if(inspcAccessor.open(sIpOwn))
+    {
+      inspcAccessor.setTargetAddr(sIpTarget); 
+      while(true){
+        int order = inspcAccessor.cmdGetValueByPath(sPathInTarget);    
+        inspcRxEval.setExpectedOrder(order, null);
+        inspcAccessor.send();
+        InspcDataExchangeAccess.Datagram[] answer = inspcAccessor.awaitAnswer(1000);
+        if(answer !=null){
+          String sError = inspcRxEval.evaluate(answer, testExec);
+        }
+        try{ Thread.sleep(300);} catch(InterruptedException exc){}
+      }
     }
+    
 
     
   }
 
 
   
-  InspcAccessExecRxOrder testExec = new InspcAccessExecRxOrder()
+  InspcAccessExecRxOrder_ifc testExec = new InspcAccessExecRxOrder_ifc()
   {
 
     @Override public void execInspcRxOrder(Info info)

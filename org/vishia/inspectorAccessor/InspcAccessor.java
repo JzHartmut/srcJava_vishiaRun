@@ -37,11 +37,11 @@ public class InspcAccessor
 	 */
 	int nEntrant = -1;
 	
-	String sOwnIpAddr = "UDP:127.0.0.1:60099";
+	String sOwnIpAddr;
 	
-	String sTargetIpAddr = "UDP:127.0.0.1:60080";
+	String sTargetIpAddr;
 	
-	Address_InterProcessComm targetAddr = new Address_InterProcessComm_Socket(sTargetIpAddr);
+	Address_InterProcessComm targetAddr;
 	
 	int nSeqNumber = 0; 
 	
@@ -49,24 +49,40 @@ public class InspcAccessor
 	
 	
 	
-	final InterProcessComm ipc;
+	private InterProcessComm ipc;
 	
 	
-	InspcAccessor()
+	public InspcAccessor()
 	{
 		
 		txAccess.assignEmpty(txBuffer);
     //The factory should be loaded already. Then the instance is able to get. Loaded before!
-		InterProcessCommFactory ipcFactory = InterProcessCommFactoryAccessor.getInstance();
-		ipc = ipcFactory.create (sOwnIpAddr);
-		ipc.open(null, true);
-		int ipcOk = ipc.checkConnection();
-		if(ipcOk == 0){
-		  receiveThread.start();   //start it after ipc is ok.
-		}
 	}
 
 	
+	public boolean open(String sOwnIpAddr)
+	{
+	  this.sOwnIpAddr = sOwnIpAddr;
+    InterProcessCommFactory ipcFactory = InterProcessCommFactoryAccessor.getInstance();
+    ipc = ipcFactory.create (sOwnIpAddr);
+    ipc.open(null, true);
+    int ipcOk = ipc.checkConnection();
+    if(ipcOk == 0){
+      receiveThread.start();   //start it after ipc is ok.
+    }
+	  return ipcOk == 0;
+	}
+	
+	
+	/**Sets the target address for the next telegram assembling and the next send()-invocation.
+	 * If a telegram is pending, it will be sent. A new telegram is prepared.
+	 * @param sTargetIpAddr
+	 */
+	public void setTargetAddr(String sTargetIpAddr)
+	{ //TODO check and send, prepare new head.
+	  this.sTargetIpAddr = sTargetIpAddr;
+	  this.targetAddr = new Address_InterProcessComm_Socket(sTargetIpAddr);
+	}
 	
 	/**Checks whether the head of the datagram should be created and filled. Does that if necessary.
 	 * Elsewhere if the datagram hasn't place for the new info, it will be sent and a new head
@@ -75,6 +91,7 @@ public class InspcAccessor
 	 */
 	private void checkSendAndFillHead(int zBytesInfo)
 	{ if(!bFillTelg){
+	    txAccess.assignEmpty(txBuffer);
 	    txAccess.setHead(nEntrant, ++nSeqNumber, nEncryption);
 	    bFillTelg = true;
 	  } else {
@@ -93,7 +110,7 @@ public class InspcAccessor
 	 * But it should be waited for the answer firstly.  
 	 * @return true if a telegram is sent but the answer isn't received yet.
 	 */
-	boolean checkIsSent()
+	public boolean checkIsSent()
 	{
 	  return bIsSentTelg;
 	}
@@ -104,7 +121,7 @@ public class InspcAccessor
 	 * @param sPathInTarget
 	 * @return The order number.
 	 */
-	int cmdGetValueByPath(String sPathInTarget)
+	public int cmdGetValueByPath(String sPathInTarget)
 	{
 	  checkSendAndFillHead(sPathInTarget.length() + 8 + 4);
     Datagrams.CmdGetValue infoGetValue = new Datagrams.CmdGetValue();
@@ -116,7 +133,7 @@ public class InspcAccessor
 	
 	
 	
-	void send()
+	public void send()
 	{
     int lengthDatagram = txAccess.getLength();
     txAccess.setLengthDatagram(lengthDatagram);
@@ -129,7 +146,28 @@ public class InspcAccessor
 	
 	
 	
-	InspcDataExchangeAccess.Datagram  awaitAnswer(int timeout){ return checkerRxTelg.waitForAnswer(timeout); }
+	/**Sets a executer instance for the answer telegrams from the target.
+	 * The method {@link InspcAccessExecAnswerTelg_ifc#execInspcRxTelg(org.vishia.communication.InspcDataExchangeAccess.Datagram[], int)}
+	 * will be invoked if all answer telegrams are received.
+	 * If this method is set, the answer execution of the application is done in the receivers thread.
+	 * In that case the method {@link #awaitAnswer(int)} must not use.
+	 * @param executerAnswer
+	 */
+	public  void setExecuterAnswer(InspcAccessExecAnswerTelg_ifc executerAnswer)
+  { checkerRxTelg.setExecuterAnswer(executerAnswer);
+  }
+  
+
+	
+	
+	/**Waits for answer from the target.
+	 * This method can be called in any users thread. Typically it is the thread, which has send the telegram
+	 * to the target. The alternate method is {@link #setExecuterAnswer(InspcAccessExecAnswerTelg_ifc)}.
+	 * 
+	 * @param timeout for waiting.
+	 * @return null on timeout, the answer datagrams elsewhere.
+	 */
+	public InspcDataExchangeAccess.Datagram[]  awaitAnswer(int timeout){ return checkerRxTelg.waitForAnswer(timeout); }
 	
 	
 	

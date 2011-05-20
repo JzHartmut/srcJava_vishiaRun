@@ -21,7 +21,7 @@ public class InspcAccessGenerateOrder
 	int getNewOrder()
 	{
 		int order = (int)((System.currentTimeMillis() & 0x0fffffff)); 
-		if( (order - nLastOrder) <0){
+		if( (order - nLastOrder) <=0){
 			order = nLastOrder +1;
 		}
 		nLastOrder = order;

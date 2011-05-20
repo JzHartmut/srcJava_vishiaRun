@@ -14,8 +14,10 @@ public class InspcAccessCheckerRxTelg
    */
   boolean awaitTelg;
   
+  private InspcAccessExecAnswerTelg_ifc executerAnswer;
+  
   /**True if wait is called already. */
-  boolean bWaiting;
+  private boolean bWaiting;
   
   private int awaitSeqNumber;
   
@@ -23,10 +25,28 @@ public class InspcAccessCheckerRxTelg
   private boolean received;
   
   final InspcDataExchangeAccess.Datagram rxTelg = new InspcDataExchangeAccess.Datagram();
+
+  /**Accumulator for all answer telegrams. Usual it is only 1 telegram. But up to the max number may be received.
+   * The communication supports only 1 send telegram, but with more as one info blocks.
+   * The answer telegram can contain 1 or more info blocks. The answers may be longer as the requests.
+   * Therefore more as one answer telegrams can be received.
+   */
+  private InspcDataExchangeAccess.Datagram[] answerTelgs; 
+  
+
+  public InspcAccessCheckerRxTelg()
+  {
+  }
+  
+  void setExecuterAnswer(InspcAccessExecAnswerTelg_ifc executerAnswer)
+  { this.executerAnswer = executerAnswer;
+  }
   
   /**Set awaiting an answer with given sequence number. This method should be called before a telegram is sent.
    * If the answer telegram is received quickly after send, that informations should be present already.
    * @param seqNumber The awaiting sequence number, it is the same as the sent sequence number
+   * @param executerAnswer if not null, then the method of this interface will be called in the receiver thread
+   *        if all answer telegrams are received. 
    */
   void setAwait(int seqNumber)
   {
@@ -41,7 +61,7 @@ public class InspcAccessCheckerRxTelg
    * @param timeout
    * @return null if timeout, elsewhere the answer telegram with given head and content.
    */
-  InspcDataExchangeAccess.Datagram waitForAnswer(int timeout)
+  InspcDataExchangeAccess.Datagram[] waitForAnswer(int timeout)
   { boolean bAnswer;
     synchronized(this){
       if(received){  //received already before this method is called:
@@ -51,7 +71,13 @@ public class InspcAccessCheckerRxTelg
         bAnswer = received;
       }
     }
-    return bAnswer ? rxTelg : null;
+    if(bAnswer){
+      InspcDataExchangeAccess.Datagram[] answers = new InspcDataExchangeAccess.Datagram[1];
+      answers[0] = answerTelgs[0];
+      return answers;
+    } else {
+      return null;
+    }
   }
   
   
@@ -67,12 +93,22 @@ public class InspcAccessCheckerRxTelg
       int rxSeqnr = rxTelg.getSeqnr();
       if(rxSeqnr == awaitSeqNumber){
         //TODO check if the answer should consist of more as one telg
-        synchronized(this){
+        answerTelgs = new InspcDataExchangeAccess.Datagram[1];
+        answerTelgs[0] = rxTelg;
+        if(executerAnswer !=null){
           if(bWaiting){
-            notify();
-            bWaiting = false;
+            throw new RuntimeException("Software error. awaitSeqNumber() with an executer was called. "
+              + "Than waitForAnswer() must not be called!"); 
           }
-          received = true;
+          executerAnswer.execInspcRxTelg(answerTelgs);
+        } else {
+          synchronized(this){
+            if(bWaiting){
+              notify();
+              bWaiting = false;
+            }
+            received = true;
+          }
         }
       }
     }
