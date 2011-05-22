@@ -21,6 +21,7 @@ set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/byteData/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/communication/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/inspector/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/inspector/example/*.java
+set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/inspectorAccessor/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/msgDispatch/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/reflect/*.java
 set INPUT_JAVAC=%INPUT_JAVAC% ../org/vishia/util/*.java
