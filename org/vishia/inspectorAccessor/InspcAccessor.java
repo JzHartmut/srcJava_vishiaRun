@@ -23,6 +23,7 @@ public class InspcAccessor
 	 */
 	private boolean bFillTelg = false;
 	
+	long timeSend, dtimeReceive, dtimeWeakup;
 	
 	/**True if a second datagram is prepared and sent yet.
 	 * 
@@ -119,15 +120,21 @@ public class InspcAccessor
 	
 	/**Adds the info block to send 'get value by path'
 	 * @param sPathInTarget
-	 * @return The order number.
+	 * @return The order number. 0 if the cmd can't be created.
 	 */
 	public int cmdGetValueByPath(String sPathInTarget)
-	{
+	{ int order;
 	  checkSendAndFillHead(sPathInTarget.length() + 8 + 4);
-    Datagrams.CmdGetValue infoGetValue = new Datagrams.CmdGetValue();
-    txAccess.addChild(infoGetValue);
-    int order = orderGenerator.getNewOrder();
-    infoGetValue.set(sPathInTarget, order);
+	  int sizeTelgLast = txAccess.getLengthTotal();
+	  if(sizeTelgLast + Datagrams.CmdGetValue.sizeofHead + sPathInTarget.length() + 3 < txBuffer.length){
+      Datagrams.CmdGetValue infoGetValue = new Datagrams.CmdGetValue();
+      txAccess.addChild(infoGetValue);
+      order = orderGenerator.getNewOrder();
+      infoGetValue.set(sPathInTarget, order);
+	  } else {
+	    //too much info blocks
+	    order = 0;
+	  }
     return order;
 	}
 	
@@ -139,6 +146,7 @@ public class InspcAccessor
     txAccess.setLengthDatagram(lengthDatagram);
     //send the telegram:
     checkerRxTelg.setAwait(nSeqNumber);
+    timeSend = System.currentTimeMillis();
     ipc.send(txBuffer, lengthDatagram, targetAddr);
 	  bFillTelg = false;
 	  bIsSentTelg = true;
@@ -167,7 +175,12 @@ public class InspcAccessor
 	 * @param timeout for waiting.
 	 * @return null on timeout, the answer datagrams elsewhere.
 	 */
-	public InspcDataExchangeAccess.Datagram[]  awaitAnswer(int timeout){ return checkerRxTelg.waitForAnswer(timeout); }
+	public InspcDataExchangeAccess.Datagram[]  awaitAnswer(int timeout)
+	{ InspcDataExchangeAccess.Datagram[] answerTelgs = checkerRxTelg.waitForAnswer(timeout); 
+  	long time = System.currentTimeMillis();
+    dtimeWeakup = time - timeSend;
+    return answerTelgs;
+  }
 	
 	
 	
@@ -193,6 +206,8 @@ public class InspcAccessor
     while(true){
       byte[] rxBuffer = ipc.receive(result, targetAddr);
       if(result[0]>0){
+        long time = System.currentTimeMillis();
+        dtimeReceive = time - timeSend;
         checkerRxTelg.applyReceivedTelg(rxBuffer, result[0]);
       } else {
         System.out.append("receive error");

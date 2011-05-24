@@ -67,6 +67,7 @@ public class InspcAccessCheckerRxTelg
       if(received){  //received already before this method is called:
         bAnswer = true;
       } else { //not received, then wait.
+        bWaiting = true;
         try{ wait(timeout); } catch(InterruptedException exc){}
         bAnswer = received;
       }

@@ -1,6 +1,11 @@
 package org.vishia.inspectorAccessor;
 
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.vishia.communication.InspcDataExchangeAccess;
@@ -11,9 +16,25 @@ import org.vishia.communication.InspcDataExchangeAccess;
  */
 public class InspcAccessEvaluatorRxTelg
 {
-
-  final Map<Integer, InspcAccessExecRxOrder_ifc> ordersExpected = new TreeMap<Integer, InspcAccessExecRxOrder_ifc>();
   
+  private static class OrderWithTime
+  {
+    final int order;
+    final long time;
+    final InspcAccessExecRxOrder_ifc exec;
+    
+    public OrderWithTime(int order, long time, InspcAccessExecRxOrder_ifc exec)
+    { this.order = order;
+      this.time = time;
+      this.exec = exec;
+    }
+    
+  }
+  
+
+  final Map<Integer, OrderWithTime> ordersExpected = new TreeMap<Integer, OrderWithTime>();
+  
+  final Deque<OrderWithTime> listTimedOrders = new LinkedList<OrderWithTime>();
   
   /**Reused instance to evaluate any info blocks.
    * 
@@ -27,10 +48,49 @@ public class InspcAccessEvaluatorRxTelg
   }
   
   
+  /**Sets a expected order in the index of orders.
+   * @param order The unique order number.
+   * @param exec The execution for the answer. 
+   */
   public void setExpectedOrder(int order, InspcAccessExecRxOrder_ifc exec)
   {
-    ordersExpected.put(order, exec);
+    OrderWithTime timedOrder = new OrderWithTime(order, System.currentTimeMillis(), exec);
+    //listTimedOrders.addFirst(timedOrder);
+    ordersExpected.put(order, timedOrder);
   }
+  
+  
+  /**Clean up the order list.
+   * @param timeOld The time before that the orders are old. 
+   * @return number of deleted orders.
+   */
+  public int checkAndRemoveOldOrders(long timeOld)
+  {
+    int removedOrders = 0;
+    boolean bRepeatBecauseModification;
+    do{
+      bRepeatBecauseModification = false;
+      //if(ordersExpected.size() > 10){
+        Set<Map.Entry<Integer, OrderWithTime>> list = ordersExpected.entrySet();
+        try{
+          Iterator<Map.Entry<Integer, OrderWithTime>> iter = list.iterator();
+          while(iter.hasNext()){
+            Map.Entry<Integer, OrderWithTime> entry = iter.next();
+            OrderWithTime timedOrder = entry.getValue();
+            if(timedOrder.time < timeOld){
+              iter.remove();
+              removedOrders +=1;
+            }
+          }
+        } catch(Exception exc){ //Repeat it, the list ist modified
+          bRepeatBecauseModification = true;
+        }
+      //}
+    } while(bRepeatBecauseModification);
+      
+    return removedOrders;
+  }
+  
   
   
   /**Evaluates a received telegram.
@@ -59,8 +119,10 @@ public class InspcAccessEvaluatorRxTelg
           } else {
             int cmd = infoAccess.getCmd();
             int order = infoAccess.getOrder();
-            InspcAccessExecRxOrder_ifc orderExec = ordersExpected.remove(order);
-            if(orderExec !=null){
+            OrderWithTime timedOrder = ordersExpected.remove(order);
+            if(timedOrder !=null){
+              //remove timed order
+              InspcAccessExecRxOrder_ifc orderExec = timedOrder.exec;
               orderExec.execInspcRxOrder(infoAccess);
             }
             //
