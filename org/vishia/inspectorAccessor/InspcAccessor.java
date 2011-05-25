@@ -18,6 +18,11 @@ public class InspcAccessor
 
 	private final InspcAccessCheckerRxTelg checkerRxTelg = new InspcAccessCheckerRxTelg();
 	
+  /**Instance to evaluate received telegrams. It is possible that a derived instance is used! */
+  public final InspcAccessEvaluatorRxTelg rxEval;
+  
+
+	
 	/**If true, then a TelgHead is prepared already and some more info can be taken into the telegram.
 	 * If false then the txBuffer is unused yet.
 	 */
@@ -53,9 +58,9 @@ public class InspcAccessor
 	private InterProcessComm ipc;
 	
 	
-	public InspcAccessor()
+	public InspcAccessor(InspcAccessEvaluatorRxTelg inspcRxEval)
 	{
-		
+		this.rxEval = inspcRxEval;
 		txAccess.assignEmpty(txBuffer);
     //The factory should be loaded already. Then the instance is able to get. Loaded before!
 	}
@@ -93,7 +98,8 @@ public class InspcAccessor
 	private void checkSendAndFillHead(int zBytesInfo)
 	{ if(!bFillTelg){
 	    txAccess.assignEmpty(txBuffer);
-	    txAccess.setHead(nEntrant, ++nSeqNumber, nEncryption);
+	    if(++nSeqNumber == 0){ nSeqNumber = 1; }
+	    txAccess.setHead(nEntrant, nSeqNumber, nEncryption);
 	    bFillTelg = true;
 	  } else {
 	    int lengthDatagram = txAccess.getLength();
@@ -140,7 +146,7 @@ public class InspcAccessor
 	
 	
 	
-	public void send()
+	public int send()
 	{
     int lengthDatagram = txAccess.getLength();
     txAccess.setLengthDatagram(lengthDatagram);
@@ -150,6 +156,7 @@ public class InspcAccessor
     ipc.send(txBuffer, lengthDatagram, targetAddr);
 	  bFillTelg = false;
 	  bIsSentTelg = true;
+	  return nSeqNumber;
 	}
 	
 	

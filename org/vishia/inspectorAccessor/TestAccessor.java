@@ -7,9 +7,8 @@ import org.vishia.inspector.Datagrams;
 public class TestAccessor
 {
 
-  InspcAccessor inspcAccessor = new InspcAccessor();
+  InspcAccessor inspcAccessor = new InspcAccessor(new InspcAccessEvaluatorRxTelg());
   
-  InspcAccessEvaluatorRxTelg inspcRxEval = new InspcAccessEvaluatorRxTelg();
   
   /**The main method is only for test.
    * @param args
@@ -38,11 +37,11 @@ public class TestAccessor
       inspcAccessor.setTargetAddr(sIpTarget); 
       while(true){
         int order = inspcAccessor.cmdGetValueByPath(sPathInTarget);    
-        inspcRxEval.setExpectedOrder(order, null);
+        inspcAccessor.rxEval.setExpectedOrder(order, null);
         inspcAccessor.send();
         InspcDataExchangeAccess.Datagram[] answer = inspcAccessor.awaitAnswer(1000);
         if(answer !=null){
-          String sError = inspcRxEval.evaluate(answer, testExec);
+          String sError = inspcAccessor.rxEval.evaluate(answer, testExec);
         }
         try{ Thread.sleep(300);} catch(InterruptedException exc){}
       }
