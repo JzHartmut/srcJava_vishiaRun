@@ -7,7 +7,8 @@ import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessCommFactory;
 import org.vishia.communication.InterProcessCommFactoryAccessor;
-import org.vishia.inspector.*;
+import org.vishia.inspector.InspcTelgInfoSet;
+import org.vishia.reflect.ClassJc;
 
 public class InspcAccessor
 {
@@ -17,6 +18,8 @@ public class InspcAccessor
 	private final byte[] txBuffer = new byte[1400];
 
 	private final InspcAccessCheckerRxTelg checkerRxTelg = new InspcAccessCheckerRxTelg();
+	
+	private final InspcTelgInfoSet infoAccess;
 	
   /**Instance to evaluate received telegrams. It is possible that a derived instance is used! */
   public final InspcAccessEvaluatorRxTelg rxEval;
@@ -62,6 +65,7 @@ public class InspcAccessor
 	{
 		this.rxEval = inspcRxEval;
 		txAccess.assignEmpty(txBuffer);
+		this.infoAccess = new InspcTelgInfoSet();
     //The factory should be loaded already. Then the instance is able to get. Loaded before!
 	}
 
@@ -90,28 +94,46 @@ public class InspcAccessor
 	  this.targetAddr = new Address_InterProcessComm_Socket(sTargetIpAddr);
 	}
 	
-	/**Checks whether the head of the datagram should be created and filled. Does that if necessary.
-	 * Elsewhere if the datagram hasn't place for the new info, it will be sent and a new head
-	 * will be created. 
-	 * @param zBytesInfo
-	 */
-	private void checkSendAndFillHead(int zBytesInfo)
-	{ if(!bFillTelg){
-	    txAccess.assignEmpty(txBuffer);
-	    if(++nSeqNumber == 0){ nSeqNumber = 1; }
-	    txAccess.setHead(nEntrant, nSeqNumber, nEncryption);
-	    bFillTelg = true;
-	  } else {
-	    int lengthDatagram = txAccess.getLength();
-	    if(lengthDatagram + zBytesInfo > txBuffer.length){
-	      send();
-	      assert(!bFillTelg);
-	      txAccess.setHead(nEntrant, nSeqNumber, nEncryption);
-	      bFillTelg = true;
-	    }
-	  }
-	}
-	
+  /**Checks whether the head of the datagram should be created and filled. Does that if necessary.
+   * Elsewhere if the datagram hasn't place for the new info, it will be sent and a new head
+   * will be created. 
+   * @param zBytesInfo
+   */
+  private void XXXcheckSendAndFillHead(int zBytesInfo)
+  { if(!bFillTelg){
+      txAccess.assignEmpty(txBuffer);
+      if(++nSeqNumber == 0){ nSeqNumber = 1; }
+      txAccess.setHead(nEntrant, nSeqNumber, nEncryption);
+      bFillTelg = true;
+    } else {
+      int lengthDatagram = txAccess.getLength();
+      if(lengthDatagram + zBytesInfo > txBuffer.length){
+        send();
+        assert(!bFillTelg);
+        txAccess.setHead(nEntrant, nSeqNumber, nEncryption);
+        bFillTelg = true;
+      }
+    }
+  }
+  
+  /**Checks whether the head of the datagram should be created and filled. Does that if necessary.
+   * Elsewhere if the datagram hasn't place for the new info, it will be sent and a new head
+   * will be created. 
+   * @param zBytesInfo
+   */
+  private boolean checkAndFillHead(int zBytesInfo)
+  { if(!bFillTelg){
+      txAccess.assignEmpty(txBuffer);
+      if(++nSeqNumber == 0){ nSeqNumber = 1; }
+      txAccess.setHead(nEntrant, nSeqNumber, nEncryption);
+      bFillTelg = true;
+      return true;
+    } else {
+      int lengthDatagram = txAccess.getLengthTotal();
+      return lengthDatagram + zBytesInfo < txBuffer.length;
+    }
+  }
+  
 	/**Returns true if enough information blocks are given, so that a telegram was sent already.
 	 * A second telegram may be started to prepare with the last call. 
 	 * But it should be waited for the answer firstly.  
@@ -124,28 +146,48 @@ public class InspcAccessor
 	
 	
 	
-	/**Adds the info block to send 'get value by path'
-	 * @param sPathInTarget
-	 * @return The order number. 0 if the cmd can't be created.
-	 */
-	public int cmdGetValueByPath(String sPathInTarget)
-	{ int order;
-	  checkSendAndFillHead(sPathInTarget.length() + 8 + 4);
-	  int sizeTelgLast = txAccess.getLengthTotal();
-	  if(sizeTelgLast + Datagrams.CmdGetValue.sizeofHead + sPathInTarget.length() + 3 < txBuffer.length){
-      Datagrams.CmdGetValue infoGetValue = new Datagrams.CmdGetValue();
-      txAccess.addChild(infoGetValue);
+  /**Adds the info block to send 'get value by path'
+   * @param sPathInTarget
+   * @return The order number. 0 if the cmd can't be created.
+   */
+  public int cmdGetValueByPath(String sPathInTarget)
+  { int order;
+    if(checkAndFillHead(InspcTelgInfoSet.sizeofHead + sPathInTarget.length() + 3 )){
+      //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
+      txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
-      infoGetValue.set(sPathInTarget, order);
-	  } else {
-	    //too much info blocks
-	    order = 0;
-	  }
+      infoAccess.setCmdGetValueByPath(sPathInTarget, order);
+    } else {
+      //too much info blocks
+      order = 0;
+    }
     return order;
-	}
-	
-	
-	
+  }
+  
+  
+  
+  /**Adds the info block to send 'get value by path'
+   * @param sPathInTarget
+   * @param value The value as long-image, it may be a double, float, int etc.
+   * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
+   *                    + {@link ClassJc#REFLECTION_double} etc.
+   * @return The order number. 0 if the cmd can't be created.
+   */
+  public int cmdSetValueByPath(String sPathInTarget, long value, int typeofValue)
+  { int order;
+    if(checkAndFillHead(InspcTelgInfoSet.sizeofHead + 8 + sPathInTarget.length() + 3 )){
+      txAccess.addChild(infoAccess);
+      order = orderGenerator.getNewOrder();
+      infoAccess.setCmdSetValueByPath(value, sPathInTarget, order);
+    } else {
+      //too much info blocks
+      order = 0;
+    }
+    return order;
+  }
+  
+  
+  
 	public int send()
 	{
     int lengthDatagram = txAccess.getLength();

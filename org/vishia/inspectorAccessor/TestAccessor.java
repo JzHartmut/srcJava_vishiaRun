@@ -2,7 +2,7 @@ package org.vishia.inspectorAccessor;
 
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InspcDataExchangeAccess.Info;
-import org.vishia.inspector.Datagrams;
+import org.vishia.inspector.InspcTelgInfoSet;
 
 public class TestAccessor
 {

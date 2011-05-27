@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.vishia.communication.InspcDataExchangeAccess;
+import org.vishia.reflect.ClassJc;
 
 /**This class helps to evaluate any telegram.
  * @author Hartmut Schorrig
@@ -107,6 +108,7 @@ public class InspcAccessEvaluatorRxTelg
     for(InspcDataExchangeAccess.Datagram telgHead: telgHeads){
       int nrofBytesTelgInHead = telgHead.getLengthDatagram();
       int nrofBytesTelg = telgHead.getLength();  //length from ByteDataAccess-management.
+      telgHead.assertNotExpandable();
       while(sError == null && currentPos + InspcDataExchangeAccess.Info.sizeofHead <= nrofBytesTelg){
         telgHead.addChild(infoAccess);
         int nrofBytesInfo = infoAccess.getLenInfo();
@@ -123,7 +125,11 @@ public class InspcAccessEvaluatorRxTelg
             if(timedOrder !=null){
               //remove timed order
               InspcAccessExecRxOrder_ifc orderExec = timedOrder.exec;
-              orderExec.execInspcRxOrder(infoAccess);
+              if(orderExec !=null){
+                orderExec.execInspcRxOrder(infoAccess);
+              } else {
+                stop();  //should not 
+              }
             }
             //
             //search the order whether it is expected:
@@ -180,7 +186,7 @@ public class InspcAccessEvaluatorRxTelg
     int type = (int)info.getChildInteger(1);
     if(type >= InspcDataExchangeAccess.kScalarTypes){
       switch(type - InspcDataExchangeAccess.kScalarTypes){
-        case org.vishia.reflect.ClassJc.REFLECTION_char16: ret = (char)info.getChildInteger(2); break;
+        case ClassJc.REFLECTION_char16: ret = (char)info.getChildInteger(2); break;
         case org.vishia.reflect.ClassJc.REFLECTION_char8:  ret = (char)info.getChildInteger(1); break;
         case org.vishia.reflect.ClassJc.REFLECTION_double: ret = (int)info.getChildDouble(); break;
         case org.vishia.reflect.ClassJc.REFLECTION_float:  ret = (int)info.getChildFloat(); break;
@@ -207,7 +213,7 @@ public class InspcAccessEvaluatorRxTelg
   }
   
   
-  
+  void stop(){}
   
   
 }
