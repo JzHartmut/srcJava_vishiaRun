@@ -1,6 +1,5 @@
 package org.vishia.inspectorAccessor;
 
-import org.vishia.byteData.ByteDataAccess;
 import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.Address_InterProcessComm_Socket;
 import org.vishia.communication.InspcDataExchangeAccess;
@@ -8,11 +7,23 @@ import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessCommFactory;
 import org.vishia.communication.InterProcessCommFactoryAccessor;
 import org.vishia.inspector.InspcTelgInfoSet;
+import org.vishia.mainGui.WidgetDescriptor;
 import org.vishia.reflect.ClassJc;
 
 public class InspcAccessor
 {
 	
+  /**The version history of this class:
+   * <ul>
+   * <li>2011-06-19 Hartmut new; {@link #shouldSend()} and {@link #isFilledTxTelg()} able to call outside.
+   *     It improves the handling with info blocks in a telegram.
+   * <li>2011-05 Hartmut created
+   * </ul>
+   */
+  final static int version = 0x20110502;
+
+  
+  
 	private InspcAccessGenerateOrder orderGenerator = new InspcAccessGenerateOrder();
 	
 	private final byte[] txBuffer = new byte[1400];
@@ -24,19 +35,22 @@ public class InspcAccessor
   /**Instance to evaluate received telegrams. It is possible that a derived instance is used! */
   public final InspcAccessEvaluatorRxTelg rxEval;
   
-
-	
 	/**If true, then a TelgHead is prepared already and some more info can be taken into the telegram.
 	 * If false then the txBuffer is unused yet.
 	 */
 	private boolean bFillTelg = false;
 	
-	long timeSend, dtimeReceive, dtimeWeakup;
+	/**If true then the current prepared tx telegram should be send.
+	 * This bit is set, if a info block can't be placed in the current telegram.
+	 */
+  private boolean bShouldSend = false;
 	
 	/**True if a second datagram is prepared and sent yet.
-	 * 
-	 */
-	private boolean bIsSentTelg = false;
+   * 
+   */
+  private boolean bIsSentTelg = false;
+  
+	long timeSend, dtimeReceive, dtimeWeakup;
 	
 	private final InspcDataExchangeAccess.Datagram txAccess = new InspcDataExchangeAccess.Datagram();
 	
@@ -116,10 +130,19 @@ public class InspcAccessor
     }
   }
   
-  /**Checks whether the head of the datagram should be created and filled. Does that if necessary.
-   * Elsewhere if the datagram hasn't place for the new info, it will be sent and a new head
-   * will be created. 
-   * @param zBytesInfo
+  
+  /**Checks whether the head of the datagram should be created and the telegram has place for the current data.
+   * This routine is called at begin of all cmd...() routines of this class. 
+   * <ul>
+   * <li>Creates the head if if necessary.
+   * <li>Sets {@link #bFillTelg}, able to query with {@link isFilledTxTelg()}.
+   * <li>Checks whether the requested bytes are able to fill in the telegram.
+   * <li>Sets {@link #bShouldSend} able to query with {@link shouldSend()} if the info doesn't fit in the telegram.
+   * </ul>
+   * @param zBytesInfo Number of bytes to add to the telegram.
+   * @return true if the number of bytes are able to place in the current telegram.
+   *         If this routine returns false, the info can't be place in this telegram.
+   *         It should be send firstly. The current order should be processed after them.
    */
   private boolean checkAndFillHead(int zBytesInfo)
   { if(!bFillTelg){
@@ -127,10 +150,12 @@ public class InspcAccessor
       if(++nSeqNumber == 0){ nSeqNumber = 1; }
       txAccess.setHead(nEntrant, nSeqNumber, nEncryption);
       bFillTelg = true;
+      assert(zBytesInfo + txAccess.getLengthTotal() <= txBuffer.length);  //1 info block should match in size!
       return true;
     } else {
       int lengthDatagram = txAccess.getLengthTotal();
-      return lengthDatagram + zBytesInfo < txBuffer.length;
+      bShouldSend =  lengthDatagram + zBytesInfo > txBuffer.length;
+      return !bShouldSend;
     }
   }
   
@@ -187,9 +212,44 @@ public class InspcAccessor
   }
   
   
+  /**Adds the info block to send 'get value by path'
+   * @param sPathInTarget
+   * @return The order number. 0 if the cmd can't be created.
+   */
+  public int cmdGetAddressByPath(String sPathInTarget)
+  { int order;
+    if(checkAndFillHead(InspcTelgInfoSet.sizeofHead + sPathInTarget.length() + 3 )){
+      //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
+      txAccess.addChild(infoAccess);
+      order = orderGenerator.getNewOrder();
+      infoAccess.setCmdGetAddressByPath(sPathInTarget, order);
+    } else {
+      //too much info blocks
+      order = 0;
+    }
+    return order;
+  }
   
+  
+  /**Returns whether a tx telegram is filled with any info blocks.
+   * The user can check it. The user needn't store itself whether any call of cmd...() is done.
+   * It helps in management info blocks.
+   * @return true if any call of cmd...() was done and the send() was not called.
+   */
+  public boolean isFilledTxTelg(){ return bFillTelg; }
+  
+  /**Returns true if any cmd..() call doesn't fit in the current telegram, therefore the tx telegram
+   * should be send firstly.
+   */
+  public boolean shouldSend(){ return bShouldSend; }
+  
+  
+	/**Sends the prepared telegram.
+	 * @return
+	 */
 	public int send()
 	{
+	  assert(bFillTelg);
     int lengthDatagram = txAccess.getLength();
     txAccess.setLengthDatagram(lengthDatagram);
     //send the telegram:
@@ -198,6 +258,7 @@ public class InspcAccessor
     ipc.send(txBuffer, lengthDatagram, targetAddr);
 	  bFillTelg = false;
 	  bIsSentTelg = true;
+	  bShouldSend = false;
 	  return nSeqNumber;
 	}
 	
