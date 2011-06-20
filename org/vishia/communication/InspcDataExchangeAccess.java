@@ -317,6 +317,24 @@ public final static class SetValue extends ByteDataAccess{
 	
 	public double getDouble(){ return getDouble(8); }
 
+  /**Sets a byte value. */
+  public void setByte(byte value){ _setLong(15, 1, value);} 
+  
+  /**Sets a byte value. */
+  public void setShort(short value){ _setLong(14, 2, value);} 
+  
+  /**Sets a byte value. */
+  public void setInt(int value){ _setLong(12, 4, value);} 
+  
+  /**Sets a byte value. */
+  public void setLong(long value){ _setLong(8, 8, value);} 
+  
+  /**Sets a byte value. */
+  public void setFloat(float value){ setFloat(8, value);} 
+  
+  /**Sets a byte value. */
+  public void setDouble(double value){ setDouble(8, value);} 
+  
 	@Override protected void specifyEmptyDefaultData()
 	{
 	}

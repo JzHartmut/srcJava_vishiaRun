@@ -202,6 +202,8 @@ public class InspcAccessEvaluatorRxTelg
         case org.vishia.reflect.ClassJc.REFLECTION_uint:   ret = (int)info.getChildInteger(4); break;
         case org.vishia.reflect.ClassJc.REFLECTION_boolean:ret = info.getChildInteger(1) == 0 ? 0: 1; break;
       }      
+    } else if(type == InspcDataExchangeAccess.kReferenceAddr){
+      ret = (int)info.getChildInteger(4);
     } else if(type <= InspcDataExchangeAccess.maxNrOfChars){
       try{
         String sValue = info.getChildString(type);

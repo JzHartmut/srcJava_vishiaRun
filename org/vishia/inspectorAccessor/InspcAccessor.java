@@ -203,7 +203,49 @@ public class InspcAccessor
     if(checkAndFillHead(InspcTelgInfoSet.sizeofHead + 8 + sPathInTarget.length() + 3 )){
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
-      infoAccess.setCmdSetValueByPath(value, sPathInTarget, order);
+      infoAccess.setCmdSetValueByPath(sPathInTarget, value, typeofValue, order);
+    } else {
+      //too much info blocks
+      order = 0;
+    }
+    return order;
+  }
+  
+  
+  /**Adds the info block to send 'get value by path'
+   * @param sPathInTarget
+   * @param value The value as long-image, it may be a double, float, int etc.
+   * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
+   *                    + {@link ClassJc#REFLECTION_double} etc.
+   * @return The order number. 0 if the cmd can't be created.
+   */
+  public int cmdSetValueByPath(String sPathInTarget, float value)
+  { int order;
+    if(checkAndFillHead(InspcTelgInfoSet.sizeofHead + 8 + sPathInTarget.length() + 3 )){
+      txAccess.addChild(infoAccess);
+      order = orderGenerator.getNewOrder();
+      infoAccess.setCmdSetValueByPath(sPathInTarget, value, order);
+    } else {
+      //too much info blocks
+      order = 0;
+    }
+    return order;
+  }
+  
+  
+  /**Adds the info block to send 'get value by path'
+   * @param sPathInTarget
+   * @param value The value as long-image, it may be a double, float, int etc.
+   * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
+   *                    + {@link ClassJc#REFLECTION_double} etc.
+   * @return The order number. 0 if the cmd can't be created.
+   */
+  public int cmdSetValueByPath(String sPathInTarget, double value)
+  { int order;
+    if(checkAndFillHead(InspcTelgInfoSet.sizeofHead + 8 + sPathInTarget.length() + 3 )){
+      txAccess.addChild(infoAccess);
+      order = orderGenerator.getNewOrder();
+      infoAccess.setCmdSetValueByPath(sPathInTarget, value, order);
     } else {
       //too much info blocks
       order = 0;
