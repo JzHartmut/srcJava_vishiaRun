@@ -34,7 +34,18 @@ public class InspcDataExchangeAccess
 {
 
 	
-	
+  /**The version history of this class:
+   * <ul>
+   * <li>2011-06-21 Hartmut new {@link SetValue} completed with set-methods. 
+   *     Note: Because this class is used in Java2C for C-Programming, the short methods should be designated
+   *     to use macros while translation Java2C.
+   * <li>2011-01-01 Hartmut Translated to Java
+   * <li>2005 Hartmut created for C-programming
+   * </ul>
+   */
+  final static int version = 0x20110502;
+
+  	
 	/**Preparing the header of a datagram.
 	 * 
 	 */

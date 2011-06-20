@@ -7,7 +7,6 @@ import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessCommFactory;
 import org.vishia.communication.InterProcessCommFactoryAccessor;
 import org.vishia.inspector.InspcTelgInfoSet;
-import org.vishia.mainGui.WidgetDescriptor;
 import org.vishia.reflect.ClassJc;
 
 public class InspcAccessor
