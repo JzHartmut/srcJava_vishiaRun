@@ -153,7 +153,7 @@ public class InspcAccessor
       return true;
     } else {
       int lengthDatagram = txAccess.getLengthTotal();
-      bShouldSend =  lengthDatagram + zBytesInfo > txBuffer.length;
+      bShouldSend =  (lengthDatagram + zBytesInfo) >= txBuffer.length;
       return !bShouldSend;
     }
   }
@@ -199,10 +199,20 @@ public class InspcAccessor
    */
   public int cmdSetValueByPath(String sPathInTarget, long value, int typeofValue)
   { int order;
-    if(checkAndFillHead(InspcTelgInfoSet.sizeofHead + 8 + sPathInTarget.length() + 3 )){
+    int zPath = sPathInTarget.length();
+    int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
+    int zInfo = InspcTelgInfoSet.sizeofHead + InspcDataExchangeAccess.SetValue.sizeofElement + zPath + restChars; 
+    if(checkAndFillHead(zInfo )){
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
-      infoAccess.setCmdSetValueByPath(sPathInTarget, value, typeofValue, order);
+      //infoAccess.setCmdSetValueByPath(sPathInTarget, value, typeofValue, order);
+      InspcDataExchangeAccess.SetValue accessSetValue = new InspcDataExchangeAccess.SetValue(); 
+      infoAccess.addChild(accessSetValue);
+      accessSetValue.setLong(value);
+      infoAccess.addChildString(sPathInTarget);
+      if(restChars >0) { infoAccess.addChildInteger(restChars, 0); }
+      assert(infoAccess.getLength() == zInfo);  //check length after add children. 
+      infoAccess.setInfoHead(zInfo, InspcDataExchangeAccess.Info.kSetValueByPath, order);
     } else {
       //too much info blocks
       order = 0;

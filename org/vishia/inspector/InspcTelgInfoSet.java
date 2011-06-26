@@ -27,8 +27,9 @@ public class InspcTelgInfoSet extends InspcDataExchangeAccess.Info
    * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created.
+   * @deprecated see {@link org.vishia.inspectorAccessor.InspcAccessor#cmdSetValueByPath(String, double)}
    */
-  public void setCmdSetValueByPath(String path, long value, int typeofValue, int order)
+  public void xxxsetCmdSetValueByPath(String path, long value, int typeofValue, int order)
   {
     int zPath = path.length();
     int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
