@@ -43,6 +43,10 @@ public interface Java4C {
   /**Designates that the following variable is a variable for dynamic call, a method-table-reference. */
   public @interface DynamicCall{  }
 	
+  /**The String is used only non-Persist. Written on definition of String variable. */
+  public @interface nonPersistent{}
   
+  /**The String is designated as non-persistent, especially located in ThreadContext. */
+  public @interface toStringNonPersist{}
   
 }
