@@ -108,7 +108,7 @@ public class InspcAccessEvaluatorRxTelg
     for(InspcDataExchangeAccess.Datagram telgHead: telgHeads){
       int nrofBytesTelgInHead = telgHead.getLengthDatagram();
       int nrofBytesTelg = telgHead.getLength();  //length from ByteDataAccess-management.
-      telgHead.assertNotExpandable();
+      //telgHead.assertNotExpandable();
       while(sError == null && currentPos + InspcDataExchangeAccess.Info.sizeofHead <= nrofBytesTelg){
         telgHead.addChild(infoAccess);
         int nrofBytesInfo = infoAccess.getLenInfo();
