@@ -106,6 +106,9 @@ public class FieldJc
 	 * don't come from Java. */
 	private final Field field;
 	
+	/**Name of the field. It is the same like field.getName(), but set if field == null. */
+	private final String name; 
+	
 	/**The type of the field. */
 	public final ClassJc type;
 	
@@ -254,7 +257,7 @@ public class FieldJc
 		this.field = field;
 		field.setAccessible(true);
 		modifier = field.getModifiers();
-		String sName = field.getName();
+		this.name = field.getName();
 		Class fieldType = field.getType();
 		String sTypeName = fieldType.getName();
 		annotations = field.getAnnotations();
@@ -315,18 +318,29 @@ public class FieldJc
 			} else {
 			  //a non-final array in Java is like an ObjectArray
 				modifier |= ModifierJc.kObjectArrayJc;
-				type = ClassJc.fromClass(field.getType());
+				type = ClassJc.fromClass(fieldType);
 			  staticArraySize = null;
 			}
 		} else {
 			//not an array field
-			type = ClassJc.fromClass(field.getType());
+			type = ClassJc.fromClass(fieldType);
 		  staticArraySize = null;
 		}
 	}
 
 	
-	public String getName(){ return field.getName(); }
+	
+	public FieldJc(Class clazz, String name){
+	  this.type = ClassJc.fromClass(clazz);
+	  this.field = null;
+	  this.name = name;
+	  this.staticArraySize = null;
+	  this.annotations = null;
+	}
+	
+	
+	
+	public String getName(){ return name; }
 	
 	
 	public ClassJc getType(){ return type; }
@@ -421,8 +435,8 @@ public class FieldJc
   { ClassJc clazz = null;
     Object retObj = null;
     Object currObject = instanceM.obj();
-    Class<?> typeField = field.getType();
-    String nameType = typeField.getName();
+    //Class<?> typeField = field.getType();
+    String nameType = type.getName();
     if(nameType.startsWith("["))
     { /**its an Object-Array */
       Object[] objArray = (Object[])instanceM.obj();

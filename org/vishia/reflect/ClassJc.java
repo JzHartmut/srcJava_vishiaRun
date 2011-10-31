@@ -85,8 +85,18 @@ public final class ClassJc
   		Field[] fields = clazz.getDeclaredFields();
   		//create the requested aggregations:
   		indexNameFields = new TreeMap<String, FieldJc>();
-      allFields = new FieldJc[fields.length];
-      int ix=-1;
+      Class<?> superClazz = clazz.getSuperclass();
+      int ix;
+      if(false && superClazz !=null){  //wrong idea, field is not existent. TODO evaluate superclass in ClassContent.getFields.
+        allFields = new FieldJc[fields.length+1];
+        FieldJc fieldJc = new FieldJc(superClazz, "super");
+        indexNameFields.put("super", fieldJc);
+        ix=0; //last used index
+        allFields[ix] = fieldJc;
+      } else {
+        allFields = new FieldJc[fields.length];
+        ix=-1; //last used index, preincremented
+      }
       for(Field field: fields){
       	String name = field.getName();
       	FieldJc fieldJc = new FieldJc(field);
