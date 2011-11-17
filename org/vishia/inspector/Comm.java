@@ -9,9 +9,26 @@ import org.vishia.util.Java4C;
 
 public class Comm implements Runnable
 {
+  /**Version and history
+   * <ul>
+   * <li>2011-11-17 Hartmut new {@link #shutdown()} to end communication thread.
+   * <li>2011-01-00 Hartmut Created from C-Sources, then re-translated to C and testet with Java2C
+   * </ul>
+   */
+  public static final int version = 0x20111118; 
+
   /**@java2c=simpleRef. */
 	private final CmdExecuter cmdExecuter;
 	
+	/**State of function.
+	 * <ul>
+	 * <li>o: opened
+	 * <li>e: error (open error)
+	 * <li>x: exit
+	 * <li>z: is exited.
+	 * </ul>
+	 * 
+	 */
 	private char state;
 	
 	private boolean bEnablePrintfOnComm;
@@ -101,6 +118,10 @@ public class Comm implements Runnable
 	      }
 		  }
 	  }
+	  synchronized(this){
+  	  state = 'z';
+  	  notify();
+	  }
 		
 	}
 	
@@ -121,19 +142,21 @@ public class Comm implements Runnable
       //
       state = 'r';  //receive
 	  	ipcMtbl.receiveData(this.nrofBytesReceived, this.rxBuffer, this.myAnswerAddress);
-      if(nrofBytesReceived[0] <0){ //error situation
-        //it is possible that a send request has failed because the destination port is not
-      	//able to reach any more. Therefore wait a moment and listen new
-      	state = 'e';  //prevent send
-        //wait a moment! If it is a permanent error, a loop can be occur. Prevent it. Let other threads work.
-      	try{ Thread.sleep(50); } catch(InterruptedException exc){}
-      	state = 'r';
-        //
-        //cmdExecuterMtbl.executeCmd(rxBuffer, nrofBytesReceived[0]);
-      } else {
-      	cmdExecuterMtbl.executeCmd(rxBuffer, nrofBytesReceived[0]);      
-	      //unnecessary because usage receiveData: ipcMtbl.freeData(rxBuffer);
-	    } 
+      if(state !='x'){
+  	  	if(nrofBytesReceived[0] <0){ //error situation
+          //it is possible that a send request has failed because the destination port is not
+        	//able to reach any more. Therefore wait a moment and listen new
+        	state = 'e';  //prevent send
+          //wait a moment! If it is a permanent error, a loop can be occur. Prevent it. Let other threads work.
+        	try{ Thread.sleep(50); } catch(InterruptedException exc){}
+        	state = 'r';
+          //
+          //cmdExecuterMtbl.executeCmd(rxBuffer, nrofBytesReceived[0]);
+        } else {
+        	cmdExecuterMtbl.executeCmd(rxBuffer, nrofBytesReceived[0]);      
+  	      //unnecessary because usage receiveData: ipcMtbl.freeData(rxBuffer);
+  	    }
+      }
 	  }//while state !='x'
 	}
 
@@ -164,5 +187,23 @@ public class Comm implements Runnable
   }
 
   
+  /**Shutdown the communication, close the thread. This routine should be called 
+   * either on shutdown of the whole system or on closing the inspector functionality.
+   * The inspector functionality can be restarted calling {@link #start(Object)}.
+   * 
+   */
+  public void shutdown(){
+    /**@java2c=dynamic-call. */
+    state = 'x';
+    InterProcessComm ipcMtbl = ipc; 
+    ipcMtbl.close();  //breaks waiting in receive socket
+    //waits till the receive thread is finished.
+    while(state !='z'){
+      synchronized(this){
+        try{ wait(100); } catch(InterruptedException exc){}
+      }
+    }
+  }
+
   
 }
