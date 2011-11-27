@@ -88,12 +88,16 @@ public class InspcAccessor
 	  this.sOwnIpAddr = sOwnIpAddr;
     InterProcessCommFactory ipcFactory = InterProcessCommFactoryAccessor.getInstance();
     ipc = ipcFactory.create (sOwnIpAddr);
-    ipc.open(null, true);
-    int ipcOk = ipc.checkConnection();
+    int ipcOk = ipc.open(null, true);
+    if(ipcOk >=0){  ipcOk = ipc.checkConnection(); }
     if(ipcOk == 0){
+    }
+    if(ipcOk < 0){
+      System.out.println("Problem can't open socket: " + sOwnIpAddr); 
+    } else {
       receiveThread.start();   //start it after ipc is ok.
     }
-	  return ipcOk == 0;
+  	return ipcOk == 0;
 	}
 	
 	

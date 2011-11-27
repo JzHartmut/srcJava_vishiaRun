@@ -102,6 +102,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
   public int close()
   { if(rxSocket != null)
     { rxSocket.close();
+      rxSocket = null;
     }
     return 0;
   }
