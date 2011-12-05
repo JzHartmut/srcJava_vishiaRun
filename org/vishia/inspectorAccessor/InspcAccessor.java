@@ -1,5 +1,8 @@
 package org.vishia.inspectorAccessor;
 
+import java.io.Closeable;
+import java.io.IOException;
+
 import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.Address_InterProcessComm_Socket;
 import org.vishia.communication.InspcDataExchangeAccess;
@@ -9,7 +12,7 @@ import org.vishia.communication.InterProcessCommFactoryAccessor;
 import org.vishia.inspector.InspcTelgInfoSet;
 import org.vishia.reflect.ClassJc;
 
-public class InspcAccessor
+public class InspcAccessor implements Closeable
 {
 	
   /**The version history of this class:
@@ -350,6 +353,8 @@ public class InspcAccessor
 	
 	
 	
+	
+	
   
   Runnable receiveRun = new Runnable()
   { @Override public void run()
@@ -363,12 +368,25 @@ public class InspcAccessor
    */
   Thread receiveThread = new Thread(receiveRun, "inspcRxThread");
   
+  boolean bRun, bFinish, bWaitFinish;
+  
+  /**Closes the thread for receive
+   * @see java.io.Closeable#close()
+   */
+  @Override public void close() throws IOException
+  { bRun = false;
+    ipc.close();
+    synchronized(receiveRun){
+      while( !bFinish){ try{ receiveRun.wait(); } catch(InterruptedException exc){}}
+    }
+  }
+
   
   
   void receiveFromTarget()
-  {
+  { bRun = true;
     int[] result = new int[1];
-    while(true){
+    while(bRun){
       byte[] rxBuffer = ipc.receive(result, targetAddr);
       if(result[0]>0){
         long time = System.currentTimeMillis();
@@ -378,10 +396,17 @@ public class InspcAccessor
         System.out.append("receive error");
       }
     }//while
+    
+    synchronized(receiveRun){ 
+      bFinish = true;     //NOTE set in synchronized state, because it should wait for
+      receiveRun.notify(); 
+    }
   }
   
   
   
 	
 	void stop(){}
+
+
 }
