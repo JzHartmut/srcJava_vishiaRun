@@ -374,10 +374,12 @@ public class InspcAccessor implements Closeable
    * @see java.io.Closeable#close()
    */
   @Override public void close() throws IOException
-  { bRun = false;
-    ipc.close();
-    synchronized(receiveRun){
-      while( !bFinish){ try{ receiveRun.wait(); } catch(InterruptedException exc){}}
+  { if(bRun){ //on error bRun is false
+      bRun = false;
+      ipc.close();
+      synchronized(receiveRun){
+        while( !bFinish){ try{ receiveRun.wait(); } catch(InterruptedException exc){}}
+      }
     }
   }
 
