@@ -23,19 +23,6 @@
 package org.vishia.msgDispatch;
 
 /**@changes:
- * 2009-02-05 HScho  *corr nrofMixedOutputs
- *                   *bugfix: setOutputRoutine() should count maxDst
- *                   *new: reportOutput
- * 2009-02-04 HScho  *corr: Syntax errors in setOutputFromString() tested and improved. 
- *                   The param errorBuffer is now optional. It may be null.
- * 2009-02-03 HScho  *new: method isOnline
- * 2009-02-01 HScho  *new method getSharedFreeEntries().
- *                   * dispatchMsg(...) returns the mask of non-handled outputs, to handle later or in queue.
- *                   * sendMsgVaList(...) returns true, 
- *                   functionality: All non dispatched messages in calling thread are to dispatched in dispatcher thread, 
- *                   using return value of dispatchMsg(...). The functionality are not change really.
- *                   * dispatchQueuedMsg(): Try to evaluated non output messages, but this algorithm isn't good. No change.
- *                   * Implementation of close and flush: It means here: unconditionally dispatching.
  */
 
 
@@ -56,9 +43,35 @@ import org.vishia.util.StringPart;
 
 
 
+/**The message dispatcher supports to dispatch messages by an ident number to several destinations.
+ * 
+ * @author Hartmut Schorrig
+ *
+ */
 public class MsgDispatcher implements LogMessage
 {
 
+/**Version and history:
+ * <ul>
+ * <li>2012-01-13 Hartmut make some methods public, especially {@link #searchDispatchBits(int)}.
+ *   It make it possible to use the dispatch data without calling {@link #sendMsg(int, String, Object...)}.
+ * <li>2009-02-05 Hartmut  *corr nrofMixedOutputs
+ *                   *bugfix: setOutputRoutine() should count maxDst
+ *                   *new: reportOutput
+ * <li>2009-02-04 Hartmut  *corr: Syntax errors in setOutputFromString() tested and improved. 
+ *                   The param errorBuffer is now optional. It may be null.
+ * <li>2009-02-03 Hartmut  *new: method isOnline
+ * <li>2009-02-01 Hartmut  *new method getSharedFreeEntries().
+ *                   * dispatchMsg(...) returns the mask of non-handled outputs, to handle later or in queue.
+ *                   * sendMsgVaList(...) returns true, 
+ *                   functionality: All non dispatched messages in calling thread are to dispatched in dispatcher thread, 
+ *                   using return value of dispatchMsg(...). The functionality are not change really.
+ *                   * dispatchQueuedMsg(): Try to evaluated non output messages, but this algorithm isn't good. No change.
+ *                   * Implementation of close and flush: It means here: unconditionally dispatching.
+ * </ul>
+ */
+public static final int version = 0x20120113; 
+  
   /**If this bit is set in the bitmask for dispatching, the dispatching should be done 
    * in the dispatcher Thread. In the calling thread the message is stored in a queue. */
   public final static int mDispatchInDispatcherThread = 0x80000000;
@@ -75,10 +88,10 @@ public class MsgDispatcher implements LogMessage
   private final int nrofMixedOutputs;
   
   /**Calculated mask of bits which are able to mix. */
-  private final int mDstMixedOutputs;
+  public final int mDstMixedOutputs;
    
   /**Calculated mask of bits which are one index. */
-  private final int mDstOneOutput;
+  public final int mDstOneOutput;
   
   
   /**Mask for dispatch the message to console directly in the calling thread. 
@@ -300,7 +313,12 @@ public class MsgDispatcher implements LogMessage
   }
   
   
-  private final int searchDispatchBits(int ident)
+  /**Searches and returns the bits where a message is dispatch to.
+   * The return value describes what to do with the message.
+   * @param ident The message identificator
+   * @return 0 if the message should not be dispatched, else some bits or number, see {@link #mDstMixedOutputs} etc.
+   */
+  public final int searchDispatchBits(int ident)
   { int bitDst;
     if(ident < 0)
     { /**a negative ident means: going state. The absolute value is to dispatch! */ 
