@@ -77,7 +77,7 @@ public class ByteDataSymbolicAccess {
 		
 		public int bitMask;
 		
-		public int nrofBytes;
+		public int XXXnrofBytes;
 		
 		public int nrofArrayElements;
 
