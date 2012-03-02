@@ -91,7 +91,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
 	      sRxErrorMsg = null;
 	    }
 	    catch (SocketException e)
-	    { sRxErrorMsg = e.getMessage() + "ipaddress=" + ownAddressSocket.getHostName() + " port=" + ownAddressSocket.getPort();
+	    { sRxErrorMsg = e.getMessage() + "ipaddress=" + ownAddressSocket.getHostString() + " port=" + ownAddressSocket.getPort();
 	      error = -1;
 	    }
     }

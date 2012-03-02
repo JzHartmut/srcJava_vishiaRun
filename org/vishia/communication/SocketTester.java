@@ -81,6 +81,7 @@ public class SocketTester extends MainCmd
   public static void main(String [] args)
   { SocketTester main = new SocketTester(args);
     //main.testStringBufferFormat();
+    new InterProcessCommFactorySocket();  //initializes the static member of InterProcessCommFactoryAccessor.
     main.execute();
     main.exit();
   }
@@ -142,9 +143,9 @@ public class SocketTester extends MainCmd
       //dstAddress    = InterProcessCommFactory.makeRemoteAddress(sDestinationInetAddress, nDestinationPort);
       dstAddress    = comm.createAddress("127.0.0.1", nDestinationPort);
       senderAddress = comm.createAddress();
-      ownAddress    = comm.createAddress(0, nReceivePort);
+      ownAddress    = comm.createAddress("127.0.0.1", nReceivePort);
       
-      error = comm.open(ownAddress, true); //InterProcessComm.receiverShouldbeBlocking);
+      error = 0; ///test comm.open(ownAddress, true); //InterProcessComm.receiverShouldbeBlocking);
       if(error <0)
       { main.writeError("Problem at open socket" + comm.translateErrorMsg(error));
         bOk = false;
@@ -155,12 +156,14 @@ public class SocketTester extends MainCmd
         UDPdebugTransmitter txExec = new UDPdebugTransmitter();
   
         try
-        { rxExec.start();
-          txExec.start();
+        { //rxExec.start();
+          //txExec.start();
+          int nrWait = 0;
           while(true)
           { synchronized(this)
-            { wait(100);
+            { wait(10);
             }
+            System.out.println("working..." + (++nrWait));
           }
         }
         catch(Exception exception)
