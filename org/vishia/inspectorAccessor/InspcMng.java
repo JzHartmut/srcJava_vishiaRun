@@ -4,20 +4,63 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.vishia.byteData.VariableAccessWithIdx;
 import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.byteData.VariableContainer_ifc;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.util.CompleteConstructionAndStart;
 import org.vishia.util.Event;
 import org.vishia.util.EventConsumer;
+import org.vishia.util.StringFunctions;
 
-/**This class holds variables for a session.
+/**This class supports the communication via the inspector reflex access. 
+
  * @author Hartmut Schorrig
  *
  */
 public class InspcMng implements CompleteConstructionAndStart, VariableContainer_ifc
 {
 
+  /**Version, history and license
+   * <ul>
+   * <li>2013-03-31 Hartmut created. Most of code are gotten from org.vishia.guiInspc.InspcGuiComm,
+   *   which has experience since about 1 year. But the concept is changed. This source uses
+   *   the {@link VariableAccess_ifc} concept which has experience in the org.vishia.guiViewCfg package.
+   *   Both concepts to access variable are merged yet. The GUI to show values from a target system
+   *   now has only one interface concept to access values, independent of their communication concept.
+   *   This class supports the communication via the inspector reflex access. 
+   * </ul>
+   * <br><br>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   */
+  public static final int version = 20120331;
+
+  
+  /**This method is called if variable are received.
+   * 
+   */
   Runnable callbackOnRxData;
   
   /**This container holds all variables which are created. */
@@ -104,7 +147,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     this.callbackOnRxData = callback;
   }
 
-  
+  /*
   @Override public VariableAccess_ifc getVariable(final String nameP, int[] index)
   { int posIndex = nameP.indexOf('[');
     final String name;
@@ -127,6 +170,46 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       idxAllVars.put(name, var);
     }
     return var;
+  }
+   */
+  
+  
+  @Override public VariableAccessWithIdx getVariable(final String sDataPathP)
+  { int posIndex = sDataPathP.lastIndexOf('.');
+    final String sDataPathVariable;
+    char cc;
+    int mask, bit;
+    if(posIndex > 0 && sDataPathP.length() > posIndex && (cc = sDataPathP.charAt(posIndex +1)) >='0' && cc <='9'){
+      //it is a bit designation:
+      if(sDataPathP.charAt(posIndex -1) =='.'){ //a double .. for bit space like 12..8
+        int posIndex1 = sDataPathP.lastIndexOf('.', posIndex -2);
+        int bitStart = StringFunctions.parseIntRadixBack(sDataPathP, posIndex1-1, posIndex1-1, 10, null);
+        int[] zParsed = new int[1];
+        int bitEnd = StringFunctions.parseIntRadix(sDataPathP, posIndex+1, 2, 10, zParsed);
+        posIndex = posIndex1 - zParsed[0];
+        if(bitStart >= bitEnd){
+          bit = bitEnd;
+          mask = (1 << (bitStart - bitEnd +1)) -1;
+        } else {
+          bit = bitStart;
+          mask = (1 << (bitEnd - bitStart +1)) -1;
+        }
+      } else {
+        bit = StringFunctions.parseIntRadix(sDataPathP, posIndex+1, 2, 10, null);
+        mask = 1;
+      }
+      sDataPathVariable = sDataPathP.substring(0, posIndex);
+    } else {
+      mask = -1;
+      bit = 0;
+      sDataPathVariable = sDataPathP;
+    }
+    InspcVariable var = idxAllVars.get(sDataPathVariable);
+    if(var == null){
+      var = new InspcVariable(this, sDataPathVariable);
+      idxAllVars.put(sDataPathVariable, var);
+    }
+    return new VariableAccessWithIdx(var, null, bit, mask);
   }
  
   
@@ -281,12 +364,15 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       bAllReceived = false;
       if(requestValuesFromTarget()){
         synchronized(this){
-          if(!bAllReceived){
+          if(!bAllReceived){ //NOTE: its possible that 
             bThreadWaits = true;
-            try{ wait(1000); } catch(InterruptedException exc){}
+            try{ wait(100); } catch(InterruptedException exc){}
             bThreadWaits = false;
           }
         }
+      }
+      if(!bAllReceived){
+        stop();
       }
       timeReceived = System.currentTimeMillis();  //all requests after this time calls new variables.
       if(callbackOnRxData !=null){
@@ -298,6 +384,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   }
   
   
-
+  void stop(){}
   
 }

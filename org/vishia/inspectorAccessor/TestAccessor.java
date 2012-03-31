@@ -62,7 +62,7 @@ public class TestAccessor
       int cmd = info.getCmd();
       try{
         if(cmd == InspcDataExchangeAccess.Info.kAnswerValue){
-          float value = InspcAccessEvaluatorRxTelg.valueFloatFromRxValue(info);
+          float value = InspcAccessEvaluatorRxTelg.valueFloatFromRxValue(info, InspcAccessEvaluatorRxTelg.getInspcTypeFromRxValue(info));
           System.out.println("" + value);
         }
       } catch(Exception exc){

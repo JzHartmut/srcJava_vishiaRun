@@ -145,10 +145,9 @@ public class InspcAccessEvaluatorRxTelg
   
   
   
-  public static float valueFloatFromRxValue(InspcDataExchangeAccess.Info info)
+  public static float valueFloatFromRxValue(InspcDataExchangeAccess.Info info, int type)
   {
     float ret = 0;
-    int type = (int)info.getChildInteger(1);
     if(type >= InspcDataExchangeAccess.kScalarTypes){
       switch(type - InspcDataExchangeAccess.kScalarTypes){
         case org.vishia.reflect.ClassJc.REFLECTION_char16: ret = (float)(char)info.getChildInteger(2); break;
@@ -180,10 +179,10 @@ public class InspcAccessEvaluatorRxTelg
   
   
   
-  public static int valueIntFromRxValue(InspcDataExchangeAccess.Info info)
+
+  public static int valueIntFromRxValue(InspcDataExchangeAccess.Info info, int type)
   {
     int ret = 0;
-    int type = (int)info.getChildInteger(1);
     if(type >= InspcDataExchangeAccess.kScalarTypes){
       switch(type - InspcDataExchangeAccess.kScalarTypes){
         case ClassJc.REFLECTION_char16: ret = (char)info.getChildInteger(2); break;
@@ -211,6 +210,56 @@ public class InspcAccessEvaluatorRxTelg
       } catch(Exception exc){ ret = 0; }
     }
 
+    return ret;
+  }
+  
+  
+  /**Gets the reflection type of the received information.
+   * 
+   * @param info
+   * @return The known character Z, C, D, F, B, S, I, J for the scalar types, 'c' for character array (String)
+   */
+  public static int getInspcTypeFromRxValue(InspcDataExchangeAccess.Info info)
+  {
+    char ret = 0;
+    int type = (int)info.getChildInteger(1);
+    return type;
+  }
+    
+    /**Gets the type of the received information.
+   * 
+   * @param info
+   * @return The known character Z, C, D, F, B, S, I, J for the scalar types, 'c' for character array (String)
+   */
+  public static char getTypeFromInspcType(int type)
+  {
+    final char ret;
+    if(type >= InspcDataExchangeAccess.kScalarTypes){
+      switch(type - InspcDataExchangeAccess.kScalarTypes){
+        case ClassJc.REFLECTION_char16: ret = 'S'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_char8:  ret = 'C'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_double: ret = 'D'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_float:  ret = 'F'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int8:   ret = 'B'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int16:  ret = 'S'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int32:  ret = 'I'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int64:  ret = 'J'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int:    ret = 'I'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint8:  ret = 'B'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint16: ret = 'S'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint32: ret = 'I'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint64: ret = 'J'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint:   ret = 'I'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_boolean:ret = 'Z'; break;
+        default: ret = '?';
+      }      
+    } else if(type == InspcDataExchangeAccess.kReferenceAddr){
+      ret = 'I';
+    } else if(type <= InspcDataExchangeAccess.maxNrOfChars){
+        ret = 'c';
+    } else {
+      ret = '?'; //error
+    }
     return ret;
   }
   

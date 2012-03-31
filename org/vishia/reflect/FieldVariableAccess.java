@@ -68,7 +68,7 @@ public class FieldVariableAccess implements VariableAccess_ifc
 		return value;
 	}
 	
-	@Override	public String getString(int ixArray)
+	@Override	public String getString(int ...ixArray)
 	{ String sValue ;
 	  Class<?> type = theField.getType();
 	  try{ 
@@ -109,11 +109,30 @@ public class FieldVariableAccess implements VariableAccess_ifc
 	}
 
 	@Override
-	public String setString(String value, int ixArray)
+	public String setString(String value, int ...ixArray)
 	{
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+	
+  @Override public char getType(){ 
+    Class<?> type = theField.getType();
+    String sType = type.getName();
+    if(type.isPrimitive()){
+      return sType.charAt(0);
+    } else {
+      throw new IllegalArgumentException("does war nich vereinbart, mach'n mer nich.");
+      //return '.'; //TODO
+    }
+  }
+  
+  @Override public int getDimension(int dimension){
+    return 0; //TODO
+  }
+  
+
+  
 
 
 }
