@@ -9,6 +9,7 @@ import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessCommFactory;
 import org.vishia.communication.InterProcessCommFactoryAccessor;
+import org.vishia.communication.InspcDataExchangeAccess.Info;
 import org.vishia.inspector.InspcTelgInfoSet;
 import org.vishia.reflect.ClassJc;
 
@@ -17,6 +18,10 @@ public class InspcAccessor implements Closeable
 	
   /**The version history of this class:
    * <ul>
+   * <li>2012-04-02 Hartmut new: {@link #sendAndPrepareCmdSetValueByPath(String, long, int, InspcAccessExecRxOrder_ifc)}.
+   *   The concept is: provide the {@link InspcAccessExecRxOrder_ifc} with the send request.
+   *   It should be implement for all requests in this form. But the awaiting of answer doesn't may the best way.
+   *   Problem evaluating the answer telg in the rx thread or in the tx thread. TODO.
    * <li>2011-06-19 Hartmut new; {@link #shouldSend()} and {@link #isFilledTxTelg()} able to call outside.
    *     It improves the handling with info blocks in a telegram.
    * <li>2011-05 Hartmut created
@@ -208,7 +213,7 @@ public class InspcAccessor implements Closeable
   { int order;
     int zPath = sPathInTarget.length();
     int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
-    int zInfo = InspcTelgInfoSet.sizeofHead + InspcDataExchangeAccess.SetValue.sizeofElement + zPath + restChars; 
+    int zInfo = Info.sizeofHead + InspcDataExchangeAccess.SetValue.sizeofElement + zPath + restChars; 
     if(checkAndFillHead(zInfo )){
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
@@ -228,7 +233,36 @@ public class InspcAccessor implements Closeable
   }
   
   
-  /**Adds the info block to send 'get value by path'
+  /**Sends the given telegram if the requested command doesn't fit in the telegram yet,
+   * prepares the given command as info in the given or a new one telegram and registers the exec on answer.
+   * <br><br>
+   * After the last such request {@link #sendAndAwaitAnswer()} have to be called
+   * to send at least the last request. 
+   * @param sPathInTarget
+   * @param value The value as long-image, it may be a double, float, int etc.
+   * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
+   *                    + {@link ClassJc#REFLECTION_double} etc.
+   * @param exec The routine to execute on answer.
+   * @return true if a new telegram was created. It is an info only.
+   * 
+   */
+  public boolean sendAndPrepareCmdSetValueByPath(String sPathInTarget, long value, int typeofValue, InspcAccessExecRxOrder_ifc exec)
+  { int order;
+    boolean sent = false;
+    do {
+      order = cmdSetValueByPath(sPathInTarget, value, typeofValue);    
+      if(order !=0){ //save the order to the action. It is taken on receive.
+        this.rxEval.setExpectedOrder(order, exec);
+      } else {
+        sendAndAwaitAnswer();  //calls execInspcRxOrder as callback.
+        sent = true;
+      }
+    } while(order == 0);  
+    return sent;
+  }
+  
+  
+/**Adds the info block to send 'get value by path'
    * @param sPathInTarget
    * @param value The value as long-image, it may be a double, float, int etc.
    * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
@@ -334,7 +368,19 @@ public class InspcAccessor implements Closeable
   }
   
 
-	
+  void sendAndAwaitAnswer()
+  { send();
+    InspcDataExchangeAccess.Datagram[] answerTelgs = awaitAnswer(2000);
+    if(answerTelgs !=null){
+      rxEval.evaluate(answerTelgs, null); //executerAnswerInfo);  //executer on any info block.
+    } else {
+      System.err.println("InspcAccessor - sendAndAwaitAnswer; no communication" );
+    }
+  }
+
+
+  
+
 	
 	/**Waits for answer from the target.
 	 * This method can be called in any users thread. Typically it is the thread, which has send the telegram

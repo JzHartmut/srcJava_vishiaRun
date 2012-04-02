@@ -1,8 +1,11 @@
 package org.vishia.inspectorAccessor;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.vishia.byteData.VariableAccessWithIdx;
 import org.vishia.byteData.VariableAccess_ifc;
@@ -14,21 +17,63 @@ import org.vishia.util.EventConsumer;
 import org.vishia.util.StringFunctions;
 
 /**This class supports the communication via the inspector reflex access. 
-
+ * It is a {@link VariableContainer_ifc}. It means any application can handle with variable. 
+ * If a variable is requested, a time stamp is written their (see {@link InspcVariable#timeRequested})
+ * and therefore this variable is requested via its {@link InspcVariable#sPath} from the associated
+ * target device.
+ * <br><br>
+ * This class supports free communication with Inspector reflex access outside the {@link VariableAccess_ifc}
+ * thinking too. Especially via {@link #addUserOrder(Runnable)} some code snippets can be placed in the
+ * communication thread of this class.
+ * <br><br>
+ * This class starts an onw thread for the send requests to the target device. That thread opens the
+ * inspector reflex access communication via {@link InspcAccessor#open(String)} which may use an
+ * {@link org.vishia.communication.InterProcessComm} instance.
+ * <br><br>
+ * <b>Communication principle</b>:
+ * The {@link #inspcThread} respectively the called method {@link #runInspcThread()} runs in a loop,
+ * if the communication was opend till {@link #close()} is called. In this loop all requested variables
+ * were handled with a request-value telegram and all {@link #addUserOrder(Runnable)} are processed.
+ * With that requests one send telegram is built. If the telegram is filled, it will be send.
+ * Then the answer of the target device is waiting, see {@link #sendAndAwaitAnswer()}.
+ * <br>
+ * TODO it seems better to execute the answer in the receive thread, because some user requests can be executed
+ * in that kind too. It isn't necessary to call a {@link InspcAccessEvaluatorRxTelg#evaluate(org.vishia.communication.InspcDataExchangeAccess.Datagram[], InspcAccessExecRxOrder_ifc)}
+ * in the sending thread. But the sending thread should be inform about completely receiving and execution
+ * before the next telegram will be send to the same device. That is because the device should not be 
+ * flood and trash with too many telegrams. A embedded target may have a limited IP stack!
+ * Sending a next telegram to the same device without an answer should be taken only after a suitable
+ * timeout. But another device can be requested in that time. 
+ * <br>
+ * But the receiving of telegrams is executing in an extra receive Thread, see {@link InspcAccessor#receiveThread}.
+ * The {@link InspcAccessor} supports the execution of any action in the received thread too,
+ * but this class calls {@link InspcAccessor#awaitAnswer(int)} in its send thread to force notifying
+ * of this class if the correct answer telegram is received.  
+ * <br>
+ * If the telegram is received, all variables are filled with the received values and the  
  * @author Hartmut Schorrig
  *
  */
-public class InspcMng implements CompleteConstructionAndStart, VariableContainer_ifc
+public class InspcMng implements CompleteConstructionAndStart, VariableContainer_ifc, Closeable
 {
 
   /**Version, history and license
    * <ul>
-   * <li>2013-03-31 Hartmut created. Most of code are gotten from org.vishia.guiInspc.InspcGuiComm,
+   * <li>2012-04-02 Hartmut all functionality from org.vishia.guiInspc.InspcGuiComm now here,
+   *   the org.vishia.guiInspc.InspcGuiComm is deleted now.
+   * <li>2012-03-31 Hartmut created. Most of code are gotten from org.vishia.guiInspc.InspcGuiComm,
    *   which has experience since about 1 year. But the concept is changed. This source uses
    *   the {@link VariableAccess_ifc} concept which has experience in the org.vishia.guiViewCfg package.
    *   Both concepts to access variable are merged yet. The GUI to show values from a target system
    *   now has only one interface concept to access values, independent of their communication concept.
    *   This class supports the communication via the inspector reflex access. 
+   * <li>2012-03-31 next versions from older org.vishia.guiInspc.InspcGuiComm:  
+   * <li>2011-06-30 Hartmut new: {@link #sendAndPrepareCmdSetValueByPath(String, long, int, InspcAccessExecRxOrder_ifc)}:
+   *     It is the first method which organizes that info blocks can be created one after another
+   *     without regarding the telegram length. It simplifies the usage.
+   * <li>2011-06-30 Hartmut improved: {@link WidgetCommAction#execInspcRxOrder(Info)} for formatted output   
+   * <li>2011-05-17 execInspcRxOrder() int32AngleDegree etc. to present a angle in degrees
+   * <li>2011-05-01 Hartmut: Created
    * </ul>
    * <br><br>
    * <b>Copyright/Copyleft</b>:
@@ -55,9 +100,10 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20120331;
+  public static final int version = 20120402;
 
-  
+  private final InspcPlugUser_ifc user;
+
   /**This method is called if variable are received.
    * 
    */
@@ -90,19 +136,27 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   private Map<String, String> indexFaultDevice;
 
+  long millisecTimeoutOrders = 5000;
+  
+  long timeLastRemoveOrders;
+
+  
   String sIpTarget;
 
+  boolean bUserCalled;
+
+  /**Some orders from any application which should be run in the {@link #inspcThread}. */
+  public ConcurrentLinkedQueue<Runnable> userOrders = new ConcurrentLinkedQueue<Runnable>();
   
   /**The time when all the receiving is finished or had its timeout.
    * 
    */
   long timeReceived;
   
-  
   /**The Event callback routine which is invoked if all 
    * 
    */
-  final EventConsumer callback = new EventConsumer(){
+  final EventConsumer XXXcallback = new EventConsumer(){
     @Override public boolean processEvent(Event ev)
     { callbackOnRxData(ev); 
       return true;
@@ -113,7 +167,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   Thread inspcThread = new Thread("InspcMng"){ @Override public void run() { runInspcThread(); } };
 
   
-  final Event callbackOnRx = new Event(this, callback);
+  final Event XXXcallbackOnRx = new Event(this, XXXcallback);
   
 
   /**True if the {@link #inspcThread} is running. If set to false, the thread ends. */
@@ -127,10 +181,15 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    */
   boolean bAllReceived;
   
-  public InspcMng(String sOwnIpcAddr, Map<String, String> indexTargetIpcAddr){
+  public InspcMng(String sOwnIpcAddr, Map<String, String> indexTargetIpcAddr, InspcPlugUser_ifc user){
     this.inspcAccessor = new InspcAccessor(new InspcAccessEvaluatorRxTelg());
     this.indexTargetIpcAddr = indexTargetIpcAddr;
     this.sOwnIpcAddr = sOwnIpcAddr;
+    this.user = user;
+    if(user !=null){
+      user.setInspcComm(this);
+    }
+
   }
   
   
@@ -173,6 +232,16 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   }
    */
   
+  
+  /**Adds any program snippet which is executed while preparing the telegram for data request from target.
+   * @param order the program snippet.
+   */
+  public void addUserOrder(Runnable order)
+  {
+    userOrders.add(order);
+  }
+  
+
   
   @Override public VariableAccessWithIdx getVariable(final String sDataPathP)
   { int posIndex = sDataPathP.lastIndexOf('.');
@@ -223,8 +292,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    * @returns true if at least one variable was requested, false if nothing is requested.
    * @see org.vishia.byteData.VariableContainer_ifc#refreshValues()
    */
-  private boolean requestValuesFromTarget(){
+  private boolean procComm(){
     boolean bRequest = false;
+    bUserCalled = false;
     idxRequestedVarFromTarget.clear();  //clear it, only new requests are pending then.
     for(Map.Entry<String,InspcVariable> entryVar: idxAllVars.entrySet()){
       InspcVariable var = entryVar.getValue();
@@ -239,9 +309,43 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       }
 
     }
+    Runnable userOrder;
+    while( (userOrder = userOrders.poll()) !=null){
+      userOrder.run();
+    }
+    
+    if(user !=null){
+      user.isSent(0);
+    }
+    
+    long time = System.currentTimeMillis();
+    if(time >= timeLastRemoveOrders + millisecTimeoutOrders){
+      timeLastRemoveOrders = time;
+      int removedOrders = inspcAccessor.rxEval.checkAndRemoveOldOrders(time - timeLastRemoveOrders);
+      if(removedOrders >0){
+        System.err.println("InspcMng - Communication problem, removed Orders; " + removedOrders);
+      }
+    }
+
     return bRequest;
   }
 
+
+  void sendAndAwaitAnswer()
+  { inspcAccessor.send();
+    InspcDataExchangeAccess.Datagram[] answerTelgs = inspcAccessor.awaitAnswer(2000);
+    if(answerTelgs !=null){
+      inspcAccessor.rxEval.evaluate(answerTelgs, null); //executerAnswerInfo);  //executer on any info block.
+    } else {
+      System.err.println("no communication");
+    }
+  }
+
+
+  
+
+
+  
   
   void getValueFromTarget(InspcVariable var)  
   { //check whether the widget has an comm action already. 
@@ -270,12 +374,10 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     }
     //
     if(sIpTarget !=null){
-      /*  TODO need?
       if(user !=null && !bUserCalled){  //call only one time per procComm()
         user.requData(0);
         bUserCalled = true;
       }
-      */
       //
       //create the send command to target.
       int order = inspcAccessor.cmdGetValueByPath(sDataPath);    
@@ -291,7 +393,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
 
   
-  String translateDeviceToAddrIp(String sDevice)
+  public String translateDeviceToAddrIp(String sDevice)
   {
     String ret = indexTargetIpcAddr.get(sDevice);
     return ret;
@@ -320,19 +422,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   
   
-  void sendAndAwaitAnswer()
-  { inspcAccessor.send();
-    InspcDataExchangeAccess.Datagram[] answerTelgs = inspcAccessor.awaitAnswer(2000);
-    if(answerTelgs !=null){
-      inspcAccessor.rxEval.evaluate(answerTelgs, null); //executerAnswerInfo);  //executer on any info block.
-    } else {
-      System.err.println("no communication");
-    }
-  }
-
-
-  
-
   
   
   /**This routine will be invoked if all data are received from the target.
@@ -362,7 +451,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       synchronized(this){ try{ wait(100); } catch(InterruptedException exc){} }
       //now requests.
       bAllReceived = false;
-      if(requestValuesFromTarget()){
+      if(procComm()){
         synchronized(this){
           if(!bAllReceived){ //NOTE: its possible that 
             bThreadWaits = true;
@@ -383,6 +472,11 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     }
   }
   
+  
+  @Override public void close() throws IOException
+  { bThreadRuns = false;
+    inspcAccessor.close();
+  }
   
   void stop(){}
   
