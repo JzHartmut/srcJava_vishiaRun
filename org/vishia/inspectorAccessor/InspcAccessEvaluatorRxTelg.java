@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.vishia.communication.InspcDataExchangeAccess;
+import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.ClassJc;
 
 /**This class helps to evaluate any telegram.
@@ -102,7 +103,7 @@ public class InspcAccessEvaluatorRxTelg
    *        and that special routine is executed.
    * @return null if no error, if not null then it is an error description. 
    */
-  public String evaluate(InspcDataExchangeAccess.Datagram[] telgHeads, InspcAccessExecRxOrder_ifc executer)
+  public String evaluate(InspcDataExchangeAccess.Datagram[] telgHeads, InspcAccessExecRxOrder_ifc executer, LogMessage log, int identLog)
   { String sError = null;
     int currentPos = InspcDataExchangeAccess.Datagram.sizeofHead;
     for(InspcDataExchangeAccess.Datagram telgHead: telgHeads){
@@ -117,7 +118,7 @@ public class InspcAccessEvaluatorRxTelg
                  + nrofBytesInfo + " / " + (nrofBytesTelg - currentPos);
         } else {
           if(executer !=null){
-            executer.execInspcRxOrder(infoAccess);
+            executer.execInspcRxOrder(infoAccess, log, identLog);
           } else {
             int cmd = infoAccess.getCmd();
             int order = infoAccess.getOrder();
@@ -126,7 +127,7 @@ public class InspcAccessEvaluatorRxTelg
               //remove timed order
               InspcAccessExecRxOrder_ifc orderExec = timedOrder.exec;
               if(orderExec !=null){
-                orderExec.execInspcRxOrder(infoAccess);
+                orderExec.execInspcRxOrder(infoAccess, log, identLog);
               } else {
                 stop();  //should not 
               }

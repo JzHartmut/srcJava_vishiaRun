@@ -67,7 +67,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
   */
   @Override public int open(final Address_InterProcessComm dstAddress, boolean shouldBlock)
   { int error = 0;
-    Address_InterProcessComm_Socket ownAddress1 = (Address_InterProcessComm_Socket)ownAddress; 
+    Address_InterProcessComm_Socket ownAddress1 = this.ownAddress; 
     /*
     switch(mode)
     { case receiverShouldbeBlocking: break; //its ok
@@ -82,18 +82,18 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
     }
     */
     if(!shouldBlock){
-    	sRxErrorMsg = sTxErrorMsg = "InterProcessComm_Socket.open(): The polling mode is not supported yet.";
+      this.sRxErrorMsg = this.sTxErrorMsg = "InterProcessComm_Socket.open(): The polling mode is not supported yet.";
       error = -1;
     } else {
 	    InetSocketAddress ownAddressSocket = ownAddress1.getSocketAddress();
 	    try
-	    { rxSocket = new DatagramSocket(ownAddressSocket);
-	      sRxErrorMsg = null;
+	    { this.rxSocket = new DatagramSocket(ownAddressSocket);
+	    this.sRxErrorMsg = null;
 	    }
 	    catch (SocketException e)
 	    { //note: getHostString not visible on Java 6
 	      //sRxErrorMsg = e.getMessage() + "ipaddress=" + ownAddressSocket.getHostString() + " port=" + ownAddressSocket.getPort();
-	      sRxErrorMsg = e.getMessage() + "ipaddress= ..." + " port=" + ownAddressSocket.getPort();
+	      this.sRxErrorMsg = e.getMessage() + "ipaddress= ..." + " port=" + ownAddressSocket.getPort();
         error = -1;
 	    }
     }
@@ -102,9 +102,9 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
 
 
   public int close()
-  { if(rxSocket != null)
-    { rxSocket.close();
-      rxSocket = null;
+  { if(this.rxSocket != null)
+    { this.rxSocket.close();
+      this.rxSocket = null;
     }
     return 0;
   }
@@ -114,14 +114,14 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
   { Address_InterProcessComm_Socket addressee = (Address_InterProcessComm_Socket) addresseeP; 
     try
     { DatagramPacket dataOut = new DatagramPacket(data, nBytes, addressee.getSocketAddress());
-      rxSocket.send(dataOut);
+      this.rxSocket.send(dataOut);
     }
     catch (SocketException e)
-    { sTxErrorMsg = e.getMessage();
+    { this.sTxErrorMsg = e.getMessage();
       nBytes = -1;
     } 
     catch (IOException e)
-    { sTxErrorMsg = e.getMessage();
+    { this.sTxErrorMsg = e.getMessage();
       nBytes = -1;
     } 
     return nBytes;
@@ -130,7 +130,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
 
   @Override public byte[] receive(int[] result, Address_InterProcessComm senderP)
   { boolean bOk = true;
-    if(rxSocket == null)
+    if(this.rxSocket == null)
     {
       return null;
     }
@@ -138,7 +138,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
     { Address_InterProcessComm_Socket sender = (Address_InterProcessComm_Socket)(senderP);
       byte[] dataBuffer = new byte[kDataBufferSize];
       DatagramPacket datagramPacket = new DatagramPacket(dataBuffer, kDataBufferSize);
-      try{ rxSocket.receive(datagramPacket); }
+      try{ this.rxSocket.receive(datagramPacket); }
       catch(IOException exception)
       { bOk = false;
         result[0] = -1;
@@ -171,7 +171,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
 
   public String getReceiveErrorMsg(boolean clearIt)
   {
-    return sRxErrorMsg;
+    return this.sRxErrorMsg;
   }
 
 
@@ -179,7 +179,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
 
   public String getSendErrorMsg(boolean clearIt)
   {
-    return sTxErrorMsg;
+    return this.sTxErrorMsg;
   }
 
 
@@ -200,7 +200,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
 	@Override
 	public int checkConnection() {
 		// TODO Auto-generated method stub
-		if(rxSocket == null){ return -1; }
+		if(this.rxSocket == null){ return -1; }
 		return 0;
 	}
 
@@ -246,7 +246,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
 	@Override	public byte[] receiveData(int[] result, byte[] bufferP,	Address_InterProcessComm senderP) 
 	{
 	  boolean bOk = true;
-    if(rxSocket == null)
+    if(this.rxSocket == null)
     {
       return null;
     }
@@ -254,7 +254,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
     { Address_InterProcessComm_Socket sender = (Address_InterProcessComm_Socket)(senderP);
       byte[] dataBuffer = bufferP != null ? bufferP : new byte[kDataBufferSize];
       DatagramPacket datagramPacket = new DatagramPacket(dataBuffer, dataBuffer.length);
-      try{ rxSocket.receive(datagramPacket); }
+      try{ this.rxSocket.receive(datagramPacket); }
       catch(IOException exception)
       { bOk = false;
         if(result != null) { result[0] = -1; }

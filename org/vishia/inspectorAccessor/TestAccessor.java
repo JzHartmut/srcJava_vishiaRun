@@ -3,6 +3,7 @@ package org.vishia.inspectorAccessor;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InspcDataExchangeAccess.Info;
 import org.vishia.inspector.InspcTelgInfoSet;
+import org.vishia.msgDispatch.LogMessage;
 
 public class TestAccessor
 {
@@ -41,7 +42,7 @@ public class TestAccessor
         inspcAccessor.send();
         InspcDataExchangeAccess.Datagram[] answer = inspcAccessor.awaitAnswer(1000);
         if(answer !=null){
-          String sError = inspcAccessor.rxEval.evaluate(answer, testExec);
+          String sError = inspcAccessor.rxEval.evaluate(answer, testExec, null, 0);
         }
         try{ Thread.sleep(300);} catch(InterruptedException exc){}
       }
@@ -56,7 +57,7 @@ public class TestAccessor
   InspcAccessExecRxOrder_ifc testExec = new InspcAccessExecRxOrder_ifc()
   {
 
-    @Override public void execInspcRxOrder(Info info)
+    @Override public void execInspcRxOrder(Info info, LogMessage log, int identLog)
     {
       int order = info.getOrder();
       int cmd = info.getCmd();

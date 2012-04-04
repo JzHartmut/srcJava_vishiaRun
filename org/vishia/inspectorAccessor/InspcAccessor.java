@@ -11,6 +11,7 @@ import org.vishia.communication.InterProcessCommFactory;
 import org.vishia.communication.InterProcessCommFactoryAccessor;
 import org.vishia.communication.InspcDataExchangeAccess.Info;
 import org.vishia.inspector.InspcTelgInfoSet;
+import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.ClassJc;
 
 public class InspcAccessor implements Closeable
@@ -18,6 +19,7 @@ public class InspcAccessor implements Closeable
 	
   /**The version history of this class:
    * <ul>
+   * <li>2012-04-05 Hartmut new: Use {@link LogMessage to test telegram trafic}
    * <li>2012-04-02 Hartmut new: {@link #sendAndPrepareCmdSetValueByPath(String, long, int, InspcAccessExecRxOrder_ifc)}.
    *   The concept is: provide the {@link InspcAccessExecRxOrder_ifc} with the send request.
    *   It should be implement for all requests in this form. But the awaiting of answer doesn't may the best way.
@@ -29,7 +31,10 @@ public class InspcAccessor implements Closeable
    */
   final static int version = 0x20110502;
 
+  /**If true then writes a log of all send and received telegrams. */
+  LogMessage logTelg;
   
+  int identLogTelg;
   
 	private InspcAccessGenerateOrder orderGenerator = new InspcAccessGenerateOrder();
 	
@@ -91,17 +96,17 @@ public class InspcAccessor implements Closeable
 	}
 
 	
-	public boolean open(String sOwnIpAddr)
+	public boolean open(String sOwnIpAddrP)
 	{
-	  this.sOwnIpAddr = sOwnIpAddr;
+	  this.sOwnIpAddr = sOwnIpAddrP;
     InterProcessCommFactory ipcFactory = InterProcessCommFactoryAccessor.getInstance();
-    ipc = ipcFactory.create (sOwnIpAddr);
+    ipc = ipcFactory.create (sOwnIpAddrP);
     int ipcOk = ipc.open(null, true);
     if(ipcOk >=0){  ipcOk = ipc.checkConnection(); }
     if(ipcOk == 0){
     }
     if(ipcOk < 0){
-      System.out.println("Problem can't open socket: " + sOwnIpAddr); 
+      System.out.println("Problem can't open socket: " + sOwnIpAddrP); 
     } else {
       receiveThread.start();   //start it after ipc is ok.
     }
@@ -118,6 +123,18 @@ public class InspcAccessor implements Closeable
 	  this.sTargetIpAddr = sTargetIpAddr;
 	  this.targetAddr = new Address_InterProcessComm_Socket(sTargetIpAddr);
 	}
+	
+	
+	
+	/**Switch on or off the log functionality.
+	 * @param logP The log output. null then switch of the log.
+	 * @param ident The ident number in log for send, next number for receive.
+	 */
+	public void setLog(LogMessage log, int ident){
+	  this.logTelg = log;
+	  this.identLogTelg = ident;
+	}
+	
 	
   /**Checks whether the head of the datagram should be created and filled. Does that if necessary.
    * Elsewhere if the datagram hasn't place for the new info, it will be sent and a new head
@@ -193,6 +210,9 @@ public class InspcAccessor implements Closeable
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
       infoAccess.setCmdGetValueByPath(sPathInTarget, order);
+      if(logTelg !=null){ 
+        logTelg.sendMsg(identLogTelg, "send cmdGetValueByPath %s, order = %d", sPathInTarget, order); 
+      }
     } else {
       //too much info blocks
       order = 0;
@@ -217,6 +237,9 @@ public class InspcAccessor implements Closeable
     if(checkAndFillHead(zInfo )){
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
+      if(logTelg !=null){ 
+        logTelg.sendMsg(identLogTelg, "send cmdSetValueByPath %s, order = %d, value=%8X, type=%d", sPathInTarget, order, value, typeofValue); 
+      }
       //infoAccess.setCmdSetValueByPath(sPathInTarget, value, typeofValue, order);
       InspcDataExchangeAccess.SetValue accessSetValue = new InspcDataExchangeAccess.SetValue(); 
       infoAccess.addChild(accessSetValue);
@@ -315,6 +338,9 @@ public class InspcAccessor implements Closeable
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
       infoAccess.setCmdGetAddressByPath(sPathInTarget, order);
+      if(logTelg !=null){ 
+        logTelg.sendMsg(identLogTelg, "send cmdGetAddressByPath %s, order = %d", sPathInTarget, order); 
+      }
     } else {
       //too much info blocks
       order = 0;
@@ -347,8 +373,11 @@ public class InspcAccessor implements Closeable
     //send the telegram:
     checkerRxTelg.setAwait(nSeqNumber);
     timeSend = System.currentTimeMillis();
-    ipc.send(txBuffer, lengthDatagram, targetAddr);
-	  bFillTelg = false;
+    int ok = ipc.send(txBuffer, lengthDatagram, targetAddr);
+    if(logTelg !=null){ 
+      logTelg.sendMsg(identLogTelg +1, "send telg length= %s, ok = %d", lengthDatagram, ok); 
+    }
+    bFillTelg = false;
 	  bIsSentTelg = true;
 	  bShouldSend = false;
 	  return nSeqNumber;
@@ -372,7 +401,7 @@ public class InspcAccessor implements Closeable
   { send();
     InspcDataExchangeAccess.Datagram[] answerTelgs = awaitAnswer(2000);
     if(answerTelgs !=null){
-      rxEval.evaluate(answerTelgs, null); //executerAnswerInfo);  //executer on any info block.
+      rxEval.evaluate(answerTelgs, null, logTelg, identLogTelg + 5); //executerAnswerInfo);  //executer on any info block.
     } else {
       System.err.println("InspcAccessor - sendAndAwaitAnswer; no communication" );
     }
@@ -439,7 +468,10 @@ public class InspcAccessor implements Closeable
       if(result[0]>0){
         long time = System.currentTimeMillis();
         dtimeReceive = time - timeSend;
-        checkerRxTelg.applyReceivedTelg(rxBuffer, result[0]);
+        if(logTelg !=null){ 
+          logTelg.sendMsg(identLogTelg+3, "recv telg after %d ms", dtimeReceive); 
+        }
+        checkerRxTelg.applyReceivedTelg(rxBuffer, result[0], logTelg, identLogTelg +4);
       } else {
         System.out.append("receive error");
       }

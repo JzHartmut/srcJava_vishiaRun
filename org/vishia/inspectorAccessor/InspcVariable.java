@@ -2,6 +2,7 @@ package org.vishia.inspectorAccessor;
 
 import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.communication.InspcDataExchangeAccess;
+import org.vishia.msgDispatch.LogMessage;
 
 public class InspcVariable implements VariableAccess_ifc
 {
@@ -52,7 +53,7 @@ public class InspcVariable implements VariableAccess_ifc
      * It prepares the value presentation.
      * @see org.vishia.inspectorAccessor.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Info)
      */
-    @Override public void execInspcRxOrder(InspcDataExchangeAccess.Info info)
+    @Override public void execInspcRxOrder(InspcDataExchangeAccess.Info info, LogMessage log, int identLog)
     {
       String sShow;
       int order = info.getOrder();
@@ -69,6 +70,9 @@ public class InspcVariable implements VariableAccess_ifc
         } else { 
           valueF = InspcAccessEvaluatorRxTelg.valueFloatFromRxValue(info, typeInspc);
           valueI = (int)valueF;
+        }
+        if(log !=null){
+          log.sendMsg(identLog, "InspcVariable - receive; variable=%s, type=%c, val = %8X = %d = %f", sPath, cType, valueI, valueI, valueF);
         }
         varMng.variableIsReceived(InspcVariable.this);
       }

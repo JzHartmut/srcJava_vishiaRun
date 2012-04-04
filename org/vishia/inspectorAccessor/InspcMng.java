@@ -11,6 +11,8 @@ import org.vishia.byteData.VariableAccessWithIdx;
 import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.byteData.VariableContainer_ifc;
 import org.vishia.communication.InspcDataExchangeAccess;
+import org.vishia.communication.InterProcessComm;
+import org.vishia.communication.InterProcessComm_SocketImpl;
 import org.vishia.util.CompleteConstructionAndStart;
 import org.vishia.util.Event;
 import org.vishia.util.EventConsumer;
@@ -32,10 +34,24 @@ import org.vishia.util.StringFunctions;
  * <br><br>
  * <b>Communication principle</b>:
  * The {@link #inspcThread} respectively the called method {@link #runInspcThread()} runs in a loop,
- * if the communication was opend till {@link #close()} is called. In this loop all requested variables
+ * if the communication was opened till {@link #close()} is called. In this loop all requested variables
  * were handled with a request-value telegram and all {@link #addUserOrder(Runnable)} are processed.
  * With that requests one send telegram is built. If the telegram is filled, it will be send.
- * Then the answer of the target device is waiting, see {@link #sendAndAwaitAnswer()}.
+ * Then the answer of the target device is awaiting, see {@link InspcAccessor#sendAndAwaitAnswer()}.
+ * <br><br>
+ * The receiving of telegrams is executing in an extra receive Thread, see {@link InspcAccessor#receiveThread}.
+ * The receive thread handles receiving from the one port of communication, which is opened with the 
+ * {@link InterProcessComm} instance which usual is a {@link InterProcessComm_SocketImpl}. 
+ * It is possible to send from more as this thread, or it is possible to receive some special telegrams which 
+ * are not requested. That does the receive thread.
+ * <br><br>
+ * The receive thread knows the sequence numbers of a sent telegram, which is response by an answer telegram.
+ * This sequence numbers are TODO
+ * 
+ *  
+ * The {@link InspcAccessor} supports the execution of any action in the received thread too,
+ * but this class calls {@link InspcAccessor#awaitAnswer(int)} in its send thread to force notifying
+ * of this class if the correct answer telegram is received.  
  * <br>
  * TODO it seems better to execute the answer in the receive thread, because some user requests can be executed
  * in that kind too. It isn't necessary to call a {@link InspcAccessEvaluatorRxTelg#evaluate(org.vishia.communication.InspcDataExchangeAccess.Datagram[], InspcAccessExecRxOrder_ifc)}
@@ -59,6 +75,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   /**Version, history and license
    * <ul>
+   * <li>2012-04-05 Hartmut new: Use {@link LogMessage to test telegram trafic}
    * <li>2012-04-02 Hartmut all functionality from org.vishia.guiInspc.InspcGuiComm now here,
    *   the org.vishia.guiInspc.InspcGuiComm is deleted now.
    * <li>2012-03-31 Hartmut created. Most of code are gotten from org.vishia.guiInspc.InspcGuiComm,
@@ -305,7 +322,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     }
     if(bRequest){
       if(inspcAccessor.isFilledTxTelg()){
-        sendAndAwaitAnswer();
+        inspcAccessor.sendAndAwaitAnswer();
       }
 
     }
@@ -331,18 +348,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   }
 
 
-  void sendAndAwaitAnswer()
-  { inspcAccessor.send();
-    InspcDataExchangeAccess.Datagram[] answerTelgs = inspcAccessor.awaitAnswer(2000);
-    if(answerTelgs !=null){
-      inspcAccessor.rxEval.evaluate(answerTelgs, null); //executerAnswerInfo);  //executer on any info block.
-    } else {
-      System.err.println("no communication");
-    }
-  }
-
-
-  
 
 
   
@@ -385,7 +390,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         //save the order to the action. It is taken on receive.
         inspcAccessor.rxEval.setExpectedOrder(order, commAction);
       } else {
-        sendAndAwaitAnswer();  //calls execInspcRxOrder as callback.
+        inspcAccessor.sendAndAwaitAnswer();  //calls execInspcRxOrder as callback.
         //sent = true;
       } 
     }    

@@ -1,6 +1,7 @@
 package org.vishia.inspectorAccessor;
 
 import org.vishia.communication.InspcDataExchangeAccess;
+import org.vishia.msgDispatch.LogMessage;
 
 /**This class checks whether a received telegram from a target is expected or not.
  * @author Hartmut Schorrig
@@ -87,7 +88,7 @@ public class InspcAccessCheckerRxTelg
    * @param rxBuffer
    * @param zBuffer
    */
-  void applyReceivedTelg(byte[] rxBuffer, int zBuffer)
+  void applyReceivedTelg(byte[] rxBuffer, int zBuffer, LogMessage log, int identLog)
   {
     if(awaitTelg){
       rxTelg.assignData(rxBuffer, zBuffer);
@@ -101,7 +102,7 @@ public class InspcAccessCheckerRxTelg
             throw new RuntimeException("Software error. awaitSeqNumber() with an executer was called. "
               + "Than waitForAnswer() must not be called!"); 
           }
-          executerAnswer.execInspcRxTelg(answerTelgs);
+          executerAnswer.execInspcRxTelg(answerTelgs, log, identLog);
         } else {
           synchronized(this){
             if(bWaiting){
