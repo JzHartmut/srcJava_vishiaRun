@@ -75,6 +75,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   /**Version, history and license
    * <ul>
+   * <li>2012-04-08 Hartmut new: Support of GetValueByIdent, catch of some exception, 
    * <li>2012-04-05 Hartmut new: Use {@link LogMessage to test telegram trafic}
    * <li>2012-04-02 Hartmut all functionality from org.vishia.guiInspc.InspcGuiComm now here,
    *   the org.vishia.guiInspc.InspcGuiComm is deleted now.
@@ -312,23 +313,22 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   private boolean procComm(){
     boolean bRequest = false;
     bUserCalled = false;
+    long timeCurr = System.currentTimeMillis();
     idxRequestedVarFromTarget.clear();  //clear it, only new requests are pending then.
     for(Map.Entry<String,InspcVariable> entryVar: idxAllVars.entrySet()){
       InspcVariable var = entryVar.getValue();
       if(var.timeRequested >= timeReceived){  //only requests communication if the variable was requested:
         bRequest = true;
-        getValueFromTarget(var);
+        var.getValueFromTarget(timeCurr);
       }
-    }
-    if(bRequest){
-      if(inspcAccessor.isFilledTxTelg()){
-        inspcAccessor.sendAndAwaitAnswer();
-      }
-
     }
     Runnable userOrder;
     while( (userOrder = userOrders.poll()) !=null){
       userOrder.run();
+    }
+    if( !inspcAccessor.txCmdGetValueByIdent()  //calls sendAndAwaitAnswer internally 
+      && inspcAccessor.isFilledTxTelg()){       //only call if necessary
+        inspcAccessor.sendAndAwaitAnswer();     
     }
     
     if(user !=null){
@@ -352,13 +352,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   
   
-  void getValueFromTarget(InspcVariable var)  
-  { //check whether the widget has an comm action already. 
-    //First time a widgets gets its WidgetCommAction. Then for ever the action is kept.
-    String sPathComm = var.sPath  + ".";
-    idxRequestedVarFromTarget.put(var.sPath, var);
-    getValueByPath(sPathComm, var.rxAction);
-  }
   
   
   
@@ -395,6 +388,42 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       } 
     }    
   }
+  
+
+  
+  /**Prepares the info block to register a variable on the target device.
+   * @param sDataPath The data path on target
+   * @param actionOnRx receiving action, executing with the response info.
+   */
+  InspcAccessor registerByPath(String sDataPath, InspcAccessExecRxOrder_ifc actionOnRx){
+    int posSepDevice = sDataPath.indexOf(':');
+    if(posSepDevice >0){
+      String sDevice = sDataPath.substring(0, posSepDevice);
+      String sIpTargetNew = translateDeviceToAddrIp(sDevice); ///
+      if(sIpTargetNew == null){
+        errorDevice(sDevice);
+      } else {
+        if(sIpTarget == null){
+          sIpTarget = sIpTargetNew;
+          inspcAccessor.setTargetAddr(sIpTarget);
+        }
+      }
+      sDataPath = sDataPath.substring(posSepDevice +1);
+    }
+    //
+    if(sIpTarget !=null){
+      if(user !=null && !bUserCalled){  //call only one time per procComm()
+        user.requData(0);
+        bUserCalled = true;
+      }
+      //
+      //create the send command to target.
+      inspcAccessor.cmdRegisterByPath(sDataPath, actionOnRx);    
+    }    
+    return inspcAccessor;
+  }
+  
+
   
 
   
@@ -456,23 +485,28 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       synchronized(this){ try{ wait(100); } catch(InterruptedException exc){} }
       //now requests.
       bAllReceived = false;
-      if(procComm()){
-        synchronized(this){
-          if(!bAllReceived){ //NOTE: its possible that 
-            bThreadWaits = true;
-            try{ wait(100); } catch(InterruptedException exc){}
-            bThreadWaits = false;
+      try{
+        if(procComm()){
+          synchronized(this){
+            if(!bAllReceived){ //NOTE: its possible that 
+              bThreadWaits = true;
+              try{ wait(100); } catch(InterruptedException exc){}
+              bThreadWaits = false;
+            }
           }
         }
-      }
-      if(!bAllReceived){
-        stop();
-      }
-      timeReceived = System.currentTimeMillis();  //all requests after this time calls new variables.
-      if(callbackOnRxData !=null){
-        callbackOnRxData.run();         //show the received values.
-        //the next requests for variables will be set.
-        //It may be the same, it may be other.
+        if(!bAllReceived){
+          stop();
+        }
+        timeReceived = System.currentTimeMillis();  //all requests after this time calls new variables.
+        if(callbackOnRxData !=null){
+          callbackOnRxData.run();         //show the received values.
+          //the next requests for variables will be set.
+          //It may be the same, it may be other.
+        }
+      }catch(Exception exc){
+        System.err.println("InspcMng - runInspcThread - unexpected Exception; " + exc.getMessage());
+        exc.printStackTrace(System.err);
       }
     }
   }

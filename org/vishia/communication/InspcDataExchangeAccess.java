@@ -34,16 +34,44 @@ public class InspcDataExchangeAccess
 {
 
 	
-  /**The version history of this class:
+  /**Version, history and license
    * <ul>
+   * <li>2012-04-09 Hartmut new: Some enhancements, especially {@link Info#kGetValueByIndex} 
+   *   The {@link Info#setInfoHead(int, int, int)} and {@link Info#setLength(int)} now adjusts the
+   *   length of the element and parent in the {@link ByteDataAccess} data with the same.
+   *   Set this information at end of filling variable data in an Info item, then all is correct.
    * <li>2011-06-21 Hartmut new {@link SetValue} completed with set-methods. 
    *     Note: Because this class is used in Java2C for C-Programming, the short methods should be designated
    *     to use macros while translation Java2C.
    * <li>2011-01-01 Hartmut Translated to Java
    * <li>2005 Hartmut created for C-programming
    * </ul>
+   * <br><br>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
    */
-  final static int version = 0x20110502;
+  public static final int version = 20120409;
 
   	
 	/**Preparing the header of a datagram.
@@ -143,7 +171,7 @@ public class InspcDataExchangeAccess
 	 */
 	public static class Info extends ByteDataAccess
 	{
-
+    private final static int kbyteOrder = 4;
 		public final static int sizeofHead = 8;
 
 		/** Aufforderung zur Rückgabe einer Liste aller Attribute und Assoziationen des adressierten Objektes.
@@ -206,8 +234,23 @@ public class InspcDataExchangeAccess
 		
 		public final static int kFailedRegisterRepeat = 0x124;
 		
-		public final static int kGetValueByIndex = 0x25;
-		
+    public final static int kGetValueByIndex = 0x25;
+    
+    /**
+     * <pre>
+        ,  answer:
+        ,  +------head-8---------+-int-4-+-int-4-+---n-------+-int-4-+---n-------+
+        ,  |kAnswerValueByIndex  | ixVal | types | values    | types | values    |
+        ,  +---------------------+-------+-------+-----------+-------+-----------+
+     * <ul>
+     * <li>First byte after head is the start index of variable for answer. It is 0 for the first answer
+     *   info block. If the info block cannot contain all answers, a second info block in a second telegram
+     *   will be send which starts with its start index.
+     * <li>After them a block with up to 4 values follows. The first word of that block ///
+     *   contains 4 types of values, see {@link InspcDataExchangeAccess#kScalarTypes}. Especially the 
+     */
+    public final static int kAnswerValueByIndex = 0x125;
+    
 		public final static int kAnswerValue = 0x26;
 		
 		public final static int kFailedValue = 0x27;
@@ -219,7 +262,10 @@ public class InspcDataExchangeAccess
 		public final static int kSetValueByPath = 0x35;
 		
 		
-		
+    public final static int kFailedPath = 0xFe;
+    
+    public final static int kNoRessource = 0xFd;
+    
 		
 		public final static int kFailedCommand = 0xFF;
 
@@ -237,15 +283,23 @@ public class InspcDataExchangeAccess
 		{ return sizeofHead;
 		}
 		
-		public final void setInfoHead(int length, int cmd, int order)
+		/**Sets the head data and sets the length of the ByteDataAccess-element.
+		 * @param length The length in head, the length of the info element
+		 * @param cmd The cmd of the info element
+		 * @param order The order number to assign the answer.
+		 */
+		public final void setInfoHead(final int length, final int cmd, final int order)
 		{ setInt16(0, length); 
 		  setInt16(2, cmd); 
-		  setInt32(4, order); 
+		  setInt32(kbyteOrder, order);
+		  int lengthInfo = length >= sizeofHead ? length : sizeofHead;
+		  setLengthElement(lengthInfo);
 		}
 		
 		public final void setLength(int length)
 		{ setInt16(0, length); 
-		}
+	    setLengthElement(length);
+    }
 		
 		public final void setCmd(int cmd)
 		{ setInt16(2, cmd); 
@@ -255,7 +309,12 @@ public class InspcDataExchangeAccess
 		
 		public final int getLenInfo(){ return getInt16(0); }
 		
-		public final int getOrder(){ return getInt32(4); }
+		/**Gets the order number of the info block. A sending info is set with the
+		 * {@link #setInfoHead(int, int, int)} with any order identification number which is unified for the target
+		 *   in a proper time. The received info returns the same order ident.   
+		 * @return The order from this Info block.
+		 */
+		public final int getOrder(){ return getInt32(kbyteOrder); }
 		
 			
 	}
@@ -267,13 +326,20 @@ public class InspcDataExchangeAccess
 		 * A String item contains maximal 200 Bytes. */
 		public static final int maxNrOfChars = 0xc8;
 
-		/**A reference is the memory-address of an element in C-language
-		 * or a significant numeric Identifier of an object (instance) in Java.
-		 */
-		public static final int kReferenceAddr = 0xdf;
+    /**A reference is the memory-address of an element in C-language
+     * or a significant numeric Identifier of an object (instance) in Java.
+     */
+    public static final int kReferenceAddr = 0xdf;
+    
+    
+    /**This type identification designates that the value is not available.
+     */
+    public static final int kTypeNoValue = 0xde;
+    
+    
 		
 		/**Scalar types started with 0xe0,
-		 * see {@link org.vishia.byteData.}
+		 * see {@link org.vishia.reflect.ClassJc#REFLECTION_int32} etc.
 		 * 
 		 */
 		public static final int kScalarTypes = 0xe0;

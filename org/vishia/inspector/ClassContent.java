@@ -2,6 +2,7 @@ package org.vishia.inspector;
 
 import java.io.UnsupportedEncodingException;
 import org.vishia.bridgeC.MemSegmJc;
+import org.vishia.bridgeC.OS_TimeStamp;
 //import org.vishia.byteData.Field_Jc;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.inspector.SearchElement.SearchTrc;
@@ -20,6 +21,40 @@ import org.vishia.util.Java4C;
 public final class ClassContent implements CmdConsumer_ifc
 {
 
+  /**Version, history and license
+   * <ul>
+   * <li>2012-04-08 Hartmut new: Support of GetValueByIdent
+   * <li>2011-02-00 Hartmut created, converted from the C implementation.
+   * <li>2006-00-00 Hartmut created for C/C++
+   * </ul>
+   * <br><br>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   */
+  public static final int version = 20120409;
+
+  
   /**The Object from which the user-given path starts to search. 
    * See {@link SearchElement#searchObject(String, Object, FieldJc[], int[])}.
    * @java2c=simpleRef. */
@@ -40,7 +75,7 @@ public final class ClassContent implements CmdConsumer_ifc
   private int nrofAnswerBytes = 0; 
   
   /**Max number as parameter of call. */
-  private int maxNrofAnswerBytes;
+  //private int maxNrofAnswerBytes;
   
   /** @java2c=simpleRef. */
   private InspcDataExchangeAccess.Datagram answer;
@@ -56,8 +91,14 @@ public final class ClassContent implements CmdConsumer_ifc
   /**Buffer to prepare the answer in the answer of a telegram. */
   private final StringBuilder uAnswer = new StringBuilder(200);
   
+  /**Array of registered data access info items. @java2c = embeddedArrayElements. */
+  final InspcDataInfo[] registeredDataAccess = new InspcDataInfo[1024];
+  
   public ClassContent()
   { debugRemoteAccess = MemAccessArrayDebugJc.getSingleton();
+    for(int ii=0; ii<registeredDataAccess.length; ++ii){
+      registeredDataAccess[ii] = new InspcDataInfo();
+    }
   	//TODO: Java2C-problem because different array annotations ... 
   	 //TODO: searchTrc should be used an onw instanc with idx!!!
   	//debugSearchTrc = SearchElement.searchTrc;  //init with that static instance.
@@ -95,9 +136,15 @@ public final class ClassContent implements CmdConsumer_ifc
 			cmdSetValueByPath(cmd, answer, maxNrofAnswerBytes);
 			break;
 		case InspcDataExchangeAccess.Info.kGetAddressByPath:
-			cmdGetAddressByPath(cmd, answer, maxNrofAnswerBytes);
-			break;
-		default:
+      cmdGetAddressByPath(cmd, answer, maxNrofAnswerBytes);
+      break;
+    case InspcDataExchangeAccess.Info.kRegisterRepeat:
+      cmdRegisterRepeat(cmd, answer, maxNrofAnswerBytes);
+      break;
+    case InspcDataExchangeAccess.Info.kGetValueByIndex:
+      cmdGetValueByIndex(cmd, answer, maxNrofAnswerBytes);
+      break;
+    default:
     { /**Unknown command - answer is: kFailedCommand.
        * think over another variant: return 0 to use delegation pattern ...
        */
@@ -114,7 +161,7 @@ public final class ClassContent implements CmdConsumer_ifc
 	
 	private final int cmdGetFields(InspcDataExchangeAccess.Info cmd, InspcDataExchangeAccess.Datagram answer, int maxNrofAnswerBytes) 
 	{
-	  this.maxNrofAnswerBytes = maxNrofAnswerBytes;
+	  //this.maxNrofAnswerBytes = maxNrofAnswerBytes;
 	  this.answer = answer;
 	  int ixFieldStart;
 	  /**@java2c=nonPersistent.  */
@@ -235,7 +282,7 @@ public final class ClassContent implements CmdConsumer_ifc
         		/**Check whether an outer class exists. */
           	ClassJc outerObj = clazz.getEnclosingClass();
         		if(outerObj !=null){
-        			evaluateFieldGetFields("_outer", outerObj, 0, 0, nOrderNr);
+        			evaluateFieldGetFields("_outer", outerObj, 0, 0, nOrderNr, maxNrofAnswerBytes);
         		}
           }
           /**Gets the fields of the real class of the found reference-field. 
@@ -247,7 +294,7 @@ public final class ClassContent implements CmdConsumer_ifc
             if(ii< 0) { ii = 0; } 
             for(int ixField = 0; ixField < fields.length; ++ixField){
               /**Generates one entry per field in the answer telegram. */
-            	evaluateFieldGetFields(fields[ixField], nOrderNr);
+            	evaluateFieldGetFields(fields[ixField], nOrderNr, maxNrofAnswerBytes);
             }
           }
         }
@@ -263,21 +310,21 @@ public final class ClassContent implements CmdConsumer_ifc
 	
 	
 	
- 	private final void evaluateFieldGetFields(FieldJc field, int orderNr)
+ 	private final void evaluateFieldGetFields(FieldJc field, int orderNr, int maxNrofAnswerBytes)
  	{
  		//FieldJc field = new FieldJc(fieldP);   //regard container types
  		String name = field.getName();
  	  ClassJc typeField = field.getType();
  	  int modifiers = field.getModifiers();
  	  int staticArraySize = field.getStaticArraySize();
- 	  evaluateFieldGetFields(name, typeField, modifiers, staticArraySize, orderNr);
+ 	  evaluateFieldGetFields(name, typeField, modifiers, staticArraySize, orderNr, maxNrofAnswerBytes);
  	} 
  	  
  	
  	
  	
  	private final void evaluateFieldGetFields(String name, ClassJc typeField, int modifiers
- 		,int  staticArraySize, int orderNr
+ 		,int  staticArraySize, int orderNr, int maxNrofAnswerBytes
  	)
   {
  	  int modifContainertype = modifiers & ModifierJc.m_Containertype;
@@ -357,7 +404,7 @@ public final class ClassContent implements CmdConsumer_ifc
 		int nrofBytesCmd = cmd.getLenInfo();
 		/**@java2c=nonPersistent.  */
 		String sVariablePath = cmd.getChildString(nrofBytesCmd - InspcDataExchangeAccess.Info.sizeofHead);
-		getSetValueByPath(cmd, null, answer, sVariablePath);
+		getSetValueByPath(cmd, null, answer, sVariablePath, maxNrofAnswerBytes);
 		return 0;
 	}
 	
@@ -373,7 +420,7 @@ public final class ClassContent implements CmdConsumer_ifc
 		                                 - InspcDataExchangeAccess.SetValue.sizeofElement;
 		/**@java2c=nonPersistent.  */
 		String sVariablePath = cmd.getChildString(nrofBytesPath);
-		getSetValueByPath(cmd, setValue, answer, sVariablePath);
+		getSetValueByPath(cmd, setValue, answer, sVariablePath, maxNrofAnswerBytes);
 		return 0;
 	}
 	
@@ -383,7 +430,8 @@ public final class ClassContent implements CmdConsumer_ifc
 		InspcDataExchangeAccess.Info cmd
 		, InspcDataExchangeAccess.SetValue accSetValue
 		, InspcDataExchangeAccess.Datagram answer
-		, String sVariablePath) 
+		, String sVariablePath
+		, int maxNrofAnswerBytes) 
 	throws IllegalArgumentException, UnsupportedEncodingException 
 	{
 		int nOrderNr =cmd.getOrder();
@@ -393,7 +441,6 @@ public final class ClassContent implements CmdConsumer_ifc
 	  final FieldJc[] theFieldP = new FieldJc[1];
 		final MemSegmJc theObject = new MemSegmJc();
     /**@java2c=nonPersistent.  */
-		String sValue;
 		int memSegment = 0;
     int idxOutput = 0;
     int maxIdxOutput = 1200; //note: yet a full telegramm can be used.      
@@ -406,154 +453,11 @@ public final class ClassContent implements CmdConsumer_ifc
       idx = idxP[0];
       if(theObject.obj() != null && theField !=null)
       { 
-      	ClassJc type = theField.getType();
-        int modifier = theField.getModifiers();
-        //add the answer-item-head. The rest is specific for types.
         answer.addChild(answerItem);
-        answerItem.setInfoHead(0, InspcDataExchangeAccess.Info.kAnswerValue, nOrderNr);
-      	
-        if(type.isPrimitive()){
-        	String sType = type.getName();
-        	char cType = sType.charAt(0);
-        	switch(cType){
-        	case 'v':   //void, handle as int
-        	case 'i': { //int
-        		int value;
-        		if(accSetValue !=null){
-        			int setValue = accSetValue.getInt();  //the value to set
-        			value = theField.setInt(theObject, setValue, idx);
-        		} else {
-        		  value = theField.getInt(theObject, idx);
-        		}
-        		answerItem.addChildInteger(1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int32);  //Set the number of char-bytes in 1 byte
-        		answerItem.addChildInteger(4, value); 
-        		sValue = null;
-        	} break;
-        	case 'c': { //int
-        		char value;
-        		if(accSetValue !=null){
-        			char setValue = (char)accSetValue.getByte();  //the value to set
-        			value = theField.setChar(theObject, setValue, idx);
-        		} else {
-        		  value = theField.getChar(theObject, idx);
-        		}
-        		answerItem.addChildInteger(1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16);  //Set the number of char-bytes in 1 byte
-        		answerItem.addChildInteger(2, (short)value); 
-        		sValue = null;
-        	} break;
-        	case 's': {  //short
-        		int value;
-        		if(accSetValue !=null){
-        			short setValue = accSetValue.getShort();  //the value to set
-        			value = theField.setShort(theObject, setValue, idx);
-        		} else {
-        		  value = theField.getShort(theObject, idx);
-        		}
-        		answerItem.addChildInteger(1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16);  //Set the number of char-bytes in 1 byte
-        		answerItem.addChildInteger(2, value); 
-        		sValue = null;
-        	} break;
-        	case 'l': {  //long, it is int64
-        		long value = theField.getInt64(theObject, idx);
-        		//TODO long won't supported by ReflectPro, use int
-        		answerItem.addChildInteger(1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int32); //64);  //Set the number of char-bytes in 1 byte
-        		answerItem.addChildInteger(4, value);  //8 
-        		sValue = null;
-        	} break;
-        	case 'f': {  //float
-        		float valuef;
-        		if(accSetValue !=null){
-        			float setValue = (float)accSetValue.getDouble();  //the value to set
-        			valuef = theField.setFloat(theObject, setValue, idx);
-        		} else {
-        		  valuef = theField.getFloat(theObject, idx);
-        		}
-        		int value = Float.floatToRawIntBits(valuef);
-        		answerItem.addChildInteger(1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float);  //Set the number of char-bytes in 1 byte
-        		answerItem.addChildInteger(4, value); 
-        		sValue = null;
-        	} break;
-        	case 'd': {  //double  TODO 'd' 
-        		double fvalue;
-        		if(accSetValue !=null){
-        			double setValue = accSetValue.getDouble();  //the value to set
-        			fvalue = theField.setDouble(theObject, setValue, idx);
-        		} else {
-        		  fvalue = theField.getDouble(theObject, idx);
-        		}
-        		boolean fixme = true;
-        		if(fixme){
-        			int value = Float.floatToRawIntBits((float)fvalue);  //send as float, Problem of ReflectPro
-          		answerItem.addChildInteger(1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float);  //Set the number of char-bytes in 1 byte
-          		answerItem.addChildInteger(4, value); 
-          	} else {
-	        		long value = Double.doubleToLongBits(fvalue);
-	        		answerItem.addChildInteger(1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_double);  //Set the number of char-bytes in 1 byte
-	        		answerItem.addChildInteger(8, value); 
-        		}
-	        	sValue = null;
-        	} break;
-        	case 'b': switch(sType.charAt(1)){//boolean or byte or bitField
-        		case 'o': { //boolean
-        			boolean value;
-          		if(accSetValue !=null){
-          			boolean setValue = accSetValue.getShort() !=0;  //the value to set
-          			value = theField.setBoolean(theObject, setValue, idx);
-          		} else {
-          		  value = theField.getBoolean(theObject, idx);
-          		}
-          		int value1 = value ? 1 : 0;
-          		answerItem.addChildInteger(1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16);  //Set the number of char-bytes in 1 byte
-          		answerItem.addChildInteger(2, value1); 
-          		sValue = null;
-          	} break;
-          	case 'y': { //byte
-          		short value = theField.getByte(theObject, idx);
-          		answerItem.addChildInteger(1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16);  //Set the number of char-bytes in 1 byte
-          		answerItem.addChildInteger(2, value); 
-          		sValue = null;
-          	} break;
-          	case 'i': { //bitfield
-          		short value;
-          		if(accSetValue !=null){
-          			short setValue = accSetValue.getShort();  //the value to set
-          			value = theField.setBitfield(theObject, setValue, idx);
-          		} else {
-          		  value = theField.getBitfield(theObject, idx);
-          		}
-          		answerItem.addChildInteger(1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16);  //Set the number of char-bytes in 1 byte
-          		answerItem.addChildInteger(2, value); 
-          		sValue = null;
-          	} break;
-          	default: {
-          		sValue = "?unknownPrimitiveType?";
-          	}
-          } break;
-        	default: {
-        		sValue = "?unknownPrimType?";
-        	}
-        	}//switch
-        } else { //it is a complex type, not a numeric.
-        	sValue = theField.getString(theObject, idx);
-        }
-        if(sValue !=null){
-        	int zValue = sValue.length();
-        	if(zValue > InspcDataExchangeAccess.maxNrOfChars){
-        		zValue = InspcDataExchangeAccess.maxNrOfChars;
-        		sValue = sValue.substring(0, zValue);
-        	}
-        	int zInfo = zValue+1+InspcDataExchangeAccess.Info.sizeofHead;
-        	answerItem.addChildInteger(1, zValue);  //Set the number of char-bytes in 1 byte
-        	answerItem.addChildString(sValue);  //Set the character String after them.
-        }
-        answerItem.setLength(answerItem.getLength());  //the length of the answerItems in byte.
-        /*
-        MemSegmJc adr;
-        if(idx < 0 || ModifierJc.isStaticEmbeddedArray(modifier)){
-          adr = getMemoryAddress_FieldJc(theField,theObject, false, idx);
-        }
-        */
-         
+        getSetValue(theField, idx, theObject, accSetValue, maxNrofAnswerBytes);
+        int nBytesItem = answerItem.getLength();
+        answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Info.kAnswerValue, nOrderNr);
+
       }
     }catch(Exception exc){
     	/**Unexpected ...*/
@@ -564,6 +468,226 @@ public final class ClassContent implements CmdConsumer_ifc
 		
 	  return 0;
 	}	
+	
+	
+	
+	/**Sets the value if accSetValue is not null, fills the {@link #answerItem} with the read value.
+	 * @param theField describes the field to access
+	 * @param idx with this index
+	 * @param theObject in this object
+	 * @param accSetValue null or given set value.
+	 * @param maxNrofAnswerBytes 
+	 * @return true if this information has space in the current telgram, false if not.
+	 * @throws IllegalArgumentException
+	 * @throws IllegalAccessException
+	 */
+	private boolean getSetValue(final FieldJc theField, int idx, final MemSegmJc theObject
+	   , InspcDataExchangeAccess.SetValue accSetValue
+	   , int maxNrofAnswerBytes
+	) throws IllegalArgumentException, IllegalAccessException
+	{
+	  ClassJc type = theField.getType();
+    int modifier = theField.getModifiers();
+    String sValue = null;
+    boolean bOk;
+    int actLenTelg = answerItem.getLengthTotal();
+    int restLen = maxNrofAnswerBytes - actLenTelg;
+    int nType;
+    //add the answer-item-head. The rest is specific for types.
+    if(type.isPrimitive()){
+      String sType = type.getName();
+      char cType = sType.charAt(0);
+      switch(cType){
+      case 'v':   //void, handle as int
+      case 'i': { //int
+        bOk = restLen >=5;
+        if(bOk){
+          int value;
+          if(accSetValue !=null){
+            int setValue = accSetValue.getInt();  //the value to set
+            value = theField.setInt(theObject, setValue, idx);
+          } else {
+            value = theField.getInt(theObject, idx);
+          }
+          nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int32;
+          answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+          answerItem.addChildInteger(4, value); 
+          sValue = null;
+        }
+      } break;
+      case 'c': { //int
+        bOk = restLen >=3;
+        if(bOk){
+          char value;
+          if(accSetValue !=null){
+            char setValue = (char)accSetValue.getByte();  //the value to set
+            value = theField.setChar(theObject, setValue, idx);
+          } else {
+            value = theField.getChar(theObject, idx);
+          }
+          nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16;
+          answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+          answerItem.addChildInteger(2, (short)value); 
+          sValue = null;
+        }
+      } break;
+      case 's': {  //short
+        bOk = restLen >=3;
+        if(bOk){
+          int value;
+          if(accSetValue !=null){
+            short setValue = accSetValue.getShort();  //the value to set
+            value = theField.setShort(theObject, setValue, idx);
+          } else {
+            value = theField.getShort(theObject, idx);
+          }
+          nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16;
+          answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+          answerItem.addChildInteger(2, value); 
+          sValue = null;
+        }
+      } break;
+      case 'l': {  //long, it is int64
+        bOk = restLen >=5;  //TODO 9
+        if(bOk){
+          long value = theField.getInt64(theObject, idx);
+          //TODO long won't supported by ReflectPro, use int
+          nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int32;
+          answerItem.addChildInteger(1, nType); //64);  //Set the number of char-bytes in 1 byte
+          answerItem.addChildInteger(4, value);  //8 
+          sValue = null;
+        }
+      } break;
+      case 'f': {  //float
+        bOk = restLen >=5;
+        if(bOk){
+          float valuef;
+          if(accSetValue !=null){
+            float setValue = (float)accSetValue.getDouble();  //the value to set
+            valuef = theField.setFloat(theObject, setValue, idx);
+          } else {
+            valuef = theField.getFloat(theObject, idx);
+          }
+          int value = Float.floatToRawIntBits(valuef);
+          nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float;
+          answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+          answerItem.addChildInteger(4, value); 
+          sValue = null;
+        }
+      } break;
+      case 'd': {  //double  TODO 'd' 
+        bOk = restLen >=9;
+        if(bOk){
+          double fvalue;
+          if(accSetValue !=null){
+            double setValue = accSetValue.getDouble();  //the value to set
+            fvalue = theField.setDouble(theObject, setValue, idx);
+          } else {
+            fvalue = theField.getDouble(theObject, idx);
+          }
+          boolean fixme = true;
+          if(fixme){
+            int value = Float.floatToRawIntBits((float)fvalue);  //send as float, Problem of ReflectPro
+            nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float;
+            answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+            answerItem.addChildInteger(4, value); 
+          } else {
+            long value = Double.doubleToLongBits(fvalue);
+            nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_double;
+            answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+            answerItem.addChildInteger(8, value); 
+          }
+          sValue = null;
+        }
+      } break;
+      case 'b': switch(sType.charAt(1)){//boolean or byte or bitField
+        case 'o': { //boolean
+          bOk = restLen >=3;
+          if(bOk){
+            boolean value;
+            if(accSetValue !=null){
+              boolean setValue = accSetValue.getShort() !=0;  //the value to set
+              value = theField.setBoolean(theObject, setValue, idx);
+            } else {
+              value = theField.getBoolean(theObject, idx);
+            }
+            int value1 = value ? 1 : 0;
+            nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16;
+            answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+            answerItem.addChildInteger(2, value1); 
+            sValue = null;
+          }
+        } break;
+        case 'y': { //byte
+          bOk = restLen >=3;
+          if(bOk){
+            short value = theField.getByte(theObject, idx);
+            nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16;
+            answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+            answerItem.addChildInteger(2, value); 
+            sValue = null;
+          }
+        } break;
+        case 'i': { //bitfield
+          bOk = restLen >=3;
+          if(bOk){
+            short value;
+            if(accSetValue !=null){
+              short setValue = accSetValue.getShort();  //the value to set
+              value = theField.setBitfield(theObject, setValue, idx);
+            } else {
+              value = theField.getBitfield(theObject, idx);
+            }
+            nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16;
+            answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+            answerItem.addChildInteger(2, value); 
+            sValue = null;
+          }
+        } break;
+        default: {
+          bOk = restLen >=1;
+          if(bOk){
+            nType = InspcDataExchangeAccess.kTypeNoValue;
+            answerItem.addChildInteger(1, nType);  
+            sValue = null; //"?unknownPrimitiveType?";
+          }
+        }
+      } break;
+      default: {
+        bOk = restLen >=1;
+        if(bOk){
+          nType = InspcDataExchangeAccess.kTypeNoValue;
+          answerItem.addChildInteger(1, nType);  
+          sValue = null; //"?unknownPrimType?";
+        }
+      }
+      }//switch
+    } else { //it is a complex type, not a numeric.
+      sValue = theField.getString(theObject, idx);
+      bOk = true;
+    }
+    if(sValue !=null){
+      int zValue = sValue.length();
+      if(zValue > InspcDataExchangeAccess.maxNrOfChars){
+        zValue = InspcDataExchangeAccess.maxNrOfChars;
+        sValue = sValue.substring(0, zValue);
+      }
+      bOk = restLen >= zValue +1;
+      if(bOk){
+        int zInfo = zValue+1+InspcDataExchangeAccess.Info.sizeofHead;
+        nType = zValue;
+        answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+        answerItem.addChildString(sValue);  //Set the character String after them.
+      }
+    }
+    /*
+    MemSegmJc adr;
+    if(idx < 0 || ModifierJc.isStaticEmbeddedArray(modifier)){
+      adr = getMemoryAddress_FieldJc(theField,theObject, false, idx);
+    }
+    */
+    return bOk;
+	}
 	
 	
 	
@@ -617,9 +741,133 @@ public final class ClassContent implements CmdConsumer_ifc
 	
 
 	
+	int cmdRegisterRepeat(InspcDataExchangeAccess.Info cmd
+    , InspcDataExchangeAccess.Datagram answer, int maxNrofAnswerBytes) 
+  throws IllegalArgumentException, UnsupportedEncodingException 
+	{
+    int nrofBytesCmd = cmd.getLenInfo();
+    int nrofBytesPath = nrofBytesCmd - InspcDataExchangeAccess.Info.sizeofHead;
+    /**@java2c=nonPersistent.  */
+    String sVariablePath = cmd.getChildString(nrofBytesPath);
+    int nOrderNr =cmd.getOrder();
+    /**@java2c=nonPersistent.  */
+    FieldJc theField = null;
+    /**@java2c=stackInstance, simpleArray.  */
+    final FieldJc[] theFieldP = new FieldJc[1];
+    final MemSegmJc theObject = new MemSegmJc();
+    /**@java2c=nonPersistent.  */
+    String sValue;
+    int memSegment = 0;
+    int idxOutput = 0;
+    int maxIdxOutput = 1200; //note: yet a full telegramm can be used.      
+    try{
+      int idx;
+      /**@java2c=stackInstance, simpleArray.  */
+      final int[] idxP = new int[1];
+      theObject.set(SearchElement.searchObject(sVariablePath, rootObj, theFieldP, idxP));
+      theField = theFieldP[0];
+      idx = idxP[0];
+      answer.addChild(answerItem);
+      answerItem.setInfoHead(0, InspcDataExchangeAccess.Info.kAnswerRegisterRepeat, nOrderNr);
+      if(theObject.obj() != null && theField !=null)
+      { 
+        ClassJc type = theField.getType();
+        int modifier = theField.getModifiers();
+        int addr = theField.getMemoryIdent(theObject, idxP[0]);
+      
+      
+        int ixReg = 0;
+        InspcDataInfo freeOrder = null;
+        int currentTime = OS_TimeStamp.os_getSeconds();
+        /**Search a free position in the static array: */
+        int ixRegLast = 0;
+        int diffLast = 0;
+        while(freeOrder == null && ixReg < registeredDataAccess.length)
+        { InspcDataInfo order = registeredDataAccess[ixReg];
+          int lastUsed = currentTime - order.lastUsed;
+          if( (lastUsed) > 3600 ){
+            freeOrder = order;
+          }
+          else { 
+            if(lastUsed > diffLast){
+              diffLast = lastUsed;
+              ixRegLast = ixReg;
+            }
+            ixReg +=1;
+          }
+        }
+        if(freeOrder == null)
+        { //no registerItem found which is older than 1 our:
+          ixReg = ixRegLast;  //get the oldest one.
+          freeOrder = registeredDataAccess[ixReg];
+        }
+        freeOrder.lastUsed = currentTime;
+        freeOrder.addrValue = theField;
+        freeOrder.addr = theObject;
+        //freeOrder.timeout_millisec = 5000;  //after 5 seconds, forget it.
+        freeOrder.check +=1; //change it to detect old requests at same index.
+        int ixAnswer = ixReg | (freeOrder.check <<12);
+        answerItem.addChildInteger(4, ixAnswer); 
+        getSetValue(theField, idx, theObject, null, maxNrofAnswerBytes);
+        answerItem.setLength(answerItem.getLength());  //the length of the answerItems in byte.
+      } else { 
+        answerItem.setCmd(InspcDataExchangeAccess.Info.kFailedPath);
+      }
+      answerItem.setLength(answerItem.getLength());  //the length of the answerItems in byte.
+      
+    } catch(Exception exc){
+      /**Unexpected ...*/
+      System.out.println("ClassContent-getValueByPath - unexpected:");
+      exc.printStackTrace();
+    }
+  
+    return 0;
+  }
+
+
 	
-	
-	
+	int cmdGetValueByIndex(InspcDataExchangeAccess.Info cmd
+    , InspcDataExchangeAccess.Datagram answer, int maxNrofAnswerBytes) 
+  throws IllegalArgumentException, UnsupportedEncodingException
+  {
+    int nrofVariable = (cmd.getLenInfo() - InspcDataExchangeAccess.Info.sizeofHead) / 4; 
+    //cyclTime_MinMaxTime_Fwc(timeValueRepeat);
+    try
+    { int idxOutput = 0;
+      int idx;
+      boolean bOk = true;
+      int nOrderNr =cmd.getOrder();
+      answer.addChild(answerItem);  ///
+      answerItem.addChildInteger(4, 0);  //TODO more as one telg.
+      while(cmd.sufficingBytesForNextChild(4)){
+      //for(idx = 0; bOk && idx < nrofVariable; idx++)
+        int idxReq = (int)cmd.getChildInteger(4); //getInt16BigEndian(&input->ixAccess[idx].ix);  //the requestions of objmoni access
+        int idxDataAccess = idxReq & 0x0fff;
+        int check = (idxReq >> 12) & 0xfffff;
+        InspcDataInfo order = registeredDataAccess[idxDataAccess];
+        //TODO check if it matches in space of telegram!
+        if(check == order.check && order.addrValue !=null){
+          getSetValue(order.addrValue, 0, order.addr, null, maxNrofAnswerBytes);
+        } else {
+          //The ident is faulty. Any ident request should have its answer.
+          answerItem.addChildInteger(1, InspcDataExchangeAccess.kTypeNoValue);
+        }
+      }//while
+      int nBytesItem = answerItem.getLength();
+      answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Info.kAnswerValueByIndex, nOrderNr);
+    } catch(IllegalAccessException exc){
+      System.err.println("ClassContent - cmdGetValueByIndex; Unexpected IllegalAccessException");
+    }
+    return 0;
+  }
+
+
+
+
+
+
+
+
 	
 	final void stop(){}
 	

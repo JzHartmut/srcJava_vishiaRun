@@ -141,22 +141,27 @@ public class Comm implements Runnable
       //----> receiveData(...)
       //
       state = 'r';  //receive
-	  	ipcMtbl.receiveData(this.nrofBytesReceived, this.rxBuffer, this.myAnswerAddress);
-      if(state !='x'){
-  	  	if(nrofBytesReceived[0] <0){ //error situation
-          //it is possible that a send request has failed because the destination port is not
-        	//able to reach any more. Therefore wait a moment and listen new
-        	state = 'e';  //prevent send
-          //wait a moment! If it is a permanent error, a loop can be occur. Prevent it. Let other threads work.
-        	try{ Thread.sleep(50); } catch(InterruptedException exc){}
-        	state = 'r';
-          //
-          //cmdExecuterMtbl.executeCmd(rxBuffer, nrofBytesReceived[0]);
-        } else {
-        	cmdExecuterMtbl.executeCmd(rxBuffer, nrofBytesReceived[0]);      
-  	      //unnecessary because usage receiveData: ipcMtbl.freeData(rxBuffer);
-  	    }
-      }
+	  	try{
+        ipcMtbl.receiveData(this.nrofBytesReceived, this.rxBuffer, this.myAnswerAddress);
+        if(state !='x'){
+    	  	if(nrofBytesReceived[0] <0){ //error situation
+            //it is possible that a send request has failed because the destination port is not
+          	//able to reach any more. Therefore wait a moment and listen new
+          	state = 'e';  //prevent send
+            //wait a moment! If it is a permanent error, a loop can be occur. Prevent it. Let other threads work.
+          	try{ Thread.sleep(50); } catch(InterruptedException exc){}
+          	state = 'r';
+            //
+            //cmdExecuterMtbl.executeCmd(rxBuffer, nrofBytesReceived[0]);
+          } else {
+          	cmdExecuterMtbl.executeCmd(rxBuffer, nrofBytesReceived[0]);      
+    	      //unnecessary because usage receiveData: ipcMtbl.freeData(rxBuffer);
+    	    }
+        }
+	  	} catch(Exception exc){
+	  	  System.err.println("Inspc-Comm unexpected Exception; " + exc.getMessage());
+	  	  exc.printStackTrace(System.err);
+	  	}
 	  }//while state !='x'
 	}
 

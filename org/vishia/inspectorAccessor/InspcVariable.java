@@ -1,5 +1,7 @@
 package org.vishia.inspectorAccessor;
 
+import java.util.Map;
+
 import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.msgDispatch.LogMessage;
@@ -9,6 +11,7 @@ public class InspcVariable implements VariableAccess_ifc
   
   /**Version, history and license
    * <ul>
+   * <li>2012-04-08 Hartmut new: Support of GetValueByIdent
    * <li>2012-03-31 Hartmut created. See {@link InspcMng#version}. 
    * </ul>
    * <br><br>
@@ -55,41 +58,62 @@ public class InspcVariable implements VariableAccess_ifc
      */
     @Override public void execInspcRxOrder(InspcDataExchangeAccess.Info info, LogMessage log, int identLog)
     {
-      String sShow;
-      int order = info.getOrder();
+      //String sShow;
+      //int order = info.getOrder();
       int cmd = info.getCmd();
       //if(widgd instanceof GralLed){
         
       //}
-      if(cmd == InspcDataExchangeAccess.Info.kAnswerValue){
-        int typeInspc = InspcAccessEvaluatorRxTelg.getInspcTypeFromRxValue(info);
-        InspcVariable.this.cType = InspcAccessEvaluatorRxTelg.getTypeFromInspcType(typeInspc);
-        if("BSI".indexOf(cType) >=0){
-          valueI = InspcAccessEvaluatorRxTelg.valueIntFromRxValue(info, typeInspc);
-          valueF = valueI;
-        } else { 
-          valueF = InspcAccessEvaluatorRxTelg.valueFloatFromRxValue(info, typeInspc);
-          valueI = (int)valueF;
-        }
-        if(log !=null){
-          log.sendMsg(identLog, "InspcVariable - receive; variable=%s, type=%c, val = %8X = %d = %f", sPath, cType, valueI, valueI, valueF);
-        }
-        varMng.variableIsReceived(InspcVariable.this);
-      }
+      switch(cmd){
+        case InspcDataExchangeAccess.Info.kAnswerRegisterRepeat: {
+          int ident = (int)info.getChildInteger(4);
+          InspcVariable.this.idTarget = ident;
+        } //no break, use next case too!
+        //$FALL-THROUGH$
+        case InspcDataExchangeAccess.Info.kAnswerValueByIndex:  //same handling, though only one of some values are gotten.
+        case InspcDataExchangeAccess.Info.kAnswerValue: {
+          int typeInspc = InspcAccessEvaluatorRxTelg.getInspcTypeFromRxValue(info);
+          InspcVariable.this.cType = InspcAccessEvaluatorRxTelg.getTypeFromInspcType(typeInspc);
+          if("BSI".indexOf(cType) >=0){
+            valueI = InspcAccessEvaluatorRxTelg.valueIntFromRxValue(info, typeInspc);
+            valueF = valueI;
+          } else { 
+            valueF = InspcAccessEvaluatorRxTelg.valueFloatFromRxValue(info, typeInspc);
+            valueI = (int)valueF;
+          }
+          if(log !=null){
+            log.sendMsg(identLog, "InspcVariable - receive; variable=%s, type=%c, val = %8X = %d = %f", sPath, cType, valueI, valueI, valueF);
+          }
+          varMng.variableIsReceived(InspcVariable.this);
+        } break;
+      }//switch
     }
   }
- 
 
-  final VariableRxAction rxAction = new VariableRxAction();
+  
+  
+  /*package private*/ final VariableRxAction rxAction = new VariableRxAction();
   
   /**The path of the variable in the target system. */
   String sPath;
+
+  InspcAccessor targetAccessor;
   
+  /**If not -1 then it is the identification of the variable in the target device.
+   * The the value can be gotten calling getValueByIdent().
+   */
+  int idTarget = -1;
+  
+  /**Timestamp in milliseconds after 1970 when the variable was requested. 
+   * A value may be gotten only if a new request is pending. */
   long timeRequested;
   
+  long timeSet;
   
+  /**The value from the target device. */
   float valueF;
 
+  /**The value from the target device. */
   int valueI;
   
   /**The type depends from the type in the target device. It is set if any answer is gotten. 
@@ -106,6 +130,32 @@ public class InspcVariable implements VariableAccess_ifc
     this.varMng = mng;
     this.sPath = sPath;
   }
+  
+  
+  void getValueFromTarget(long timeCurrent)  
+  { //check whether the widget has an comm action already. 
+    //First time a widgets gets its WidgetCommAction. Then for ever the action is kept.
+    if(idTarget !=-1){
+      targetAccessor.cmdGetValueByIdent(this.idTarget, this.rxAction);
+    } else if(idTarget ==-2){
+      //get by ident is not supported:
+      String sPathComm = this.sPath  + ".";
+      Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
+      idx.put(this.sPath, this);
+      varMng.getValueByPath(sPathComm, this.rxAction);
+    } else {
+      //register the variable in the target system:
+      String sPathComm = this.sPath  + ".";
+      Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
+      idx.put(this.sPath, this);
+      targetAccessor = varMng.registerByPath(sPathComm, this.rxAction);
+      
+    }
+  }
+  
+  
+  
+
   
   @Override
   public double getDouble(int... ixArray)

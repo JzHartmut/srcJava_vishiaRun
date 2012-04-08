@@ -2,7 +2,10 @@ package org.vishia.inspectorAccessor;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
+import org.vishia.byteData.ByteDataAccess;
+import org.vishia.byteData.ByteDataAccessSimple;
 import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.Address_InterProcessComm_Socket;
 import org.vishia.communication.InspcDataExchangeAccess;
@@ -14,11 +17,23 @@ import org.vishia.inspector.InspcTelgInfoSet;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.ClassJc;
 
+/**An instance of this class accesses any target device via InterProcessCommunication, usual Ethernet-Sockets.
+ * This class creates opens the {@link InterProcessComm} and creates a receiving thread. 
+ * Any send requests are invoked from the environment. A send request usual contains
+ * a reference to a {@link InspcAccessExecRxOrder_ifc}. 
+ * Thats {@link InspcAccessExecRxOrder_ifc#execInspcRxOrder(Info, LogMessage, int)} is executed
+ * if the response info block is received. With the order-number-concept see {@link InspcDataExchangeAccess.Info#getOrder()} 
+ * the request and the response are associated together.
+ *  
+ * @author Hartmut Schorrig
+ *
+ */
 public class InspcAccessor implements Closeable
 {
 	
-  /**The version history of this class:
+  /**The versionm history and license of this class:
    * <ul>
+   * <li>2012-04-08 Hartmut new: Support of GetValueByIdent
    * <li>2012-04-05 Hartmut new: Use {@link LogMessage to test telegram trafic}
    * <li>2012-04-02 Hartmut new: {@link #sendAndPrepareCmdSetValueByPath(String, long, int, InspcAccessExecRxOrder_ifc)}.
    *   The concept is: provide the {@link InspcAccessExecRxOrder_ifc} with the send request.
@@ -28,8 +43,31 @@ public class InspcAccessor implements Closeable
    *     It improves the handling with info blocks in a telegram.
    * <li>2011-05 Hartmut created
    * </ul>
+   * <br><br>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  final static int version = 0x20110502;
+  final static int version = 20120406;
 
   /**If true then writes a log of all send and received telegrams. */
   LogMessage logTelg;
@@ -66,6 +104,28 @@ public class InspcAccessor implements Closeable
 	
 	private final InspcDataExchangeAccess.Datagram txAccess = new InspcDataExchangeAccess.Datagram();
 	
+	
+	/**Number of idents to get values per ident. It determines the length of an info block,
+	 * see {@link #dataInfoDataGetValueByIdent}. An info block has to be no longer than a UDP-telegram.
+	 */
+	private final static int zIdent4GetValueByIdent = 320;
+	
+	private int ixIdent5GetValueByIdent;
+	
+	/**A info element to get values by ident It contains a {@link InspcDataExchangeAccess.Info} head
+	 * and then 4-byte-idents for data. The same order of data are given in the array
+	 */
+	private final byte[] dataInfoDataGetValueByIdent = new byte[InspcDataExchangeAccess.Info.sizeofHead + 4 * zIdent4GetValueByIdent]; 
+	
+	
+	//ByteBuffer acc4ValueByIdent = new ByteBuffer();
+	
+	/**Managing instance of {@link ByteDataAccess} for {@link #dataInfoDataGetValueByIdent}. */
+	private final ByteDataAccess accInfoDataGetValueByIdent = new ByteDataAccessSimple(dataInfoDataGetValueByIdent, true);
+	
+	private final InspcAccessExecRxOrder_ifc[] actionRx4GetValueByIdent = new InspcAccessExecRxOrder_ifc[zIdent4GetValueByIdent]; 
+	//InspcVariable[] variable4GetValueByIdent = new InspcVariable[zIdent4GetValueByIdent];
+	
 	/**The entrant is the sub-consumer of a telegram on the device with given IP.
 	 * A negative number is need because compatibility with oder telegram structures.
 	 * The correct number depends on the device. It is a user parameter of connection.
@@ -92,6 +152,7 @@ public class InspcAccessor implements Closeable
 		this.rxEval = inspcRxEval;
 		txAccess.assignEmpty(txBuffer);
 		this.infoAccess = new InspcTelgInfoSet();
+		
     //The factory should be loaded already. Then the instance is able to get. Loaded before!
 	}
 
@@ -187,6 +248,39 @@ public class InspcAccessor implements Closeable
     }
   }
   
+
+  
+  /**Checks whether the head of the datagram should be created and the telegram has place for the current data.
+   * This routine is called at begin of all cmd...() routines of this class. 
+   * <ul>
+   * <li>Creates the head if if necessary.
+   * <li>Sets {@link #bFillTelg}, able to query with {@link isFilledTxTelg()}.
+   * <li>Checks whether the requested bytes are able to fill in the telegram.
+   * <li>Sets {@link #bShouldSend} able to query with {@link shouldSend()} if the info doesn't fit in the telegram.
+   * </ul>
+   * @param zBytesInfo Number of bytes to add to the telegram.
+   * @return true if the number of bytes are able to place in the current telegram.
+   *         If this routine returns false, the info can't be place in this telegram.
+   *         It should be send firstly. The current order should be processed after them.
+   */
+  private int prepareTelg(int lengthNewInfo)
+  { if(bFillTelg && (txAccess.getLengthTotal() + lengthNewInfo) > txBuffer.length){
+      //the next requested info does not fit in the current telg. 
+      //Therefore send the current telg, wait for answer.
+      sendAndAwaitAnswer();
+    }
+    if(!bFillTelg){
+      txAccess.assignEmpty(txBuffer);
+      if(++nSeqNumber == 0){ nSeqNumber = 1; }
+      txAccess.setHead(nEntrant, nSeqNumber, nEncryption);
+      bFillTelg = true;
+      return txBuffer.length - txAccess.getLengthHead();
+    }
+    int lengthDatagram = txAccess.getLengthTotal();
+    
+    return txBuffer.length - lengthDatagram;
+  }
+  
 	/**Returns true if enough information blocks are given, so that a telegram was sent already.
 	 * A second telegram may be started to prepare with the last call. 
 	 * But it should be waited for the answer firstly.  
@@ -221,6 +315,82 @@ public class InspcAccessor implements Closeable
   }
   
   
+  
+  /**Adds the info block to send 'register by path'
+   * @param sPathInTarget
+   * @return The order number. 0 if the cmd can't be created because the telegram is full.
+   */
+  public int cmdRegisterByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
+  { final int order;
+    final int zPath = sPathInTarget.length();
+    final int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
+    prepareTelg(zPath + restChars);
+    order = orderGenerator.getNewOrder();
+    rxEval.setExpectedOrder(order, actionOnRx);
+    txAccess.addChild(infoAccess);  
+    infoAccess.addChildString(sPathInTarget);
+    if(restChars >0) { infoAccess.addChildInteger(restChars, 0); }
+    final int zInfo = infoAccess.getLength();
+    infoAccess.setInfoHead(zInfo, InspcDataExchangeAccess.Info.kRegisterRepeat, order);
+    //
+    if(logTelg !=null){ 
+      logTelg.sendMsg(identLogTelg, "send registerByPath %s, order = %d", sPathInTarget, order); 
+    }
+    return order;
+  }
+  
+  
+  
+  /**Adds the info block to send 'register by path'
+   * @param sPathInTarget
+   * @return The order number. 0 if the cmd can't be created because the telegram is full.
+   */
+  public void cmdGetValueByIdent(int ident, InspcAccessExecRxOrder_ifc actionOnRx)
+  { if(ixIdent5GetValueByIdent >= actionRx4GetValueByIdent.length){
+      txCmdGetValueByIdent();
+    }
+    actionRx4GetValueByIdent[ixIdent5GetValueByIdent] = actionOnRx;
+    accInfoDataGetValueByIdent.addChildInteger(4, ident);
+    ixIdent5GetValueByIdent +=1;
+  }
+  
+  
+  /**
+   * @return true if the telegram is sent.
+   */
+  boolean txCmdGetValueByIdent() {
+    if(ixIdent5GetValueByIdent > 0){
+      int lengthInfo = accInfoDataGetValueByIdent.getLength();
+      //It prepares the telg head.
+      prepareTelg(lengthInfo);  //It sends an existing telegram if there is not enough space for the idents-info
+      int order = orderGenerator.getNewOrder();
+      rxEval.setExpectedOrder(order, actionRx4ValueByIdent);
+      txAccess.addChild(infoAccess);
+      int posInTelg = infoAccess.getPositionInBuffer() + InspcDataExchangeAccess.Info.sizeofHead;
+      System.arraycopy(dataInfoDataGetValueByIdent, 0, infoAccess.getData(), posInTelg, 4 * ixIdent5GetValueByIdent);
+      infoAccess.setInfoHead(lengthInfo + InspcDataExchangeAccess.Info.sizeofHead, InspcDataExchangeAccess.Info.kGetValueByIndex, order);
+      ixIdent5GetValueByIdent = 0;
+      accInfoDataGetValueByIdent.assignEmpty(dataInfoDataGetValueByIdent);
+      sendAndAwaitAnswer();
+      return true;
+    } else return false;
+  }
+  
+  private final void execRx4ValueByIdent(Info info, LogMessage log, int identLog){
+    //int lenInfo = info.getLength();
+    int ixVal = (int)info.getChildInteger(4);
+    while(info.sufficingBytesForNextChild(1)){  //at least one byte in info, 
+      InspcAccessExecRxOrder_ifc action = actionRx4GetValueByIdent[ixVal];
+      ixVal +=1;
+      if(action !=null){
+        action.execInspcRxOrder(info, log, identLog);
+      }
+    }
+    //System.out.println("execRx4ValueByIdent");
+    stop();
+  }
+  
+
   
   /**Adds the info block to send 'get value by path'
    * @param sPathInTarget
@@ -484,7 +654,11 @@ public class InspcAccessor implements Closeable
   }
   
   
-  
+  InspcAccessExecRxOrder_ifc actionRx4ValueByIdent = new InspcAccessExecRxOrder_ifc(){
+    @Override public void execInspcRxOrder(Info info, LogMessage log, int identLog)
+    { execRx4ValueByIdent(info, log, identLog);
+    }
+  };
 	
 	void stop(){}
 
