@@ -74,12 +74,15 @@ public final class ClassContent implements CmdConsumer_ifc
   /**Current number while preparing a answer datagram. */
   private int nrofAnswerBytes = 0; 
   
-  /**Max number as parameter of call. */
+  ///**Max number as parameter of call. */
   //private int maxNrofAnswerBytes;
   
-  /** @java2c=simpleRef. */
-  private InspcDataExchangeAccess.Datagram answer;
+  ///**Reference to the answer stored in class.  
+  // * @java2c=simpleRef. */
+  //private InspcDataExchangeAccess.Datagram answerP;
   
+  /**Access element for {@link ByteDataAccess} to the answer Item. 
+   * It is reused whenever an info item is to be added. */
   private final InspcDataExchangeAccess.Info answerItem = new InspcDataExchangeAccess.Info();
   
   /**Buffer to prepare a array information in the answer of a telegram. */
@@ -90,6 +93,9 @@ public final class ClassContent implements CmdConsumer_ifc
 	
   /**Buffer to prepare the answer in the answer of a telegram. */
   private final StringBuilder uAnswer = new StringBuilder(200);
+  
+  /** java2c=simpleRef. */
+  final InspcDataInfo test = new InspcDataInfo();
   
   /**Array of registered data access info items. @java2c = embeddedArrayElements. */
   final InspcDataInfo[] registeredDataAccess = new InspcDataInfo[1024];
@@ -162,7 +168,7 @@ public final class ClassContent implements CmdConsumer_ifc
 	private final int cmdGetFields(InspcDataExchangeAccess.Info cmd, InspcDataExchangeAccess.Datagram answer, int maxNrofAnswerBytes) 
 	{
 	  //this.maxNrofAnswerBytes = maxNrofAnswerBytes;
-	  this.answer = answer;
+	  //this.answerP = answer;
 	  int ixFieldStart;
 	  /**@java2c=nonPersistent.  */
 		String sVariablePath;
@@ -282,7 +288,7 @@ public final class ClassContent implements CmdConsumer_ifc
         		/**Check whether an outer class exists. */
           	ClassJc outerObj = clazz.getEnclosingClass();
         		if(outerObj !=null){
-        			evaluateFieldGetFields("_outer", outerObj, 0, 0, nOrderNr, maxNrofAnswerBytes);
+        			evaluateFieldGetFields(answer, "_outer", outerObj, 0, 0, nOrderNr, maxNrofAnswerBytes);
         		}
           }
           /**Gets the fields of the real class of the found reference-field. 
@@ -294,7 +300,7 @@ public final class ClassContent implements CmdConsumer_ifc
             if(ii< 0) { ii = 0; } 
             for(int ixField = 0; ixField < fields.length; ++ixField){
               /**Generates one entry per field in the answer telegram. */
-            	evaluateFieldGetFields(fields[ixField], nOrderNr, maxNrofAnswerBytes);
+            	evaluateFieldGetFields(answer, fields[ixField], nOrderNr, maxNrofAnswerBytes);
             }
           }
         }
@@ -310,20 +316,21 @@ public final class ClassContent implements CmdConsumer_ifc
 	
 	
 	
- 	private final void evaluateFieldGetFields(FieldJc field, int orderNr, int maxNrofAnswerBytes)
+ 	private final void evaluateFieldGetFields(InspcDataExchangeAccess.Datagram answer, FieldJc field, int orderNr, int maxNrofAnswerBytes)
  	{
  		//FieldJc field = new FieldJc(fieldP);   //regard container types
  		String name = field.getName();
  	  ClassJc typeField = field.getType();
  	  int modifiers = field.getModifiers();
  	  int staticArraySize = field.getStaticArraySize();
- 	  evaluateFieldGetFields(name, typeField, modifiers, staticArraySize, orderNr, maxNrofAnswerBytes);
+ 	  evaluateFieldGetFields(answer, name, typeField, modifiers, staticArraySize, orderNr, maxNrofAnswerBytes);
  	} 
  	  
  	
  	
  	
- 	private final void evaluateFieldGetFields(String name, ClassJc typeField, int modifiers
+ 	private final void evaluateFieldGetFields(InspcDataExchangeAccess.Datagram answer, 
+ 	  String name, ClassJc typeField, int modifiers
  		,int  staticArraySize, int orderNr, int maxNrofAnswerBytes
  	)
   {
@@ -775,7 +782,6 @@ public final class ClassContent implements CmdConsumer_ifc
         int modifier = theField.getModifiers();
         int addr = theField.getMemoryIdent(theObject, idxP[0]);
       
-      
         int ixReg = 0;
         InspcDataInfo freeOrder = null;
         int currentTime = OS_TimeStamp.os_getSeconds();
@@ -803,7 +809,7 @@ public final class ClassContent implements CmdConsumer_ifc
         }
         freeOrder.lastUsed = currentTime;
         freeOrder.addrValue = theField;
-        freeOrder.addr = theObject;
+        freeOrder.addr.set(theObject);
         //freeOrder.timeout_millisec = 5000;  //after 5 seconds, forget it.
         freeOrder.check +=1; //change it to detect old requests at same index.
         int ixAnswer = ixReg | (freeOrder.check <<12);

@@ -1,7 +1,6 @@
 package org.vishia.inspector;
 
 import org.vishia.communication.Address_InterProcessComm;
-import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessCommFactory;
 import org.vishia.communication.InterProcessCommFactoryAccessor;
@@ -159,8 +158,10 @@ public class Comm implements Runnable
     	    }
         }
 	  	} catch(Exception exc){
-	  	  System.err.println("Inspc-Comm unexpected Exception; " + exc.getMessage());
-	  	  exc.printStackTrace(System.err);
+	  	  /** @java2c=toStringNonPersist, StringBuilderInStack=100. */
+	      String msg = "org.vishia.inspector.Comm - unexpected Exception; " + exc.getMessage();
+	  	  System.err.println(msg);
+	  	  exc.printStackTrace( System.err);
 	  	}
 	  }//while state !='x'
 	}

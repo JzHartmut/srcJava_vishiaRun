@@ -1,6 +1,5 @@
 package org.vishia.inspector;
 
-import java.lang.reflect.Field;
 
 import org.vishia.bridgeC.MemSegmJc;
 import org.vishia.reflect.FieldJc;
@@ -59,9 +58,9 @@ public class InspcDataInfo
    */
   int lastUsed;
   
-  MemSegmJc addr;
+  final MemSegmJc addr = new MemSegmJc();
   
-  /**Address and Segment of the value. */
+  /**Address and Segment of the value. @java2c=simpleRef. */
   FieldJc addrValue;
 
   /**Nr of bytes to read and transfer. */
