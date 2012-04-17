@@ -1,4 +1,8 @@
 ------------------------------------------------------------
+2012-04-17 hartmut
+Usage of InspcGUI for profession:
+* InspcVariable: access via getValuePerPath for downward compytibility with target device.
+------------------------------------------------------------
 2012-04-12 hartmut
 * makejar_vishiaRun.sh: used srcJava_vishiaBase/_make/+javacjarbase.sh
 * org.vishia.inspector: Adaptions while using for C-Language (Java2C)

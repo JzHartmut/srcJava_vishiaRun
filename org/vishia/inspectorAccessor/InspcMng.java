@@ -73,8 +73,9 @@ import org.vishia.util.StringFunctions;
 public class InspcMng implements CompleteConstructionAndStart, VariableContainer_ifc, Closeable
 {
 
-  /**Version, history and license
+  /**Version, history and license.
    * <ul>
+   * <li>2012-04-17 Hartmut new: {@link #bUseGetValueByIndex}: Access via getValuePerPath for downward compatibility with target device.
    * <li>2012-04-08 Hartmut new: Support of GetValueByIdent, catch of some exception, 
    * <li>2012-04-05 Hartmut new: Use {@link LogMessage to test telegram trafic}
    * <li>2012-04-02 Hartmut all functionality from org.vishia.guiInspc.InspcGuiComm now here,
@@ -118,7 +119,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20120402;
+  public static final int version = 20120417;
 
   private final InspcPlugUser_ifc user;
 
@@ -160,6 +161,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   
   String sIpTarget;
+  
+  final boolean bUseGetValueByIndex;
 
   boolean bUserCalled;
 
@@ -199,10 +202,11 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    */
   boolean bAllReceived;
   
-  public InspcMng(String sOwnIpcAddr, Map<String, String> indexTargetIpcAddr, InspcPlugUser_ifc user){
+  public InspcMng(String sOwnIpcAddr, Map<String, String> indexTargetIpcAddr, boolean bUseGetValueByIndex, InspcPlugUser_ifc user){
     this.inspcAccessor = new InspcAccessor(new InspcAccessEvaluatorRxTelg());
     this.indexTargetIpcAddr = indexTargetIpcAddr;
     this.sOwnIpcAddr = sOwnIpcAddr;
+    this.bUseGetValueByIndex = bUseGetValueByIndex;
     this.user = user;
     if(user !=null){
       user.setInspcComm(this);

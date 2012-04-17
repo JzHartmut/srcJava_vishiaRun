@@ -9,8 +9,9 @@ import org.vishia.msgDispatch.LogMessage;
 public class InspcVariable implements VariableAccess_ifc
 {
   
-  /**Version, history and license
+  /**Version, history and license.
    * <ul>
+   * <li>2012-04-17 Hartmut new: Access via getValuePerPath for downward compatibility with target device.
    * <li>2012-04-08 Hartmut new: Support of GetValueByIdent
    * <li>2012-03-31 Hartmut created. See {@link InspcMng#version}. 
    * </ul>
@@ -39,15 +40,13 @@ public class InspcVariable implements VariableAccess_ifc
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20120331;
+  public static final int version = 20120417;
 
 
 
   final InspcMng varMng;
   
-  /**This class joins the GUI-Widget with the inspector communication info block.
-   * It is created for any Widget one time if need and used for the communication after that. 
-   * The routine {@link #execInspcRxOrder(Info)} is used to show the received values.
+  /**This class supplies the method to set the variable value from a received info block. 
    */
   class VariableRxAction implements InspcAccessExecRxOrder_ifc
   {
@@ -137,7 +136,7 @@ public class InspcVariable implements VariableAccess_ifc
     //First time a widgets gets its WidgetCommAction. Then for ever the action is kept.
     if(idTarget !=-1){
       targetAccessor.cmdGetValueByIdent(this.idTarget, this.rxAction);
-    } else if(idTarget ==-2){
+    } else if(idTarget ==-2 || !varMng.bUseGetValueByIndex){
       //get by ident is not supported:
       String sPathComm = this.sPath  + ".";
       Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
