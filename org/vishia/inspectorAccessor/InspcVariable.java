@@ -11,6 +11,7 @@ public class InspcVariable implements VariableAccess_ifc
   
   /**Version, history and license.
    * <ul>
+   * <li>2012-04-22 Hartmut adapt: {@link #requestValue(long)} etc. from {@link VariableAccess_ifc}.
    * <li>2012-04-17 Hartmut new: Access via getValuePerPath for downward compatibility with target device.
    * <li>2012-04-08 Hartmut new: Support of GetValueByIdent
    * <li>2012-03-31 Hartmut created. See {@link InspcMng#version}. 
@@ -40,7 +41,7 @@ public class InspcVariable implements VariableAccess_ifc
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20120417;
+  public static final int version = 20120422;
 
 
 
@@ -107,7 +108,7 @@ public class InspcVariable implements VariableAccess_ifc
    * A value may be gotten only if a new request is pending. */
   long timeRequested;
   
-  long timeSet;
+  long timeRefreshed;
   
   /**The value from the target device. */
   float valueF;
@@ -166,14 +167,12 @@ public class InspcVariable implements VariableAccess_ifc
   @Override
   public float getFloat(int... ixArray)
   {
-    timeRequested = System.currentTimeMillis();
     return valueF;
   }
 
   @Override
   public int getInt(int... ixArray)
   {
-    timeRequested = System.currentTimeMillis();
     return valueI;
   }
 
@@ -220,5 +219,9 @@ public class InspcVariable implements VariableAccess_ifc
     return 0; //no dimension
   }
 
+
+  @Override public long getLastRefreshTime(){ return timeRefreshed; }
+
+  @Override public void requestValue(long time){ this.timeRequested = time; }
 
 }

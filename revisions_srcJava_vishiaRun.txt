@@ -1,4 +1,7 @@
 ------------------------------------------------------------
+2012-04-22 Hartmut
+VariableAccess_ifc: some adaptions for requestValue(long)
+------------------------------------------------------------
 2012-04-17 hartmut
 Usage of InspcGUI for profession:
 * InspcVariable: access via getValuePerPath for downward compytibility with target device.
