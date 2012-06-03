@@ -174,18 +174,18 @@ public class InspcDataExchangeAccess
       private final static int kbyteOrder = 4;
 	  public final static int sizeofHead = 8;
 
-		/** Aufforderung zur Rückgabe einer Liste aller Attribute und Assoziationen des adressierten Objektes.
+		/** Aufforderung zur Rueckgabe einer Liste aller Attribute und Assoziationen des adressierten Objektes.
     
-		    Im Cmd wird der PATH des Objektes übergeben. Das geschieht in einer Struktur DataExchangeString_OBM.
+		    Im Cmd wird der PATH des Objektes uebergeben. Das geschieht in einer Struktur DataExchangeString_OBM.
 		    
 		    ,  Cmd:
 		    ,  +------head-----------+-int32-+---------string------------------+
 		    ,  |kGetFields           | ix    | PATH mit Punkt am Ende             |
 		    ,  +---------------------+-------+-----------------------------+
 		    
-		    Dabei wird mit dem ,,head.index,, ein Startindex übergeben. Dieser soll bei der ersten Abfrage =0 sein.
+		    Dabei wird mit dem ,,head.index,, ein Startindex uebergeben. Dieser soll bei der ersten Abfrage =0 sein.
 		    
-		    Das positive Antworttelegramm enthält eine Liste von Items mit einzelnen Attributen und Assoziationen:
+		    Das positive Antworttelegramm enthaelt eine Liste von Items mit einzelnen Attributen und Assoziationen:
 		    
 		    ,  Answer:
 		    ,  +------head-----------+-----string--+-------head----------+-----string--
@@ -210,20 +210,20 @@ public class InspcDataExchangeAccess
 		public final static int kGetFieldsFurther = 0x12; 
 
 		
-		/**Antwort auf Aufforderung zur Rückgabe einer Liste von Attributen, Assoziationen oder Methoden.
-    Das Antwort-Item enthält einen Eintrag für ein Element, Type DataExchangeString_OBM.
+		/**Antwort auf Aufforderung zur Rueckgabe einer Liste von Attributen, Assoziationen oder Methoden.
+    Das Antwort-Item enthaelt einen Eintrag fï¿½r ein Element, Type DataExchangeString_OBM.
     Die Antwort auf kGetFields oder kGetMethods besteht aus mehreren Items je nach der Anzahl der vorhandenen Elemente.
     Gegebenenfalls ist die Antwort auch auf mehrere Telegramme verteilt.
 
-    Die Zeichenkette für ein Item aus zwei Teilen, Typ und Name, getrennt mit einem Zeichen ':'.
-    Der angegebenen Typ entspricht dem Typ der Assoziationsreferenz, nicht dem Typ des tatsächlich assoziierten Objektes,
+    Die Zeichenkette fuer ein Item aus zwei Teilen, Typ und Name, getrennt mit einem Zeichen ':'.
+    Der angegebenen Typ entspricht dem Typ der Assoziationsreferenz, nicht dem Typ des tatsaechlich assoziierten Objektes,
     wenn es sich nicht um einen einfachen Typ handelt.
 
-    Wenn eine Methode übergeben wird, dann werden die Aufrufargument-Typen wie eine formale Argumentliste in C angegeben.
+    Wenn eine Methode uebergeben wird, dann werden die Aufrufargument-Typen wie eine formale Argumentliste in C angegeben.
     Beispiel:
     , returnType:methodName(arg1Typ,arg2Typ)
 
-    Der Index im Head der Antwort zählt die übergebenen Informationen.
+    Der Index im Head der Antwort zaehlt die uebergebenen Informationen.
   */
 
 		public final static int kAnswerFieldMethod = 0x14;
