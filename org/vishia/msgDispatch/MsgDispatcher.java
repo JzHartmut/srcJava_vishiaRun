@@ -48,7 +48,7 @@ import org.vishia.util.StringPart;
  * @author Hartmut Schorrig
  *
  */
-public class MsgDispatcher implements LogMessage
+public class MsgDispatcher extends MsgDispatcherCore implements LogMessage
 {
 
 /**Version and history:
@@ -72,158 +72,6 @@ public class MsgDispatcher implements LogMessage
  */
 public static final int version = 0x20120113; 
   
-  /**If this bit is set in the bitmask for dispatching, the dispatching should be done 
-   * in the dispatcher Thread. In the calling thread the message is stored in a queue. */
-  public final static int mDispatchInDispatcherThread = 0x80000000;
-
-  /**If this bit is set in the bitmask for dispatching, the dispatching should only be done 
-   * in the calling thread. It is possible that also the bit {@link mDispatchInDispatcherThread}
-   * is set, if there is more as one destination. */
-  public final static int mDispatchInCallingThread =    0x40000000;
-
-  /**Only this bits are used to indicate the destination via some Bits*/
-  public final static int mDispatchBits =               0x3FFFFFFF;
-  
-  /**Number of Bits in {@link mDispatchWithBits}, it is the number of destinations dispached via bit mask. */
-  private final int nrofMixedOutputs;
-  
-  /**Calculated mask of bits which are able to mix. */
-  public final int mDstMixedOutputs;
-   
-  /**Calculated mask of bits which are one index. */
-  public final int mDstOneOutput;
-  
-  
-  /**Mask for dispatch the message to console directly in the calling thread. 
-   * It is like system.out.println(...) respectively printf in C.
-   * The console output is a fix part of the Message dispatcher.
-   */
-  public final static int mConsole = 0x01;
-  
-  /**queued Console output, it is a fix part of the Message dispatcher. */
-  public final static int mConsoleQueued = 0x02;
-  
-  /**Used for argument mode from {@link #setOutputRange(int, int, int, int, int)} to add an output.
-   * The other set outputs aren't change. 
-   */
-  public final static int mAdd = 0xcadd;
-  
-  /**Used for argument mode from {@link #setOutputRange(int, int, int, int, int)} to set an output.
-   * Outputs before are removed. 
-   */
-  public final static int mSet = 0xc5ed;
-  
-  /**Used for argument mode from {@link #setOutputRange(int, int, int, int, int)} to remove an output.
-   * All other outputs aren't change.
-   */
-  public final static int mRemove = 0xcde1;
-  
-  
-  
-  /**Stores all data of a message if the message is queued here. @java2c=noObject. */  
-  public static final class Entry
-  {
-
-    /**Bit31 is set if the state is coming, 0 if it is going. */
-    public int ident;
-     
-    /**The bits of destination dispatching are ascertained already before it is taken in the queue. */
-    public int dst;
-  
-    /**The output and format controlling text. In C it should be a reference to a persistent,
-     * typical constant String. @java2c=zeroTermString. 
-     */
-    public String text;
-    
-    /**Type of the arguments. 
-     * In Java the types are known because a variable argument list is a Object[].
-     * But in C the types should be stored extra. 
-     * @java2c=zeroTermString.
-     */
-    //String typeArgs;
-  
-    /**The time stamp of the message. It is detected before the message is queued. */
-    public final OS_TimeStamp timestamp = new OS_TimeStamp();
-
-    /**Values from variable argument list. This is a special structure 
-     * because the Implementation in C is much other than in Java. 
-     * In Java it is simple: All arguments are of type Object, and the variable argument list
-     * is a Object[]. The memory of all arguments are handled in garbage collection. It is really simple.
-     * But in C there are some problems:
-     * <ul><li>Type of arguments
-     * <li>Location of arguments: Simple numeric values are in stack (only call by value is possible)
-     *     but strings (const char*) may be non persistent. No safety memory management is present.
-     * </ul>
-     * Therefore in C language some things should be done additionally. See the special C implementation
-     * in VaArgList.c. 
-     */
-    public final VaArgBuffer values = new VaArgBuffer(11);  //embedded in C
-    
-    //final Values values = new Values();  //NOTE: 16*4 = 64 byte per entry. NOTE: only a struct is taken with *values as whole.
-
-    public static int _sizeof(){ return 1; } //it is a dummy in Java.
-    
-  }
-  
-  /**This class contains some test-counts for debugging. It is a own class because structuring of attributes. 
-   * @xxxjava2c=noObject.  //NOTE: ctor without ObjectJc not implemented yet.
-   */
-  private static final class TestCnt
-  {
-    private int noOutput;
-    private int tomuchMsgPerThread;
-  }
-  
-  /**This class contains all infomations for a output. There is an array of this type in MsgDispatcher. 
-   * @java2c=noObject.
-   */
-  private static final class Output
-  {
-    /**Short name of the destination, used for {@link #setOutputRange } or {@link #setOutputFromString }
-     * @xxxjava2c=simpleArray.
-     */
-    private String name;
-    
-    /**The output interface. */
-    private LogMessage outputIfc;
-
-    /**true if this output is processed in the dispatcher thread, 
-     * false if the output is called immediately in the calling thread.
-     */ 
-    private boolean dstInDispatcherThread;
-  
-    
-  }
-  
-  final TestCnt testCnt = new TestCnt();
-  
-  /**List of messages to process in the dispatcher thread.
-   * @java2c=noGC.
-   */
-  final ConcurrentLinkedQueue<Entry> listOrders;
-  
-  /**List of entries for messages to use.
-   * @java2c=noGC.
-   */
-  final ConcurrentLinkedQueue<Entry> freeOrders;
-  
-  /**List of idents, its current length. */ 
-  private int actNrofListIdents;
-
-  /**List of idents, a array with lengthListIdents elements.
-   * @java2c=noGC.
-   */
-  private int[] listIdents;  //NOTE: It is a pointer to an array struct.
-
-  /**List of destination bits for the idents.
-   * @java2c=noGC.
-   */
-  private int[] listBitDst;  //NOTE: It is a pointer to an array struct.
-
-  /**up to 30 destinations for output.
-   * @java2c=noGC,embeddedArrayElements.
-   */
-  private Output[] outputs;
   //private LogMessage[] outputs = new LogMessage[28];
   
   /**A console output is standard everytime..
@@ -254,10 +102,7 @@ public static final int version = 0x20120113;
    * @param nrofMixedOutputs
    */
   public MsgDispatcher(int maxDispatchEntries, int maxQueue, int maxOutputs, int nrofMixedOutputs)
-  { if(nrofMixedOutputs < 0 || nrofMixedOutputs > 28) throw new IllegalArgumentException("max. nrofMixedOutputs");
-    this.nrofMixedOutputs = nrofMixedOutputs;
-    this.mDstMixedOutputs = (1<<nrofMixedOutputs) -1;
-    this.mDstOneOutput = mDispatchBits & ~mDstMixedOutputs;
+  { super(maxQueue, nrofMixedOutputs);
     
     /**@java2c = embeddedArrayElements. */
     Entry[] entries = new Entry[maxQueue];
@@ -265,14 +110,6 @@ public static final int version = 0x20120113;
     { entries[idxEntry] = new Entry();
     }
     int idxEntry;
-    /**A queue in C without dynamically memory management should have a pool of nodes.
-     * The nodes are allocated one time and assigned to freeOrders.
-     * The other queues shares the nodes with freeOrders.
-     * The ConcurrentLinkedQueue isn't from java.util.concurrent, it is a wrapper around that.
-     */
-    final MemC mNodes = MemC.alloc((maxQueue +2) * Entry._sizeof());
-    this.freeOrders = new ConcurrentLinkedQueue<Entry>(mNodes);
-    this.listOrders = new ConcurrentLinkedQueue<Entry>(this.freeOrders);
     
     /**All entries, 1 time allocated, are stored in the freeOrders. From there they are taken
      * if an entry is necessary. */
@@ -312,25 +149,6 @@ public static final int version = 0x20120113;
     setOutputRange(0, Integer.MAX_VALUE, mConsole, MsgDispatcher.mSet, 3);
   }
   
-  
-  /**Searches and returns the bits where a message is dispatch to.
-   * The return value describes what to do with the message.
-   * @param ident The message identificator
-   * @return 0 if the message should not be dispatched, else some bits or number, see {@link #mDstMixedOutputs} etc.
-   */
-  public final int searchDispatchBits(int ident)
-  { int bitDst;
-    if(ident < 0)
-    { /**a negative ident means: going state. The absolute value is to dispatch! */ 
-      ident = -ident;
-    }
-    int idx = Arrays.binarySearch(listIdents, 0, actNrofListIdents, ident);
-    if(idx < 0) idx = -idx -2;  //example: nr between idx=2 and 3 returns -4, converted to 2
-    if(idx < 0) idx = 0;        //if nr before idx = 0, use properties of msg nr=0
-    bitDst = listBitDst[idx];     
-    return bitDst;
-  }
-
   
   
   
@@ -757,58 +575,6 @@ public static final int version = 0x20120113;
 
 
   
-  /**Dispatches a message. This routine is called either in the calling thread of the message
-   * or in the dispatcher thread. 
-   * @param dstBits Destination identificator. If the bit {@link mDispatchInDispatcherThread} is set,
-   *        the dispatching should be done only for a destination if the destination is valid
-   *        for the dispatcher thread. 
-   *        Elsewhere if the bit is 0, the dispatching should be done only for a destination 
-   *        if the destination is valid for the calling thread.
-   * @param bDispatchInDispatcherThread true if this method is called in dispatcher thread,
-   *        false if called in calling thread. This param is compared with {@link Output#dstInDispatcherThread},
-   *        only if it is equal with them, the message is outputted.
-   * @param identNumber identification of the message.
-   * @param creationTime
-   * @param text The identifier text @pjava2c=zeroTermString.
-   * @param args @pjava2c=nonPersistent.
-   * @return 0 if all destinations are processed, elsewhere dstBits with bits of non-processed dst.
-   */
-  private final int dispatchMsg(int dstBits, boolean bDispatchInDispatcherThread
-  		, int identNumber, final OS_TimeStamp creationTime, String text, final Va_list args)
-  { //final boolean bDispatchInDispatcherThread = (dstBits & mDispatchInDispatcherThread)!=0;
-    //assert, that dstBits is positive, because >>=1 and 0-test fails elsewhere.
-    //The highest Bit has an extra meaning, also extract above.
-    dstBits &= mDispatchBits;  
-    int bitTest = 0x1;
-    int idst = 0;
-    while(dstBits != 0 && bitTest < mDispatchBits) //abort if no bits are set anymore.
-    { if(  (dstBits & bitTest)!=0 
-        && ( ( outputs[idst].dstInDispatcherThread &&  bDispatchInDispatcherThread)  //dispatch in the requested thread
-           ||(!outputs[idst].dstInDispatcherThread && !bDispatchInDispatcherThread)
-           )
-        )
-      { LogMessage out = outputs[idst].outputIfc;
-        if(out != null)
-        { boolean sent = out.sendMsgVaList(identNumber, creationTime, text, args);
-          if(sent)
-          { dstBits &= ~bitTest; //if sent, reset the associated bit.
-          }
-        }
-        else
-        { dstBits &= ~bitTest; //reset the associated bit, send isn't possible
-          testCnt.noOutput +=1;
-        }
-      }
-      bitTest <<=1;
-      idst += 1;
-    }
-    return dstBits;
-  }
-
-
-  
-  
-  
   /**Sends a message. See interface.  
    * @param identNumber
    * @param text The text representation of the message, format string, see java.lang.String.format(..). 
@@ -842,59 +608,6 @@ public static final int version = 0x20120113;
 
     
   
-  
-  
-  
-  /**Sends a message. See interface.  
-   * @param identNumber 
-   * @param creationTime
-   * @param text The identifier text @pjava2c=zeroTermString.
-   * @param typeArgs Type chars, ZCBSIJFD for boolean, char, byte, short, int, long, float double. 
-   *        @java2c=zeroTermString.
-   * @param args see interface
-   */
-  @Override
-  public final boolean sendMsgVaList(int identNumber, final OS_TimeStamp creationTime, String text, final Va_list args)
-  {
-    // TODO Auto-generated method stub
-    int dstBits = searchDispatchBits(identNumber);
-    if(dstBits != 0)
-    { final int dstBitsForDispatcherThread;
-      if((dstBits & mDispatchInCallingThread) != 0)
-      { /**dispatch in this calling thread: */
-        dstBitsForDispatcherThread = dispatchMsg(dstBits, false, identNumber, creationTime, text, args);
-      }
-      else
-      { /**No destinations are to use in calling thread. */
-        dstBitsForDispatcherThread = dstBits;
-      }
-      //if((dstBits & mDispatchInDispatcherThread) != 0)
-      if(dstBitsForDispatcherThread != 0)
-      { /**store in queue, dispatch in a common thread of the message dispatcher:
-         * To support realtime systems, all data are static. The list freeOrders contains entries,
-         * get it from there and use it. No 'new' is necessary here. 
-         */
-        Entry entry = freeOrders.poll();  //get a new Entry from static data store
-        if(entry == null)
-        { /**queue overflow, no entries available. The message can't be displayed
-           * This is the payment to won't use 'new'. A problem of overwork of data. 
-           */
-          //TODO test if it is a important message
-          System.out.println("**************** NO ENTRIES");
-        }
-        else
-        { /**write the informations to the entry, store it. */
-          entry.dst = dstBitsForDispatcherThread;
-          entry.ident = identNumber;
-          entry.text = text;
-          entry.timestamp.set(creationTime);
-          entry.values.copyFrom(text, args);
-          listOrders.offer(entry);
-        }
-      }
-    }
-    return true;
-  }
   
   /**Dispatches all messages, which are stored in the queue. 
    * This routine should be called in any user thread respectively it is called in TODOx1.

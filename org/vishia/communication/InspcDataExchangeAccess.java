@@ -171,8 +171,8 @@ public class InspcDataExchangeAccess
 	 */
 	public static class Info extends ByteDataAccess
 	{
-    private final static int kbyteOrder = 4;
-		public final static int sizeofHead = 8;
+      private final static int kbyteOrder = 4;
+	  public final static int sizeofHead = 8;
 
 		/** Aufforderung zur Rückgabe einer Liste aller Attribute und Assoziationen des adressierten Objektes.
     
@@ -261,7 +261,40 @@ public class InspcDataExchangeAccess
 		
 		public final static int kSetValueByPath = 0x35;
 		
-		
+    /**Request to get all messages.
+    ,  Cmd:<pre>
+    ,  +------head-----------+
+    ,  |kGetMs               |
+    ,  +---------------------+
+    </pre>
+    ,  Answer:<pre>
+    ,  +------head-----------+---------+---------+---------+---------+
+    ,  |kAnswerMsg           | Msg     | Msg     | Msg     | Msg     |
+    ,  +---------------------+---------+---------+---------+---------+
+
+     * Any Message has 16 to 80 Bytes. The structure of a message is described with {@link org.vishia.msgDispatch.InspcMsgDataExchg}.
+     * This structure should be used as child. All values of the message are children of that child.
+     */
+    public final static int kGetMsg = 0x40;
+    public final static int kAnswerMsg = 0x140;
+  
+    /**Remove gotten messages. Any message contains a sequence number. The answer of {@link #kGetMsg} 
+     * contains all messages in a proper sequence order from..to. This Telegram removes the messages from..to sequence.
+    ,  Cmd:<pre>
+    ,  +------head-----------+--int-----+--int-----+
+    ,  |kRemoveMsg           | from seq | to seq   |
+    ,  +---------------------+----------+----------+
+    </pre>
+    ,  Answer:<pre>
+    ,  +------head-----------+
+    ,  |kAnswerRemoveMsg     |
+    ,  +---------------------+
+  
+    */
+    public final static int kRemoveMsg = 0x41;
+    public final static int kAnswerRemoveMsgOk = 0x141;
+    public final static int kAnswerRemoveMsgNok = 0x241;
+
     public final static int kFailedPath = 0xFe;
     
     public final static int kNoRessource = 0xFd;
