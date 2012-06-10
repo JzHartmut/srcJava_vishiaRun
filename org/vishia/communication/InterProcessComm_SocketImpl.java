@@ -113,8 +113,12 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
   public int send(final byte[] data, int nBytes, final Address_InterProcessComm addresseeP)
   { Address_InterProcessComm_Socket addressee = (Address_InterProcessComm_Socket) addresseeP; 
     try
-    { DatagramPacket dataOut = new DatagramPacket(data, nBytes, addressee.getSocketAddress());
-      this.rxSocket.send(dataOut);
+    { if(rxSocket !=null){ //may be closed in another thread.
+        DatagramPacket dataOut = new DatagramPacket(data, nBytes, addressee.getSocketAddress());
+        this.rxSocket.send(dataOut);
+      } else {
+        nBytes = -1;
+      }
     }
     catch (SocketException e)
     { this.sTxErrorMsg = e.getMessage();
