@@ -223,5 +223,7 @@ public class InspcVariable implements VariableAccess_ifc
   @Override public long getLastRefreshTime(){ return timeRefreshed; }
 
   @Override public void requestValue(long time){ this.timeRequested = time; }
+  
+  @Override public String toString(){ return " Variable(" + sPath + ") "; }
 
 }
