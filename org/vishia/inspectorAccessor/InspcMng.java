@@ -2,17 +2,23 @@ package org.vishia.inspectorAccessor;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import org.vishia.bridgeC.MemSegmJc;
 import org.vishia.byteData.VariableAccessWithIdx;
 import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.byteData.VariableContainer_ifc;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessComm_SocketImpl;
+import org.vishia.inspector.SearchElement;
+import org.vishia.reflect.FieldJc;
+import org.vishia.reflect.FieldJcVariableAccess;
+import org.vishia.reflect.FieldVariableAccess;
 import org.vishia.util.CompleteConstructionAndStart;
 import org.vishia.util.Event;
 import org.vishia.util.EventConsumer;
@@ -75,6 +81,10 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   /**Version, history and license.
    * <ul>
+   * <li>2012-06-09 Hartmut new: Now it knows java-internal variable too, the path for the argument of {@link #getVariable(String)}
+   *   should start with "java:" then the variable is searched internally. TODO now it isn't tested well, the start instance
+   *   should be given by constructor, because it should be either the start instance of the whole application or a special
+   *   data area.
    * <li>2012-04-17 Hartmut new: {@link #bUseGetValueByIndex}: Access via getValuePerPath for downward compatibility with target device.
    * <li>2012-04-08 Hartmut new: Support of GetValueByIdent, catch of some exception, 
    * <li>2012-04-05 Hartmut new: Use {@link LogMessage to test telegram trafic}
@@ -129,7 +139,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   Runnable callbackOnRxData;
   
   /**This container holds all variables which are created. */
-  Map<String, InspcVariable> idxAllVars = new TreeMap<String, InspcVariable>();
+  Map<String, VariableAccess_ifc> idxAllVars = new TreeMap<String, VariableAccess_ifc>();
   
   /**This container holds that variables which are currently used for communication. */
   Map<String, InspcVariable> idxVarsInAccess = new TreeMap<String, InspcVariable>();
@@ -295,9 +305,20 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       bit = 0;
       sDataPathVariable = sDataPathP;
     }
-    InspcVariable var = idxAllVars.get(sDataPathVariable);
+    VariableAccess_ifc var = idxAllVars.get(sDataPathVariable);
     if(var == null){
-      var = new InspcVariable(this, sDataPathVariable);
+      if(sDataPathVariable.startsWith("java:")){
+        FieldJc[] field = new FieldJc[0];
+        int[] ix = new int[0];
+        String sPathJava = sDataPathVariable.substring(5);
+        MemSegmJc addr = SearchElement.searchObject(sPathJava, this, field, ix);
+        var = new FieldJcVariableAccess(this, field[0]);
+      } else {
+        var = new InspcVariable(this, sDataPathVariable);
+      }
+      if(var == null){
+        //TODO use dummy to prevent new requesting
+      }
       idxAllVars.put(sDataPathVariable, var);
     }
     return new VariableAccessWithIdx(var, null, bit, mask);
@@ -319,11 +340,14 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     bUserCalled = false;
     long timeCurr = System.currentTimeMillis();
     idxRequestedVarFromTarget.clear();  //clear it, only new requests are pending then.
-    for(Map.Entry<String,InspcVariable> entryVar: idxAllVars.entrySet()){
-      InspcVariable var = entryVar.getValue();
-      if(var.timeRequested >= timeReceived){  //only requests communication if the variable was requested:
-        bRequest = true;
-        var.getValueFromTarget(timeCurr);
+    for(Map.Entry<String,VariableAccess_ifc> entryVar: idxAllVars.entrySet()){
+      VariableAccess_ifc var = entryVar.getValue();
+      if(var instanceof InspcVariable){
+        InspcVariable varInspc = (InspcVariable)var;
+        if(varInspc.timeRequested >= timeReceived){  //only requests communication if the variable was requested:
+          bRequest = true;
+          varInspc.getValueFromTarget(timeCurr);
+        }
       }
     }
     Runnable userOrder;
