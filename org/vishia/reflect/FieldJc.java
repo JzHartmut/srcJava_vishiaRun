@@ -763,7 +763,7 @@ public class FieldJc
   
   
 	/**Sets the integer adequate Field.setInt(obj, value), but with one or more indices.
-	 * @param obj
+	 * @param data
 	 * @param val
 	 * @param ix
 	 * @throws IllegalAccessException 
@@ -797,7 +797,7 @@ public class FieldJc
 	
 
 	/**Sets the integer adequate Field.setInt(obj, value), but with one or more indices.
-	 * @param obj
+	 * @param data
 	 * @param val
 	 * @param ix
 	 * @throws IllegalAccessException 

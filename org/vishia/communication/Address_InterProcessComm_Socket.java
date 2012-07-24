@@ -73,19 +73,23 @@ implements Address_InterProcessComm
   }
 
   
-  /** Constructor with full destination address given as 32-bit-integer value.
-   * @param addr The address given in string format with port. Example "192.168.10.1:1234" 
-   * or an URL:port
+  /**Constructor with address given as String.
+   * @param addr The address inclusively type given in string format with port. Example "UDP:192.168.10.1:1234" 
+   *   The type and the port is separated by ':'.
    * */
   public Address_InterProcessComm_Socket(String addr)
   { this(null, addr, -1);
   }
 
-  /** Constructor with full destination address given as 32-bit-integer value.
-   * @param addr The address given in string format. Example "192.168.10.1" 
-   * or an URL
-   * @param port The port of destination. If <0 then the addr should contain the port 
-   * */
+  /**Constructor with type, address and port.
+   * @param type The type should be "UDP", "TCP" or it may be null. If the type is null, the type is gotten
+   *   from the addr-parameter as string-part before a ':'.
+   * @param addr The address. If type and port are given, it is a String which is compatible to
+   *   java.net.InetSocketAddress. Usual it is a String with 4 octets with numbers
+   *   like "192.168.1.1". If the type is not given, the type is contained in this parameter
+   *   before a ':'. If the port is not given the port is the integer number after a trailing ':'.
+   * @param port A positive value for the Port number or -1 if the port is contained in addr.
+   */
   public Address_InterProcessComm_Socket(String type, String addr, int port)
   { if(type == null){
   	  int posAddr = addr.indexOf(':');
