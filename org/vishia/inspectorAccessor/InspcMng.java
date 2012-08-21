@@ -198,7 +198,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   Thread inspcThread = new Thread("InspcMng"){ @Override public void run() { runInspcThread(); } };
 
   
-  final Event XXXcallbackOnRx = new Event(this, XXXcallback);
+  final Event XXXcallbackOnRx = new Event(this, XXXcallback, null);
   
 
   /**True if the {@link #inspcThread} is running. If set to false, the thread ends. */

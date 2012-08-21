@@ -1,25 +1,3 @@
-/****************************************************************************
- * Copyright/Copyleft:
- *
- * For this source the LGPL Lesser General Public License,
- * published by the Free Software Foundation is valid.
- * It means:
- * 1) You can use this source without any restriction for any desired purpose.
- * 2) You can redistribute copies of this source to everybody.
- * 3) Every user of this source, also the user of redistribute copies
- *    with or without payment, must accept this license for further using.
- * 4) But the LPGL is not appropriate for a whole software product,
- *    if this source is only a part of them. It means, the user
- *    must publish this part of source,
- *    but don't need to publish the whole source of the own product.
- * 5) You can study and modify (improve) this source
- *    for own using or for redistribution, but you have to license the
- *    modified sources likewise under this LGPL Lesser General Public License.
- *    You mustn't delete this Copyright/Copyleft inscription in this source file.
- *
- * @author Hartmut Schorrig: hartmut.schorrig@vishia.de, www.vishia.org
- * @version 0.93 2011-01-05  (year-month-day)
- *******************************************************************************/ 
 package org.vishia.communication;
 
 
@@ -34,18 +12,53 @@ package org.vishia.communication;
 */
 public interface InterProcessComm
 {
+  /**version, history and license:
+   * <ul>
+   * <li>2012-08-22 Hartmut chg The constants {@link #receiverShouldbeBlocking} /Polling should be boolean because
+   *   the parameter of open is boolean. The might be never used ?
+   * <li>2011-01-05 Hartmut created
+   * </ul>
+   * 
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   * 
+   */
+  public final static int version = 20120820;
   /** Mode of receiving, determined on open(). The receive()-call either blocks 
    * if no data are available (it should be called in an extra thread), 
    * or it returns a nullpointer, if no data are available. This is a polling manner.
    */
-  public static int receiverShouldbeBlocking = 1
-                  , receiverShouldbePolling  = 2;
+  public static boolean receiverShouldbeBlocking = true
+                  , receiverShouldbePolling  = false;
   
   /** Opens the Communication. Only called at startup.
       @param dstAddress The own address to which this interprocess-port is assigned. 
              This address is also used
              when calling send() as information about the sender of the data.
-      @param mode Ones of the value '<code>receiverIsBlocking</code>' or '<code>receiverIsBlocking</code>'.
+      @param mode true if the receiver can block if receivdata are not available but the connection is established.
+        false then a call of {@link #receive(int[], Address_InterProcessComm)} or {@link #receiveData(int[], byte[], Address_InterProcessComm)}
+        does never block. Use the {@link #receiverShouldbeBlocking} or {@link #receiverShouldbePolling} values. 
       @return true if success, false if it failed. Use getReceiveErrorMsg() to detect the cause manually.
   */
   public int open(final Address_InterProcessComm dstAddress, boolean shouldBlock);
