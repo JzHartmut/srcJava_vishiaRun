@@ -40,6 +40,41 @@ import org.vishia.bridgeC.Va_list;
 public class MsgDispatcherCore 
 {
 
+  /**version, history and license:
+   * <ul>
+   * <li>2012-08-22 Hartmut new {@link #setMsgTextConverter(MsgText_ifc)}. It provides a possibility to work with a
+   *   translation from ident numbers to text with an extra module, it is optional.
+   * <li>2012-06-15 Hartmut created as separation from the MsgDispatcher because it may necessary to deploy 
+   *   in a small C environment.
+   * </ul>
+   * 
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   * 
+   */
+  public final static int version = 20120822;
+
   /**If this bit is set in the bitmask for dispatching, the dispatching should be done 
    * in the dispatcher Thread. In the calling thread the message is stored in a queue. */
   public final static int mDispatchInDispatcherThread = 0x80000000;
@@ -60,6 +95,7 @@ public class MsgDispatcherCore
    
   /**Calculated mask of bits which are one index. */
   public final int mDstOneOutput;
+  
   
   
   /**Mask for dispatch the message to console directly in the calling thread. 
@@ -190,6 +226,12 @@ public class MsgDispatcherCore
   protected Output[] outputs;
 
   
+  /**Converter from the ident number to a text. Maybe null, then unused.
+   * See {@link #setMsgTextConverter(MsgText_ifc)}
+   */
+  protected MsgText_ifc msgText;
+  
+  
   /**Initializes the instance.
    * @param maxQueue The static limited maximal size of the queue to store messages from user threads
    *        to dispatch in the dispatcher thread. If you call the dispatching in dispatcher thread
@@ -213,6 +255,12 @@ public class MsgDispatcherCore
     this.listOrders = new ConcurrentLinkedQueue<Entry>(this.freeOrders);
 
   }
+  
+  
+  public void setMsgTextConverter(MsgText_ifc converter){
+    msgText = converter;
+  }
+  
   
   
   /**Searches and returns the bits where a message is dispatch to.
@@ -311,6 +359,12 @@ public class MsgDispatcherCore
     dstBits &= mDispatchBits;  
     int bitTest = 0x1;
     int idst = 0;
+    if(msgText !=null){
+      String sTextCfg = msgText.getMsgText(identNumber);
+      if(sTextCfg !=null){
+        text = sTextCfg;   //replace the input text if a new one is found.
+      }
+    }
     while(dstBits != 0 && bitTest < mDispatchBits) //abort if no bits are set anymore.
     { if(  (dstBits & bitTest)!=0 
         && ( ( outputs[idst].dstInDispatcherThread &&  bDispatchInDispatcherThread)  //dispatch in the requested thread
