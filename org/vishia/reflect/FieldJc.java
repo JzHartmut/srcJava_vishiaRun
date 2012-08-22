@@ -112,6 +112,9 @@ public class FieldJc
 	/**The type of the field. */
 	public final ClassJc type;
 	
+  final char cPrimitveType;
+
+	
 	/**The modifier contains some more informations as java.reflect.field.
 	 * It is copied from {@link #field}, some more bits are added, see {@link ModifierJc}.
 	 */
@@ -294,13 +297,15 @@ public class FieldJc
 			  //it is designated as a fix-size-array for C-translation.
 				//Therefore it es presented as a fix-size-array in Java too.
 				//If the real array size doesn't match to the annotation-given size, an exception is thrown.
-				try{ 
+			  char typeChar =0;
+        try{ 
 					int size = atFixArraySize.value();
 					int ixArray = 0;
-					char typeChar;
 					while( (typeChar = sTypeName.charAt(ixArray)) == '['){
 						ixArray +=1;
 					} //count depths of array.
+	        this.cPrimitveType = typeChar;
+				  
 					modifier |= ModifierJc.kStaticArray;
 					staticArraySize = new int[ixArray];
 					switch(typeChar){
@@ -315,15 +320,31 @@ public class FieldJc
 				}  catch(Exception exc){
 					throw new RuntimeException(exc);
 				}
+
 			} else {
 			  //a non-final array in Java is like an ObjectArray
 				modifier |= ModifierJc.kObjectArrayJc;
 				type = ClassJc.fromClass(fieldType);
+		    this.cPrimitveType = '\0';
 			  staticArraySize = null;
 			}
 		} else {
 			//not an array field
 			type = ClassJc.fromClass(fieldType);
+			if(fieldType.isPrimitive()){
+			  String name = fieldType.getName();
+        if(name.equals("byte")){ this.cPrimitveType = 'B'; }
+        else if(name.equals("short")){ this.cPrimitveType = 'S'; }
+        else if(name.equals("int")){ this.cPrimitveType = 'I'; }
+        else if(name.equals("long")){ this.cPrimitveType = 'L'; }
+        else if(name.equals("float")){ this.cPrimitveType = 'F'; }
+        else if(name.equals("double")){ this.cPrimitveType = 'D'; }
+        else if(name.equals("boolean")){ this.cPrimitveType = 'Z'; }
+        else if(name.equals("char")){ this.cPrimitveType = 'C'; }
+        else { this.cPrimitveType = '\0';}
+			} else {
+			  this.cPrimitveType = '\0';
+			}
 		  staticArraySize = null;
 		}
 	}
@@ -335,6 +356,7 @@ public class FieldJc
 	  this.field = null;
 	  this.name = name;
 	  this.staticArraySize = null;
+	  this.cPrimitveType = '\0';
 	  this.annotations = null;
 	}
 	
@@ -345,6 +367,12 @@ public class FieldJc
 	
 	public ClassJc getType(){ return type; }
 	
+	
+	/**Returns the type char. For primitives it is B S I L F D Z C, 
+	 * for non-primitives it returns 0.
+	 * @return 0 if non primitive, else typechar.
+	 */
+	public char getTypeChar(){ return cPrimitveType; }
 	
 	public int getModifiers(){ return modifier; }
 	
@@ -464,6 +492,9 @@ public class FieldJc
     return new MemSegmJc(retObj, 0);
   }
   
+  
+  
+  
   public byte getByte(MemSegmJc obj, int... ix) throws IllegalArgumentException, IllegalAccessException {
   	return field.getByte(obj.obj());
   }
@@ -510,12 +541,24 @@ public class FieldJc
   
   public int getInt(MemSegmJc obj, int... ix) throws IllegalArgumentException, IllegalAccessException {
     int value;
-  	if(staticArraySize !=null && staticArraySize.length >0){
+    if(staticArraySize !=null && staticArraySize.length >0){
       value = intContainer.getValue(obj, ix);
-  	} else {
-  	  value = field.getInt(obj.obj());
+    } else {
+      value = field.getInt(obj.obj());
     }
-  	return value;
+    return value;
+  }
+  
+  
+  
+  public long getLong(MemSegmJc obj, int... ix) throws IllegalArgumentException, IllegalAccessException {
+    long value;
+    if(staticArraySize !=null && staticArraySize.length >0){
+      value = longContainer.getValue(obj, ix);
+    } else {
+      value = field.getLong(obj.obj());
+    }
+    return value;
   }
   
   
@@ -560,19 +603,33 @@ public class FieldJc
   
   
   /**Helper contains the method to access an int[]-array. */
-  private GetSetContainerElement<Integer, int[]> intContainer = new GetSetContainerElement<Integer, int[]>()
-  {	@Override Integer getValue(int[] array, int ix)
-		{ return array[ix];
-		}
+  private final GetSetContainerElement<Integer, int[]> intContainer = new GetSetContainerElement<Integer, int[]>()
+  { @Override Integer getValue(int[] array, int ix)
+    { return array[ix];
+    }
 
-		@Override void setValue(int[] array, Integer element, int ix)
-		{ array[ix] = element;
-		}
+    @Override void setValue(int[] array, Integer element, int ix)
+    { array[ix] = element;
+    }
+
+  };
+  
+  
+  
+  /**Helper contains the method to access an int[]-array. */
+  private final GetSetContainerElement<Long, long[]> longContainer = new GetSetContainerElement<Long, long[]>()
+  { @Override Long getValue(long[] array, int ix)
+    { return array[ix];
+    }
+
+    @Override void setValue(long[] array, Long element, int ix)
+    { array[ix] = element;
+    }
 
   };
   
   /**Helper contains the method to access an int[]-array. */
-  private GetSetContainerElement<Short, short[]> shortContainer = new GetSetContainerElement<Short, short[]>()
+  private final GetSetContainerElement<Short, short[]> shortContainer = new GetSetContainerElement<Short, short[]>()
   {	@Override Short getValue(short[] array, int ix)
 		{ return array[ix];
 		}
@@ -584,7 +641,7 @@ public class FieldJc
   };
   
   /**Helper contains the method to access an float[]-array. */
-  private GetSetContainerElement<Float, float[]> floatContainer = new GetSetContainerElement<Float, float[]>()
+  private final GetSetContainerElement<Float, float[]> floatContainer = new GetSetContainerElement<Float, float[]>()
   {	@Override Float getValue(float[] array, int ix)
 		{ return array[ix];
 		}
@@ -596,7 +653,7 @@ public class FieldJc
   };
   
   /**Helper contains the method to access an float[]-array. */
-  private GetSetContainerElement<Double, double[]> doubleContainer = new GetSetContainerElement<Double, double[]>()
+  private final GetSetContainerElement<Double, double[]> doubleContainer = new GetSetContainerElement<Double, double[]>()
   {	@Override Double getValue(double[] array, int ix)
 		{ return array[ix];
 		}
@@ -608,7 +665,7 @@ public class FieldJc
   };
   
   /**Helper contains the method to access an int[]-array. */
-  private GetSetContainerElement<Character, char[]> charContainer = new GetSetContainerElement<Character, char[]>(){
+  private final GetSetContainerElement<Character, char[]> charContainer = new GetSetContainerElement<Character, char[]>(){
 
 		@Override Character getValue(char[] array, int ix)
 		{ return array[ix];
@@ -621,25 +678,25 @@ public class FieldJc
   };
   
   /**Helper contains the method to access an int[]-array. */
-  private GetArray<short[]> getShortArray = new GetArray<short[]>();
+  private final GetArray<short[]> getShortArray = new GetArray<short[]>();
   
   /**Helper contains the method to access an int[]-array. */
-  private GetArray<byte[]> getByteArray = new GetArray<byte[]>();
+  private final GetArray<byte[]> getByteArray = new GetArray<byte[]>();
   
   /**Helper contains the method to access an int[]-array. */
-  private GetArray<long[]> getLongArray = new GetArray<long[]>();
+  private final GetArray<long[]> getLongArray = new GetArray<long[]>();
   
   /**Helper contains the method to access an int[]-array. */
-  private GetArray<float[]> getFloatArray = new GetArray<float[]>();
+  private final GetArray<float[]> getFloatArray = new GetArray<float[]>();
   
   /**Helper contains the method to access an int[]-array. */
-  private GetArray<double[]> getDoubleArray = new GetArray<double[]>();
+  private final GetArray<double[]> getDoubleArray = new GetArray<double[]>();
   
   /**Helper contains the method to access an int[]-array. */
-  private GetArray<Object[]> getObjectArray = new GetArray<Object[]>();
+  private final GetArray<Object[]> getObjectArray = new GetArray<Object[]>();
   
   /**Helper contains the method to access an int[]-array. */
-  private GetArray<String[]> getStringArray = new GetArray<String[]>();
+  private final GetArray<String[]> getStringArray = new GetArray<String[]>();
   
   
   

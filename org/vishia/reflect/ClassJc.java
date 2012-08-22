@@ -8,7 +8,7 @@ import org.vishia.bridgeC.MemSegmJc;
 
 public final class ClassJc
 {
-	
+  
   /**Version, history and license
    * <ul>
    * <li>2012-04-08 Hartmut new {@link #nrofBytesScalarTypes}, some correction parallel 
@@ -42,20 +42,20 @@ public final class ClassJc
    */
   public static final int version = 20120409;
 
-	/**Index of all known reflection-classes valid for this application. If any reflection class
-	 * is gotten, it is known here for all following accesses. Especially the instances for the fields
-	 * of the class {@link #indexNameFields} shouldn't be created newly if the instance of ClassJc is stored. 
-	 */
-	private final static Map<String, ClassJc> allClasses = new TreeMap<String, ClassJc>(); 
-	
-	/**Designation of type especially in a embedded system in C-programming.
-	 * The types identifications are defined in the range from
-	 * 0 to 0x1f. The limitation is because the {@link org.vishia.communication.InspcDataExchangeAccess}
-	 * uses designation from 0..0xc7 for Strings with upto 200 character
-	 * and uses this types in 1 byte with added {@link org.vishia.communication.InspcDataExchangeAccess#kScalarTypes} = 0xe0
-	 * <br>
-	 * The type void is used especially for a void* pointer. 
-	 */
+  /**Index of all known reflection-classes valid for this application. If any reflection class
+   * is gotten, it is known here for all following accesses. Especially the instances for the fields
+   * of the class {@link #indexNameFields} shouldn't be created newly if the instance of ClassJc is stored. 
+   */
+  private final static Map<String, ClassJc> allClasses = new TreeMap<String, ClassJc>(); 
+  
+  /**Designation of type especially in a embedded system in C-programming.
+   * The types identifications are defined in the range from
+   * 0 to 0x1f. The limitation is because the {@link org.vishia.communication.InspcDataExchangeAccess}
+   * uses designation from 0..0xc7 for Strings with upto 200 character
+   * and uses this types in 1 byte with added {@link org.vishia.communication.InspcDataExchangeAccess#kScalarTypes} = 0xe0
+   * <br>
+   * The type void is used especially for a void* pointer. 
+   */
   public static final int REFLECTION_void  =              0x01; 
   
   /**Designation of the integer types with defined bit width. In C signed and unsigned are differenced.
@@ -73,6 +73,7 @@ public final class ClassJc
    * 16 or 32 bit. Instead use {@link #REFLECTION_int32} etc.
    * @deprecated
    */
+  @Deprecated
   public static final int REFLECTION_int    =             0x0a
                         , REFLECTION_uint   =             0x0b;
   
@@ -97,6 +98,7 @@ public final class ClassJc
    * 1, 8, 16 or 32 bit. Instead use {@link #REFLECTION_int32} etc.
    * @deprecated
    */
+  @Deprecated
   public static final int REFLECTION_boolean=             0x16;
   
   /**If this designation is used, the bit position and the number of bits are given
@@ -133,7 +135,7 @@ public final class ClassJc
   private ClassJc(Class<?> clazz)
   { this.clazz = clazz;
     modifier = clazz.getModifiers();
-  	name = clazz.getName();
+    name = clazz.getName();
     allClasses.put(name, this);
     
   }
@@ -141,10 +143,10 @@ public final class ClassJc
   
   
   void fillAllFields(){
-  	if(indexNameFields == null){
-  		Field[] fields = clazz.getDeclaredFields();
-  		//create the requested aggregations:
-  		indexNameFields = new TreeMap<String, FieldJc>();
+    if(indexNameFields == null){
+      Field[] fields = clazz.getDeclaredFields();
+      //create the requested aggregations:
+      indexNameFields = new TreeMap<String, FieldJc>();
       Class<?> superClazz = clazz.getSuperclass();
       int ix;
       if(false && superClazz !=null){  //wrong idea, field is not existent. TODO evaluate superclass in ClassContent.getFields.
@@ -158,55 +160,55 @@ public final class ClassJc
         ix=-1; //last used index, preincremented
       }
       for(Field field: fields){
-      	String name = field.getName();
-      	FieldJc fieldJc = new FieldJc(field);
-      	indexNameFields.put(name, fieldJc);
-      	allFields[++ix] = fieldJc;
+        String name = field.getName();
+        FieldJc fieldJc = new FieldJc(field);
+        indexNameFields.put(name, fieldJc);
+        allFields[++ix] = fieldJc;
       }
-  	}
+    }
   }
   
   private ClassJc(String name, int modifier)
   {
-  	this.name = name;
-  	this.modifier = modifier;
-  	this.clazz = null;
+    this.name = name;
+    this.modifier = modifier;
+    this.clazz = null;
     allClasses.put(name, this);
   }
   
   
   public static ClassJc getClass(Object obj){ 
-  	Class<?> clazz = obj.getClass();
-  	String sName = clazz.getName();
-  	
-  	ClassJc ret = allClasses.get(sName);
-  	if(ret == null){
-  		MemSegmJc objM = new MemSegmJc(obj, 0);
-  	  ret = new ClassJc(clazz);
-  	}
-  	return ret;
+    Class<?> clazz = obj.getClass();
+    String sName = clazz.getName();
+    
+    ClassJc ret = allClasses.get(sName);
+    if(ret == null){
+      MemSegmJc objM = new MemSegmJc(obj, 0);
+      ret = new ClassJc(clazz);
+    }
+    return ret;
   }
   
   
   public static ClassJc fromClass(Class<?> clazz)
   {
-  	String className = clazz.getName();
-  	ClassJc clazzJc = allClasses.get(className);
-  	if(clazzJc == null){
-  		clazzJc = new ClassJc(clazz);
-  	}
-  	return clazzJc;
+    String className = clazz.getName();
+    ClassJc clazzJc = allClasses.get(className);
+    if(clazzJc == null){
+      clazzJc = new ClassJc(clazz);
+    }
+    return clazzJc;
   }
   
   
   /**Creates or gets the Class with the given name. */
   public static ClassJc forName(String className)
   {
-  	ClassJc clazzJc = allClasses.get(className);
-  	if(clazzJc == null){
-  		//Class clazz = Class.forName(className);
-  	}
-  	return clazzJc;
+    ClassJc clazzJc = allClasses.get(className);
+    if(clazzJc == null){
+      //Class clazz = Class.forName(className);
+    }
+    return clazzJc;
   }
   
   
@@ -214,11 +216,11 @@ public final class ClassJc
   /**Creates or gets the primitive class with the given Name. */
   public static ClassJc primitive(String className)
   {
-  	ClassJc clazzJc = allClasses.get(className);
-  	if(clazzJc == null){
+    ClassJc clazzJc = allClasses.get(className);
+    if(clazzJc == null){
       clazzJc = new ClassJc(className, ModifierJc.mPrimitiv);
-  	}
-  	return clazzJc;
+    }
+    return clazzJc;
   }
   
   
@@ -234,17 +236,23 @@ public final class ClassJc
   public FieldJc getDeclaredField(String name) 
   throws NoSuchFieldException
   {
-  	fillAllFields();
-  	FieldJc field = indexNameFields.get(name);
-  	if(field ==null) throw new NoSuchFieldException(name);
-  	return field;
+    fillAllFields();
+    FieldJc field = indexNameFields.get(name);
+    if(field ==null) throw new NoSuchFieldException(name);
+    return field;
   }
   
   public boolean isPrimitive(){ return (modifier & ModifierJc.mPrimitiv) != 0 || clazz != null && clazz.isPrimitive(); }
   
   
+  /**Returns the basic Class like Field.getClass()
+   * @return
+   */
+  public Class<?> getClazz(){ return clazz; }
+  
+  
   public ClassJc getEnclosingClass(){
-  	return null; //TODO
+    return null; //TODO
   }
   
 }
