@@ -41,19 +41,19 @@ import org.vishia.util.Java4C;
  * The following enhancements in comparison with java.lang.reflect.Field are done:
  * <ul>
  * <li>The general strategy to give any instance is: Supply the instance in form 
- * 	of a {@link MemSegmJc}-reference instead of a java.lang.Object-reference. There are two reasons:
- * 	<ul>
- * 	<li>In the C-implementation, non-Object-base structures are supported too. An ObjectJc*-pointer
+ *   of a {@link MemSegmJc}-reference instead of a java.lang.Object-reference. There are two reasons:
+ *   <ul>
+ *   <li>In the C-implementation, non-Object-base structures are supported too. An ObjectJc*-pointer
  *     can't be used in all cases.
- * 	<li>To support access to an external hardware, an additional information (segment) is necessary
+ *   <li>To support access to an external hardware, an additional information (segment) is necessary
  *     always proper to the instance reference.
- * 	</ul>
- * 	The type {@link MemSegmJc} is deployed in C with a segment information and a void*-pointer,
- * 	where in Java it is a Object-reference for normal reflection usage, the segment information
- * 	and an int-address for access to extern memory with special Interprocesscomm-Mechanism such as
- * 	UDP-Telegrams, serial data transmission or access via JNI.   
+ *   </ul>
+ *   The type {@link MemSegmJc} is deployed in C with a segment information and a void*-pointer,
+ *   where in Java it is a Object-reference for normal reflection usage, the segment information
+ *   and an int-address for access to extern memory with special Interprocesscomm-Mechanism such as
+ *   UDP-Telegrams, serial data transmission or access via JNI.   
  * <li>
- * 	All get and set-Methods to access field contents have an int... Argument for indexing an array.
+ *   All get and set-Methods to access field contents have an int... Argument for indexing an array.
  * </ul>
  * 
  * @author Hartmut Schorrig
@@ -62,7 +62,7 @@ import org.vishia.util.Java4C;
 @SuppressWarnings("unchecked")
 public class FieldJc
 {
-	
+  
   /**Version, history and license.
    * <ul>
    * <li>2012-08-23 Hartmut {@link #getFloat(MemSegmJc, int...)} now supports non-static arrays too. Experience.
@@ -94,78 +94,78 @@ public class FieldJc
    */
   public static final int version = 20120823;
 
-	/**That annotation is used to detect fix-size-arrays. In Java all arrays are dynamically,
-	 * but to test the reflection access in Java adequate to C static arrays should be emulated. */
-	static final Class<Java4C.FixArraySize> annotationJava2CFixArraySize;
-	
-	/**Initializer-Block for the {@link #annotationJava2CFixArraySize}. */
-	static {
-		Class<Java4C.FixArraySize> af;
-		try{
-			af = (Class<Java4C.FixArraySize>) Class.forName("org.vishia.util.Java4C$FixArraySize");
-		}catch(ClassNotFoundException exc){ 
-			af = null;
-		}
-		annotationJava2CFixArraySize = af;
-	}
+  /**That annotation is used to detect fix-size-arrays. In Java all arrays are dynamically,
+   * but to test the reflection access in Java adequate to C static arrays should be emulated. */
+  static final Class<Java4C.FixArraySize> annotationJava2CFixArraySize;
+  
+  /**Initializer-Block for the {@link #annotationJava2CFixArraySize}. */
+  static {
+    Class<Java4C.FixArraySize> af;
+    try{
+      af = (Class<Java4C.FixArraySize>) Class.forName("org.vishia.util.Java4C$FixArraySize");
+    }catch(ClassNotFoundException exc){ 
+      af = null;
+    }
+    annotationJava2CFixArraySize = af;
+  }
 
-	
-	/**Aggregation to the original field of reflection from Java. It may be null if the reflections
-	 * don't come from Java. */
-	private final Field field;
-	
-	/**Name of the field. It is the same like field.getName(), but set if field == null. */
-	private final String name; 
-	
-	/**The type of the field. */
-	public final ClassJc type;
-	
+  
+  /**Aggregation to the original field of reflection from Java. It may be null if the reflections
+   * don't come from Java. */
+  private final Field field;
+  
+  /**Name of the field. It is the same like field.getName(), but set if field == null. */
+  private final String name; 
+  
+  /**The type of the field. */
+  public final ClassJc type;
+  
   final char cPrimitveType;
 
-	
-	/**The modifier contains some more informations as java.reflect.field.
-	 * It is copied from {@link #field}, some more bits are added, see {@link ModifierJc}.
-	 */
-	private int modifier;
-	
-	/**The size of a static array. Note: The array size may be changed in Java. Only a final array
-	 * isn't changed. If null then it isn't an array. */
-	final int[] staticArraySize;
-	
-	/**All annotations from {@link #field}. */
-	final Annotation[] annotations;
-	
-		
+  
+  /**The modifier contains some more informations as java.reflect.field.
+   * It is copied from {@link #field}, some more bits are added, see {@link ModifierJc}.
+   */
+  private int modifier;
+  
+  /**The size of a static array. Note: The array size may be changed in Java. Only a final array
+   * isn't changed. If null then it isn't an array. */
+  final int[] staticArraySize;
+  
+  /**All annotations from {@link #field}. */
+  final Annotation[] annotations;
+  
+    
   /**Helper class containing a template method to get the last array and the last index
    * for indexed access.
    * @param <ArrayType> The type like int[] or short[] 
    */
   class GetArray<ArrayType>
   {
-	  /**Gets the last array
-	   * @param ixP Returns the last given index in the variable argument list ix, or 0 if not given.
-	   * @param obj The instance where this field is member of.
-	   * @param ix  variable number of given indices for the dimension. If the number of indices
-	   *            is less then the number of dimension, missed indices are used as 0.
-	   * @return The last array-reference with the proper type.
-	   *         To access data the returnValue[ixP[0]] should be used.
-	   */
-	  ArrayType getLastArray(int[] ixP, MemSegmJc obj, int ...ix)
-	  { Object data = null;  //it is the Object of an array-head
-	  	try{ data = field.get(obj.obj());  //the element itself. It is an int[], or float[] or such.
-	   	} catch(IllegalAccessException exc){
-	   		throw new RuntimeException(exc);
-	   	}
-	  	int ix1 = 0;  //index of the dimension
-			for(int ixx=0; ixx < staticArraySize.length; ++ixx){  //iterate over dimension
-	  		if(ix.length >= ixx){ ix1 = ix[ixx]; } else { ix1 = 0; }  //if an index isn't given, use 0
-	  		if(ixx < staticArraySize.length -1){
-	  			data = ((Object[])data)[ix1];       //further dimensions: data is the array inside
-	  		} 
-	  	}
-			ixP[0] = ix1;
-			return (ArrayType)data;  //cast to the array type.
-	  }
+    /**Gets the last array
+     * @param ixP Returns the last given index in the variable argument list ix, or 0 if not given.
+     * @param obj The instance where this field is member of.
+     * @param ix  variable number of given indices for the dimension. If the number of indices
+     *            is less then the number of dimension, missed indices are used as 0.
+     * @return The last array-reference with the proper type.
+     *         To access data the returnValue[ixP[0]] should be used.
+     */
+    ArrayType getLastArray(int[] ixP, MemSegmJc obj, int ...ix)
+    { Object data = null;  //it is the Object of an array-head
+      try{ data = field.get(obj.obj());  //the element itself. It is an int[], or float[] or such.
+       } catch(IllegalAccessException exc){
+         throw new RuntimeException(exc);
+       }
+      int ix1 = 0;  //index of the dimension
+      for(int ixx=0; ixx < staticArraySize.length; ++ixx){  //iterate over dimension
+        if(ix.length >= ixx){ ix1 = ix[ixx]; } else { ix1 = 0; }  //if an index isn't given, use 0
+        if(ixx < staticArraySize.length -1){
+          data = ((Object[])data)[ix1];       //further dimensions: data is the array inside
+        } 
+      }
+      ixP[0] = ix1;
+      return (ArrayType)data;  //cast to the array type.
+    }
   }
 
   
@@ -183,30 +183,30 @@ public class FieldJc
      */
     class GetArray
     {
-  	  /**Gets the last array
-  	   * @param ixP Returns the last given index in the variable argument list ix, or 0 if not given.
-  	   * @param obj The instance where this field is member of.
-  	   * @param ix  variable number of given indices for the dimension. If the number of indices
-  	   *            is less then the number of dimension, missed indices are used as 0.
-  	   * @return The last array-reference with the proper type.
-  	   *         To access data the returnValue[ixP[0]] should be used.
-  	   */
-  	  ArrayType getLastArray(int[] ixP, MemSegmJc obj, int ...ix)
-  	  { Object data = null;  //it is the Object of an array-head
-  	  	try{ data = field.get(obj.obj());  //the element itself. It is an int[], or float[] or such.
-  	   	} catch(IllegalAccessException exc){
-  	   		throw new RuntimeException(exc);
-  	   	}
-  	  	int ix1 = 0;  //index of the dimension
-  			for(int ixx=0; ixx < staticArraySize.length; ++ixx){  //iterate over dimension
-  	  		if(ix.length >= ixx){ ix1 = ix[ixx]; } else { ix1 = 0; }  //if an index isn't given, use 0
-  	  		if(ixx < staticArraySize.length -1){
-  	  			data = ((Object[])data)[ix1];       //further dimensions: data is the array inside
-  	  		} 
-  	  	}
-  			ixP[0] = ix1;
-  			return (ArrayType)data;  //cast to the array type.
-  	  }
+      /**Gets the last array
+       * @param ixP Returns the last given index in the variable argument list ix, or 0 if not given.
+       * @param obj The instance where this field is member of.
+       * @param ix  variable number of given indices for the dimension. If the number of indices
+       *            is less then the number of dimension, missed indices are used as 0.
+       * @return The last array-reference with the proper type.
+       *         To access data the returnValue[ixP[0]] should be used.
+       */
+      ArrayType getLastArray(int[] ixP, MemSegmJc obj, int ...ix)
+      { Object data = null;  //it is the Object of an array-head
+        try{ data = field.get(obj.obj());  //the element itself. It is an int[], or float[] or such.
+         } catch(IllegalAccessException exc){
+           throw new RuntimeException(exc);
+         }
+        int ix1 = 0;  //index of the dimension
+        for(int ixx=0; ixx < staticArraySize.length; ++ixx){  //iterate over dimension
+          if(ix.length >= ixx){ ix1 = ix[ixx]; } else { ix1 = 0; }  //if an index isn't given, use 0
+          if(ixx < staticArraySize.length -1){
+            data = ((Object[])data)[ix1];       //further dimensions: data is the array inside
+          } 
+        }
+        ixP[0] = ix1;
+        return (ArrayType)data;  //cast to the array type.
+      }
     }
 
     /**Instance containing the template-access method.
@@ -224,15 +224,15 @@ public class FieldJc
      * @throws IllegalAccessException
      */
     public ElementType getValue(MemSegmJc obj, int... ix) throws IllegalArgumentException, IllegalAccessException {
-    	ElementType value = null;
-    	if(staticArraySize !=null && staticArraySize.length >0){
+      ElementType value = null;
+      if(staticArraySize !=null && staticArraySize.length >0){
         int[] ixP = new int[1];
         ArrayType array = getTypedArray.getLastArray(ixP, obj, ix);
-      	value = getValue(array,ixP[0]);
-    	} else {
-    	  //value = 0; //field.getInt(obj.obj());
+        value = getValue(array,ixP[0]);
+      } else {
+        //value = 0; //field.getInt(obj.obj());
       }
-    	return value;
+      return value;
     }
     /**Gets a value from a container-field.
      * @param obj The instance containing the field.
@@ -242,14 +242,14 @@ public class FieldJc
      * @throws IllegalAccessException
      */
     public ElementType setValue(ElementType value, MemSegmJc obj, int... ix) throws IllegalArgumentException, IllegalAccessException {
-    	if(staticArraySize !=null && staticArraySize.length >0){
+      if(staticArraySize !=null && staticArraySize.length >0){
         int[] ixP = new int[1];
         ArrayType array = getTypedArray.getLastArray(ixP, obj, ix);
-      	setValue(array, value, ixP[0]);
-    	} else {
-    	  //value = 0; //field.getInt(obj.obj());
+        setValue(array, value, ixP[0]);
+      } else {
+        //value = 0; //field.getInt(obj.obj());
       }
-    	return value;
+      return value;
     }
     
     abstract ElementType getValue(ArrayType array, int ix);
@@ -260,46 +260,46 @@ public class FieldJc
   
   
   
-	
-	/**Creates based on a given field.
-	 * @param field Any field of reflection. */
-	public FieldJc(Field field)
-	{
-		this.field = field;
-		field.setAccessible(true);
-		modifier = field.getModifiers();
-		this.name = field.getName();
-		Class fieldType = field.getType();
-		String sTypeName = fieldType.getName();
-		annotations = field.getAnnotations();
-		
-		for(Annotation annotation: annotations){
-			Class<? extends Annotation> aClazz = annotation.annotationType();
-			String name = aClazz.getName();
-		}
-		//check container types List and Map
-		Class[] typeInterfaces = fieldType.getInterfaces();
-		if(typeInterfaces !=null){
-			for(Class typeInterface: typeInterfaces){
-				String sNameifc = typeInterface.getName();
-				if(sNameifc.equals("java.util.List")){
-					modifier |= ModifierJc.kLinkedListJc;
-				} else if(sNameifc.equals("Map")){
-					modifier |= ModifierJc.kMapJc;
-				}  
-			}
-		}
-		
-		if(sTypeName.equals("java.util.List")){
-			modifier |= ModifierJc.kLinkedListJc;
-		} else if(sTypeName.equals("java.util.Map")){
-			modifier |= ModifierJc.kMapJc;
-		}  
-		
-		
-		
-		if(sTypeName.charAt(0)== '['){
-			//An array
+  
+  /**Creates based on a given field.
+   * @param field Any field of reflection. */
+  public FieldJc(Field field)
+  {
+    this.field = field;
+    field.setAccessible(true);
+    modifier = field.getModifiers();
+    this.name = field.getName();
+    Class fieldType = field.getType();
+    String sTypeName = fieldType.getName();
+    annotations = field.getAnnotations();
+    
+    for(Annotation annotation: annotations){
+      Class<? extends Annotation> aClazz = annotation.annotationType();
+      String name = aClazz.getName();
+    }
+    //check container types List and Map
+    Class[] typeInterfaces = fieldType.getInterfaces();
+    if(typeInterfaces !=null){
+      for(Class typeInterface: typeInterfaces){
+        String sNameifc = typeInterface.getName();
+        if(sNameifc.equals("java.util.List")){
+          modifier |= ModifierJc.kLinkedListJc;
+        } else if(sNameifc.equals("Map")){
+          modifier |= ModifierJc.kMapJc;
+        }  
+      }
+    }
+    
+    if(sTypeName.equals("java.util.List")){
+      modifier |= ModifierJc.kLinkedListJc;
+    } else if(sTypeName.equals("java.util.Map")){
+      modifier |= ModifierJc.kMapJc;
+    }  
+    
+    
+    
+    if(sTypeName.charAt(0)== '['){
+      //An array
       char typeChar =0;
       int ixArray = 0;
       try{ 
@@ -323,29 +323,29 @@ public class FieldJc
       }  catch(Exception exc){
         throw new RuntimeException(exc);
       }
-		  Java4C.FixArraySize atFixArraySize = field.getAnnotation(annotationJava2CFixArraySize);
-			if(atFixArraySize !=null){
-			  //it is designated as a fix-size-array for C-translation.
-				//Therefore it es presented as a fix-size-array in Java too.
-				//If the real array size doesn't match to the annotation-given size, an exception is thrown.
-					int size = atFixArraySize.value();
-				  
-					modifier |= ModifierJc.kStaticArray;
-					staticArraySize = new int[ixArray];
-				  staticArraySize[0] = size;
-	
-			} else {
-			  //a non-final array in Java is like an ObjectArray
-				modifier |= ModifierJc.kObjectArrayJc;
-				//type = ClassJc.fromClass(fieldType);
-		    //this.cPrimitveType = '\0';
-			  staticArraySize = null;
-			}
-		} else {
-			//not an array field
-			type = ClassJc.fromClass(fieldType);
-			if(fieldType.isPrimitive()){
-			  String name = fieldType.getName();
+      Java4C.FixArraySize atFixArraySize = field.getAnnotation(annotationJava2CFixArraySize);
+      if(atFixArraySize !=null){
+        //it is designated as a fix-size-array for C-translation.
+        //Therefore it es presented as a fix-size-array in Java too.
+        //If the real array size doesn't match to the annotation-given size, an exception is thrown.
+          int size = atFixArraySize.value();
+          
+          modifier |= ModifierJc.kStaticArray;
+          staticArraySize = new int[ixArray];
+          staticArraySize[0] = size;
+  
+      } else {
+        //a non-final array in Java is like an ObjectArray
+        modifier |= ModifierJc.kObjectArrayJc;
+        //type = ClassJc.fromClass(fieldType);
+        //this.cPrimitveType = '\0';
+        staticArraySize = null;
+      }
+    } else {
+      //not an array field
+      type = ClassJc.fromClass(fieldType);
+      if(fieldType.isPrimitive()){
+        String name = fieldType.getName();
         if(name.equals("byte")){ this.cPrimitveType = 'B'; }
         else if(name.equals("short")){ this.cPrimitveType = 'S'; }
         else if(name.equals("int")){ this.cPrimitveType = 'I'; }
@@ -355,113 +355,113 @@ public class FieldJc
         else if(name.equals("boolean")){ this.cPrimitveType = 'Z'; }
         else if(name.equals("char")){ this.cPrimitveType = 'C'; }
         else { this.cPrimitveType = '\0';}
-			} else {
-			  this.cPrimitveType = '\0';
-			}
-		  staticArraySize = null;
-		}
-	}
+      } else {
+        this.cPrimitveType = '\0';
+      }
+      staticArraySize = null;
+    }
+  }
 
-	
-	
-	public FieldJc(Class clazz, String name){
-	  this.type = ClassJc.fromClass(clazz);
-	  this.field = null;
-	  this.name = name;
-	  this.staticArraySize = null;
-	  this.cPrimitveType = '\0';
-	  this.annotations = null;
-	}
-	
-	
-	
-	public String getName(){ return name; }
-	
-	
-	public ClassJc getType(){ return type; }
-	
-	
-	/**Returns the type char. For primitives it is B S I L F D Z C, 
-	 * for non-primitives it returns 0.
-	 * @return 0 if non primitive, else typechar.
-	 */
-	public char getTypeChar(){ return cPrimitveType; }
-	
-	public int getModifiers(){ return modifier; }
-	
-	
-	public int getStaticArraySize(){ return staticArraySize !=null && staticArraySize.length>0 ? staticArraySize[0] : 0; }
-	
-	
-	
-	public int getArraylength(MemSegmJc instance) throws IllegalArgumentException, IllegalAccessException
-	{ /* it is assumed, that the obj matches to the Field ythis, it means, the Field ythis
+  
+  
+  public FieldJc(Class clazz, String name){
+    this.type = ClassJc.fromClass(clazz);
+    this.field = null;
+    this.name = name;
+    this.staticArraySize = null;
+    this.cPrimitveType = '\0';
+    this.annotations = null;
+  }
+  
+  
+  
+  public String getName(){ return name; }
+  
+  
+  public ClassJc getType(){ return type; }
+  
+  
+  /**Returns the type char. For primitives it is B S I L F D Z C, 
+   * for non-primitives it returns 0.
+   * @return 0 if non primitive, else typechar.
+   */
+  public char getTypeChar(){ return cPrimitveType; }
+  
+  public int getModifiers(){ return modifier; }
+  
+  
+  public int getStaticArraySize(){ return staticArraySize !=null && staticArraySize.length>0 ? staticArraySize[0] : 0; }
+  
+  
+  
+  public int getArraylength(MemSegmJc instance) throws IllegalArgumentException, IllegalAccessException
+  { /* it is assumed, that the obj matches to the Field ythis, it means, the Field ythis
      is getted from a object of exactly this type or from the obj itself.
      This is tested by original Java - set- or get- operations.
      But it is not tested here to optimize calculation time. If it is a part of a
      Java2C-translation, the test should be done on Java-level, if it is a directly
      programmed in C or C++ part, the user should be programmed carefully, how it is
      ordinary in C or C++.
-	  */
-	 int length;
-	 int bitModifiers;
-	 int bitContainerType;
-	 final MemSegmJc adr = new MemSegmJc();  //an Stack instance in C because it is an embedded type.
-	 bitModifiers = getModifiers();
-	 bitContainerType = bitModifiers & ModifierJc.m_Containertype;
-	 //gets the address of the container without index
-	 //adr = getContainerAddress(instance, null, null); //memory location of the field inside obj
-	 if(MemSegmJc.segment(instance) ==0){
-		 adr.set(getContainer(instance)); //reference to the instance; 
-	 }
-	 Object obj = adr.obj();
-	 if(obj != null && MemSegmJc.segment(adr)==0){
-	   switch(bitContainerType){
-	   case ModifierJc.kLinkedListJc:
-	   { length = ((List)obj).size();
-	   } break; 
-	   case ModifierJc.kMapJc:
-	   { length = ((Map)obj).size();;
-	   } break; 
-	   case ModifierJc.kUML_LinkedList:
-	   { length = getArraylengthUML_LinkedList(adr);
-	   } break; 
-	   case ModifierJc.kUML_ArrayList:
-	   { length = getArraylengthUML_ArrayList(adr);
-	   } break; 
-	   case ModifierJc.kUML_Map:
-	   { length = getArraylengthUML_Map(adr);
-	   } break; 
-	   case ModifierJc.kObjectArrayJc:
-	   { int[] array = (int[])(adr.obj());  //it is known that it is an ObjectArrayJc
-	     length = array.length;
-	   } break; 
-	   case ModifierJc.kStaticArray:
-	   { //memory location of the field inside obj
-	     //MemSegmJc adr = getMemoryAddress_FieldJc(ythis,instance, null, null); 
-	     length = getStaticArraySize();
-	     if(  (bitModifiers & ModifierJc.mAddressing) == ModifierJc.kReference) {
-	       /**Only if it is an reference, check the reference values from back. Show only non-null references. */
-	       length = 0; //getRealLengthStaticArray_MemAccessJc(adr, length);
-	     }
-	   } break;
-	   default:
-	   { //assumed, it is a reference:
-	     //THROW_s0(NoSuchFieldException, "not an array or container field, field=", (int32)(ythis));
-	     length = 0;  //dereferenced at the given position.
-	   }
-	   }//switch
-	 }
-	 else
-	 { length = 0; //because container is not exitsting
-	 }
-	 return length;
-	}	
+    */
+   int length;
+   int bitModifiers;
+   int bitContainerType;
+   final MemSegmJc adr = new MemSegmJc();  //an Stack instance in C because it is an embedded type.
+   bitModifiers = getModifiers();
+   bitContainerType = bitModifiers & ModifierJc.m_Containertype;
+   //gets the address of the container without index
+   //adr = getContainerAddress(instance, null, null); //memory location of the field inside obj
+   if(MemSegmJc.segment(instance) ==0){
+     adr.set(getContainer(instance)); //reference to the instance; 
+   }
+   Object obj = adr.obj();
+   if(obj != null && MemSegmJc.segment(adr)==0){
+     switch(bitContainerType){
+     case ModifierJc.kLinkedListJc:
+     { length = ((List)obj).size();
+     } break; 
+     case ModifierJc.kMapJc:
+     { length = ((Map)obj).size();;
+     } break; 
+     case ModifierJc.kUML_LinkedList:
+     { length = getArraylengthUML_LinkedList(adr);
+     } break; 
+     case ModifierJc.kUML_ArrayList:
+     { length = getArraylengthUML_ArrayList(adr);
+     } break; 
+     case ModifierJc.kUML_Map:
+     { length = getArraylengthUML_Map(adr);
+     } break; 
+     case ModifierJc.kObjectArrayJc:
+     { int[] array = (int[])(adr.obj());  //it is known that it is an ObjectArrayJc
+       length = array.length;
+     } break; 
+     case ModifierJc.kStaticArray:
+     { //memory location of the field inside obj
+       //MemSegmJc adr = getMemoryAddress_FieldJc(ythis,instance, null, null); 
+       length = getStaticArraySize();
+       if(  (bitModifiers & ModifierJc.mAddressing) == ModifierJc.kReference) {
+         /**Only if it is an reference, check the reference values from back. Show only non-null references. */
+         length = 0; //getRealLengthStaticArray_MemAccessJc(adr, length);
+       }
+     } break;
+     default:
+     { //assumed, it is a reference:
+       //THROW_s0(NoSuchFieldException, "not an array or container field, field=", (int32)(ythis));
+       length = 0;  //dereferenced at the given position.
+     }
+     }//switch
+   }
+   else
+   { length = 0; //because container is not exitsting
+   }
+   return length;
+  }  
   
-	
-	
-	
-	/**Returns the real Class and the referenced Object appropriate to the field in the given Object.
+  
+  
+  
+  /**Returns the real Class and the referenced Object appropriate to the field in the given Object.
    * The field should be a reference field, not a primitive. 
    * It means, this.getType().isPrimitive() should return false.
    * @param instanceM The reference to the Object, where the field is located in. It may be located
@@ -486,20 +486,20 @@ public class FieldJc
     }
     else
     {
-    	int modifier = field.getModifiers();
+      int modifier = field.getModifiers();
       field.setAccessible(true);
-    	try{ 
-    		retObj = field.get(currObject);
-    		if(retObj !=null){
-    		  clazz = ClassJc.getClass(retObj);
-    		} else {
-    			clazz = null;
-    		}
-    	} catch(IllegalAccessException exc){ 
-    		retObj = null;
-    		clazz = null;
-    	}
-    	//if(Modifier.)
+      try{ 
+        retObj = field.get(currObject);
+        if(retObj !=null){
+          clazz = ClassJc.getClass(retObj);
+        } else {
+          clazz = null;
+        }
+      } catch(IllegalAccessException exc){ 
+        retObj = null;
+        clazz = null;
+      }
+      //if(Modifier.)
     }
     retClazz[0] = clazz;  
     return new MemSegmJc(retObj, 0);
@@ -509,23 +509,23 @@ public class FieldJc
   
   
   public byte getByte(MemSegmJc obj, int... ix) throws IllegalArgumentException, IllegalAccessException {
-  	return field.getByte(obj.obj());
+    return field.getByte(obj.obj());
   }
   
   
   public short getShort(MemSegmJc obj, int... ix) throws IllegalArgumentException, IllegalAccessException {
-  	return field.getShort(obj.obj());
+    return field.getShort(obj.obj());
   }
   
   public int setShort(MemSegmJc objM, short valSet, int... ix) throws IllegalArgumentException, IllegalAccessException {
     short value;
-  	if(staticArraySize !=null && staticArraySize.length >0){
+    if(staticArraySize !=null && staticArraySize.length >0){
       value = shortContainer.setValue(valSet, objM, ix);
    } else {
-  	  field.setShort(objM.obj(), valSet);
-  	  value = valSet;
+      field.setShort(objM.obj(), valSet);
+      value = valSet;
     }
-  	return value;
+    return value;
   }
   
   
@@ -533,21 +533,21 @@ public class FieldJc
   
   public int xxxgetInt(MemSegmJc obj, int... ix) throws IllegalArgumentException, IllegalAccessException {
     int value;
-  	if(staticArraySize !=null && staticArraySize.length >0){
-    	Object data = field.get(obj.obj());  //the element itself. It is an int[], or float[] or such.
-			
-    	int ix1 = 0;
-  		for(int ixx=0; ixx < staticArraySize.length; ++ixx){
-    		if(ix.length >= ixx){ ix1 = ix[ixx]; } else { ix1 = 0; }
-    		if(ixx < staticArraySize.length -1){
-    			data = ((Object[])data)[ix1];
-    		} 
-    	}
-  		value = ((int[])data)[ix1];
-  	} else {
-  	  value = field.getInt(obj.obj());
+    if(staticArraySize !=null && staticArraySize.length >0){
+      Object data = field.get(obj.obj());  //the element itself. It is an int[], or float[] or such.
+      
+      int ix1 = 0;
+      for(int ixx=0; ixx < staticArraySize.length; ++ixx){
+        if(ix.length >= ixx){ ix1 = ix[ixx]; } else { ix1 = 0; }
+        if(ixx < staticArraySize.length -1){
+          data = ((Object[])data)[ix1];
+        } 
+      }
+      value = ((int[])data)[ix1];
+    } else {
+      value = field.getInt(obj.obj());
     }
-  	return value;
+    return value;
   }
   
   
@@ -578,38 +578,38 @@ public class FieldJc
   
   public int setInt(MemSegmJc objM, int valSet, int... ix) throws IllegalArgumentException, IllegalAccessException {
     int value;
-  	if(staticArraySize !=null && staticArraySize.length >0){
+    if(staticArraySize !=null && staticArraySize.length >0){
       value = intContainer.setValue(valSet, objM, ix);
    } else {
-  	  field.setInt(objM.obj(), valSet);
-  	  value = valSet;
+      field.setInt(objM.obj(), valSet);
+      value = valSet;
     }
-  	return value;
+    return value;
   }
   
   
   
   public char getChar(MemSegmJc obj, int... ix) throws IllegalArgumentException, IllegalAccessException {
     char value;
-  	if(staticArraySize !=null && staticArraySize.length >0){
+    if(staticArraySize !=null && staticArraySize.length >0){
       value = charContainer.getValue(obj, ix);
-  	} else {
-  	  value = field.getChar(obj.obj());
+    } else {
+      value = field.getChar(obj.obj());
     }
-  	return value;
+    return value;
   }
   
   
   
   public char setChar(MemSegmJc objM, char valSet, int... ix) throws IllegalArgumentException, IllegalAccessException {
     char value;
-  	if(staticArraySize !=null && staticArraySize.length >0){
+    if(staticArraySize !=null && staticArraySize.length >0){
       value = charContainer.setValue(valSet, objM, ix);
    } else {
-  	  field.setChar(objM.obj(), valSet);
-  	  value = valSet;
+      field.setChar(objM.obj(), valSet);
+      value = valSet;
     }
-  	return value;
+    return value;
   }
   
   
@@ -643,50 +643,50 @@ public class FieldJc
   
   /**Helper contains the method to access an int[]-array. */
   private final GetSetContainerElement<Short, short[]> shortContainer = new GetSetContainerElement<Short, short[]>()
-  {	@Override Short getValue(short[] array, int ix)
-		{ return array[ix];
-		}
+  {  @Override Short getValue(short[] array, int ix)
+    { return array[ix];
+    }
 
-		@Override void setValue(short[] array, Short element, int ix)
-		{ array[ix] = element;
-		}
+    @Override void setValue(short[] array, Short element, int ix)
+    { array[ix] = element;
+    }
 
   };
   
   /**Helper contains the method to access an float[]-array. */
   private final GetSetContainerElement<Float, float[]> floatContainer = new GetSetContainerElement<Float, float[]>()
-  {	@Override Float getValue(float[] array, int ix)
-		{ return array[ix];
-		}
+  {  @Override Float getValue(float[] array, int ix)
+    { return array[ix];
+    }
 
-		@Override void setValue(float[] array, Float element, int ix)
-		{ array[ix] = element;
-		}
+    @Override void setValue(float[] array, Float element, int ix)
+    { array[ix] = element;
+    }
 
   };
   
   /**Helper contains the method to access an float[]-array. */
   private final GetSetContainerElement<Double, double[]> doubleContainer = new GetSetContainerElement<Double, double[]>()
-  {	@Override Double getValue(double[] array, int ix)
-		{ return array[ix];
-		}
+  {  @Override Double getValue(double[] array, int ix)
+    { return array[ix];
+    }
 
-		@Override void setValue(double[] array, Double element, int ix)
-		{ array[ix] = element;
-		}
+    @Override void setValue(double[] array, Double element, int ix)
+    { array[ix] = element;
+    }
 
   };
   
   /**Helper contains the method to access an int[]-array. */
   private final GetSetContainerElement<Character, char[]> charContainer = new GetSetContainerElement<Character, char[]>(){
 
-		@Override Character getValue(char[] array, int ix)
-		{ return array[ix];
-		}
+    @Override Character getValue(char[] array, int ix)
+    { return array[ix];
+    }
 
-		@Override void setValue(char[] array, Character element, int ix)
-		{ array[ix] = element;
-		}
+    @Override void setValue(char[] array, Character element, int ix)
+    { array[ix] = element;
+    }
 
   };
   
@@ -715,7 +715,7 @@ public class FieldJc
   
   
   public long getInt64(MemSegmJc obj, int... ix) throws IllegalArgumentException, IllegalAccessException {
-  	return field.getLong(obj.obj());
+    return field.getLong(obj.obj());
   }
   
   
@@ -742,40 +742,40 @@ public class FieldJc
   public float setFloat(MemSegmJc objM, float valSet, int... ix) throws IllegalArgumentException, IllegalAccessException 
   {
     float value;
-  	if(staticArraySize !=null && staticArraySize.length >0){
+    if(staticArraySize !=null && staticArraySize.length >0){
       value = floatContainer.setValue(valSet, objM, ix);
-  	} else {
-  	  field.setFloat(objM.obj(), valSet);
-  	  value = valSet;
+    } else {
+      field.setFloat(objM.obj(), valSet);
+      value = valSet;
     }
-  	return value;
+    return value;
   }
   
   
   
 
   public double getDouble(MemSegmJc obj, int... ix) throws IllegalArgumentException, IllegalAccessException {
-  	return field.getDouble(obj.obj());
+    return field.getDouble(obj.obj());
   }
   
 
   public double setDouble(MemSegmJc objM, double valSet, int... ix) throws IllegalArgumentException, IllegalAccessException 
   {
     double value;
-  	if(staticArraySize !=null && staticArraySize.length >0){
+    if(staticArraySize !=null && staticArraySize.length >0){
       value = doubleContainer.setValue(valSet, objM, ix);
-  	} else {
-  	  field.setDouble(objM.obj(), valSet);
-  	  value = valSet;
+    } else {
+      field.setDouble(objM.obj(), valSet);
+      value = valSet;
     }
-  	return value;
+    return value;
   }
   
   
   
   
   public boolean getBoolean(MemSegmJc obj, int... ix) throws IllegalArgumentException, IllegalAccessException {
-  	return field.getBoolean(obj.obj());
+    return field.getBoolean(obj.obj());
   }
  
   /**Gets the value from a bitField. A bitField is deployed in C/C++ only. In Java it may be possible
@@ -787,7 +787,7 @@ public class FieldJc
    * @throws IllegalAccessException
    */
   public short getBitfield(MemSegmJc obj, int... ix) throws IllegalArgumentException, IllegalAccessException {
-  	return 0;
+    return 0;
   }
  
   /**Gets the value from a bitField. A bitField is deployed in C/C++ only. In Java it may be possible
@@ -799,7 +799,7 @@ public class FieldJc
    * @throws IllegalAccessException
    */
   public short setBitfield(MemSegmJc obj, short value, int... ix) throws IllegalArgumentException, IllegalAccessException {
-  	return 0;
+    return 0;
   }
  
   /**Gets a String representation of the content of this FieldJc in the given instance.
@@ -818,109 +818,109 @@ public class FieldJc
    * @throws IllegalAccessException
    */
   public String getString(MemSegmJc instance, int... ix) throws IllegalArgumentException, IllegalAccessException {
-   	Object obj1 = field.get(instance.obj());
-   	final String sValue;
-   	if(obj1 == null){ sValue = "null"; }
-  	else { sValue = obj1.toString(); }
-  	return sValue;
+     Object obj1 = field.get(instance.obj());
+     final String sValue;
+     if(obj1 == null){ sValue = "null"; }
+    else { sValue = obj1.toString(); }
+    return sValue;
   }
   
   
   public MemSegmJc get(MemSegmJc obj, int... ix) throws IllegalArgumentException, IllegalAccessException {
-  	Object refObj = field.get(obj.obj());
-  	MemSegmJc retMem = new MemSegmJc(refObj, 0);
-  	return retMem;
+    Object refObj = field.get(obj.obj());
+    MemSegmJc retMem = new MemSegmJc(refObj, 0);
+    return retMem;
   }
   
   
   public int getMemoryIdent(MemSegmJc obj, int... ix)
   {
-  	return obj.obj().hashCode();
-  	
+    return obj.obj().hashCode();
+    
   }
   
   
   public MemSegmJc getContainer(MemSegmJc obj, int... ix) throws IllegalArgumentException, IllegalAccessException {
-  	Object refObj = field.get(obj.obj());
-  	MemSegmJc retMem = new MemSegmJc(refObj, 0);
-  	return retMem;
+    Object refObj = field.get(obj.obj());
+    MemSegmJc retMem = new MemSegmJc(refObj, 0);
+    return retMem;
   }
   
   
   
-	/**Sets the integer adequate Field.setInt(obj, value), but with one or more indices.
-	 * @param data
-	 * @param val
-	 * @param ix
-	 * @throws IllegalAccessException 
-	 * @throws IllegalArgumentException 
-	 */
-	public int xxxsetInt(MemSegmJc objM, int val, int ... ix) throws IllegalArgumentException, IllegalAccessException
-	{ Object obj = objM.obj();
-		String sTypename = type.getName();
-		int ixArray = 0;
-		if(sTypename.charAt(0)!='['){
-			//trivial, not an array, simple field.
-		  field.setInt(obj, val);	 //use the setInt()-method. It does all, inclusive test and exception.
-		} else {
-			//it is an array type. Access to the correct element!
-			Object data = field.get(obj);  //the element itself. It is an int[], or float[] or such.
-			//if(sTypename.equals("[I")){ ((int[])data)[ix[0]] = val; }
-			while(sTypename.charAt(++ixArray) == '['){
-				//if it is a deeper array, get the element.
-				data = ((Object[])data)[ix[ixArray-1]];
-			} //count depths of array.
-			//now data is a simple int[] or float[] or such, but not a deeper array.
-			char typechar = sTypename.charAt(ixArray);  //int, etc.
-			switch(typechar){
-			case 'I': ((int[])data)[ix[ixArray-1]] = val; break;  //simple access.
-			case 'J': ((int[])data)[ix[ixArray-1]] = val; break;  //simple access.
-			default: throw new IllegalArgumentException("Field is not of int-type.");
-			}
-		} 
-		return val;
-	}
-	
+  /**Sets the integer adequate Field.setInt(obj, value), but with one or more indices.
+   * @param data
+   * @param val
+   * @param ix
+   * @throws IllegalAccessException 
+   * @throws IllegalArgumentException 
+   */
+  public int xxxsetInt(MemSegmJc objM, int val, int ... ix) throws IllegalArgumentException, IllegalAccessException
+  { Object obj = objM.obj();
+    String sTypename = type.getName();
+    int ixArray = 0;
+    if(sTypename.charAt(0)!='['){
+      //trivial, not an array, simple field.
+      field.setInt(obj, val);   //use the setInt()-method. It does all, inclusive test and exception.
+    } else {
+      //it is an array type. Access to the correct element!
+      Object data = field.get(obj);  //the element itself. It is an int[], or float[] or such.
+      //if(sTypename.equals("[I")){ ((int[])data)[ix[0]] = val; }
+      while(sTypename.charAt(++ixArray) == '['){
+        //if it is a deeper array, get the element.
+        data = ((Object[])data)[ix[ixArray-1]];
+      } //count depths of array.
+      //now data is a simple int[] or float[] or such, but not a deeper array.
+      char typechar = sTypename.charAt(ixArray);  //int, etc.
+      switch(typechar){
+      case 'I': ((int[])data)[ix[ixArray-1]] = val; break;  //simple access.
+      case 'J': ((int[])data)[ix[ixArray-1]] = val; break;  //simple access.
+      default: throw new IllegalArgumentException("Field is not of int-type.");
+      }
+    } 
+    return val;
+  }
+  
 
-	/**Sets the integer adequate Field.setInt(obj, value), but with one or more indices.
-	 * @param data
-	 * @param val
-	 * @param ix
-	 * @throws IllegalAccessException 
-	 * @throws IllegalArgumentException 
-	 */
-	public boolean setBoolean(MemSegmJc objM, boolean val, int ... ix) throws IllegalArgumentException, IllegalAccessException
-	{ Object obj = objM.obj();
-		String sTypename = type.getName();
-		int ixArray = 0;
-		if(sTypename.charAt(0)!='['){
-			//trivial, not an array, simple field.
-		  field.setBoolean(obj, val);	 //use the setInt()-method. It does all, inclusive test and exception.
-		} else {
-			//it is an array type. Access to the correct element!
-			Object data = field.get(obj);  //the element itself. It is an int[], or float[] or such.
-			//if(sTypename.equals("[I")){ ((int[])data)[ix[0]] = val; }
-			while(sTypename.charAt(++ixArray) == '['){
-				//if it is a deeper array, get the element.
-				data = ((Object[])data)[ix[ixArray-1]];
-			} //count depths of array.
-			//now data is a simple int[] or float[] or such, but not a deeper array.
-			char typechar = sTypename.charAt(ixArray);  //int, etc.
-			switch(typechar){
-			case 'Z': ((boolean[])data)[ix[ixArray-1]] = val; break;  //simple access.
-			default: throw new IllegalArgumentException("Array-Element is not of boolean-type.");
-			}
-		} 
-		return val;
-	}
-	
+  /**Sets the integer adequate Field.setInt(obj, value), but with one or more indices.
+   * @param data
+   * @param val
+   * @param ix
+   * @throws IllegalAccessException 
+   * @throws IllegalArgumentException 
+   */
+  public boolean setBoolean(MemSegmJc objM, boolean val, int ... ix) throws IllegalArgumentException, IllegalAccessException
+  { Object obj = objM.obj();
+    String sTypename = type.getName();
+    int ixArray = 0;
+    if(sTypename.charAt(0)!='['){
+      //trivial, not an array, simple field.
+      field.setBoolean(obj, val);   //use the setInt()-method. It does all, inclusive test and exception.
+    } else {
+      //it is an array type. Access to the correct element!
+      Object data = field.get(obj);  //the element itself. It is an int[], or float[] or such.
+      //if(sTypename.equals("[I")){ ((int[])data)[ix[0]] = val; }
+      while(sTypename.charAt(++ixArray) == '['){
+        //if it is a deeper array, get the element.
+        data = ((Object[])data)[ix[ixArray-1]];
+      } //count depths of array.
+      //now data is a simple int[] or float[] or such, but not a deeper array.
+      char typechar = sTypename.charAt(ixArray);  //int, etc.
+      switch(typechar){
+      case 'Z': ((boolean[])data)[ix[ixArray-1]] = val; break;  //simple access.
+      default: throw new IllegalArgumentException("Array-Element is not of boolean-type.");
+      }
+    } 
+    return val;
+  }
+  
 
-	int getArraylengthUML_LinkedList(MemSegmJc instance){ return 0; }
-	
-	int getArraylengthUML_ArrayList(MemSegmJc instance){ return 0; }
-	
-	int getArraylengthUML_Map(MemSegmJc instance){ return 0; }
-	
-	
-	//public Class<?> getType(){ return field.getClass(); }
+  int getArraylengthUML_LinkedList(MemSegmJc instance){ return 0; }
+  
+  int getArraylengthUML_ArrayList(MemSegmJc instance){ return 0; }
+  
+  int getArraylengthUML_Map(MemSegmJc instance){ return 0; }
+  
+  
+  //public Class<?> getType(){ return field.getClass(); }
 }
