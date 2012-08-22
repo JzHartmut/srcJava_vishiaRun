@@ -1,25 +1,3 @@
-/****************************************************************************
- * Copyright/Copyleft:
- *
- * For this source the LGPL Lesser General Public License,
- * published by the Free Software Foundation is valid.
- * It means:
- * 1) You can use this source without any restriction for any desired purpose.
- * 2) You can redistribute copies of this source to everybody.
- * 3) Every user of this source, also the user of redistribute copies
- *    with or without payment, must accept this license for further using.
- * 4) But the LPGL is not appropriate for a whole software product,
- *    if this source is only a part of them. It means, the user
- *    must publish this part of source,
- *    but don't need to publish the whole source of the own product.
- * 5) You can study and modify (improve) this source
- *    for own using or for redistribution, but you have to license the
- *    modified sources likewise under this LGPL Lesser General Public License.
- *    You mustn't delete this Copyright/Copyleft inscription in this source file.
- *
- * @author Hartmut Schorrig: hartmut.schorrig@vishia.de, www.vishia.org
- * @version 0.93 2011-01-05  (year-month-day)
- *******************************************************************************/ 
 package org.vishia.reflect;
 
 import java.lang.annotation.Annotation;
@@ -85,7 +63,37 @@ import org.vishia.util.Java4C;
 public class FieldJc
 {
 	
-	
+  /**Version, history and license.
+   * <ul>
+   * <li>2012-08-23 Hartmut {@link #getFloat(MemSegmJc, int...)} now supports non-static arrays too. Experience.
+   * <li>2008-00-00 Hartmut created
+   * </ul>
+   * 
+   * <b>Copyright/Copyleft</b>:<br>
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL is not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but doesn't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you intent to use this source without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   */
+  public static final int version = 20120823;
+
 	/**That annotation is used to detect fix-size-arrays. In Java all arrays are dynamically,
 	 * but to test the reflection access in Java adequate to C static arrays should be emulated. */
 	static final Class<Java4C.FixArraySize> annotationJava2CFixArraySize;
@@ -292,40 +300,45 @@ public class FieldJc
 		
 		if(sTypeName.charAt(0)== '['){
 			//An array
+      char typeChar =0;
+      int ixArray = 0;
+      try{ 
+        while( (typeChar = sTypeName.charAt(ixArray)) == '['){
+          ixArray +=1;
+        } //count depths of array.
+        this.cPrimitveType = typeChar;
+        
+        switch(typeChar){
+        case 'B': type = ClassJc.primitive("byte"); break;
+        case 'S': type = ClassJc.primitive("short"); break;
+        case 'I': type = ClassJc.primitive("int"); break;
+        case 'L': type = ClassJc.primitive("long"); break;
+        case 'F': type = ClassJc.primitive("float"); break;
+        case 'D': type = ClassJc.primitive("double"); break;
+        case 'Z': type = ClassJc.primitive("boolean"); break;
+        case 'C': type = ClassJc.primitive("char"); break;
+        default:
+          throw new IllegalArgumentException("FieldJc-Exception; unexpected typeChar;" + typeChar);
+        }//switch
+      }  catch(Exception exc){
+        throw new RuntimeException(exc);
+      }
 		  Java4C.FixArraySize atFixArraySize = field.getAnnotation(annotationJava2CFixArraySize);
 			if(atFixArraySize !=null){
 			  //it is designated as a fix-size-array for C-translation.
 				//Therefore it es presented as a fix-size-array in Java too.
 				//If the real array size doesn't match to the annotation-given size, an exception is thrown.
-			  char typeChar =0;
-        try{ 
 					int size = atFixArraySize.value();
-					int ixArray = 0;
-					while( (typeChar = sTypeName.charAt(ixArray)) == '['){
-						ixArray +=1;
-					} //count depths of array.
-	        this.cPrimitveType = typeChar;
 				  
 					modifier |= ModifierJc.kStaticArray;
 					staticArraySize = new int[ixArray];
-					switch(typeChar){
-					case 'I':{
-						staticArraySize[0] = size;
-						type = ClassJc.primitive("int");
-					} break;
-					default:
-						throw new IllegalArgumentException("FieldJc-Exception; unexpected typeChar;" + typeChar);
-					}//switch
-					
-				}  catch(Exception exc){
-					throw new RuntimeException(exc);
-				}
-
+				  staticArraySize[0] = size;
+	
 			} else {
 			  //a non-final array in Java is like an ObjectArray
 				modifier |= ModifierJc.kObjectArrayJc;
-				type = ClassJc.fromClass(fieldType);
-		    this.cPrimitveType = '\0';
+				//type = ClassJc.fromClass(fieldType);
+		    //this.cPrimitveType = '\0';
 			  staticArraySize = null;
 			}
 		} else {
@@ -707,7 +720,23 @@ public class FieldJc
   
   
   public float getFloat(MemSegmJc obj, int... ix) throws IllegalArgumentException, IllegalAccessException {
-  	return field.getFloat(obj.obj());
+    float value;
+    if(staticArraySize !=null && staticArraySize.length >0){
+      value = floatContainer.getValue(obj, ix);
+    } else if((modifier & ModifierJc.kObjectArrayJc) !=0) {
+      Object array = field.get(obj.obj());
+      float[] fArray = (float[]) array;
+      int ix0 = ix[0];
+        
+      if(ix0 >=0 && ix0 < fArray.length ){
+        value = fArray[ix0];
+      } else {
+        value = -99999.99999f;
+      }
+    } else {
+      value = field.getFloat(obj.obj());
+    }
+    return value;
   }
   
   public float setFloat(MemSegmJc objM, float valSet, int... ix) throws IllegalArgumentException, IllegalAccessException 
