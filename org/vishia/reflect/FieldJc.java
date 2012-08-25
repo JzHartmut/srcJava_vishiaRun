@@ -744,6 +744,16 @@ public class FieldJc
     float value;
     if(staticArraySize !=null && staticArraySize.length >0){
       value = floatContainer.setValue(valSet, objM, ix);
+    } else if((modifier & ModifierJc.kObjectArrayJc) !=0) {
+      Object array = field.get(objM.obj());
+      float[] fArray = (float[]) array;
+      int ix0 = ix[0];
+        
+      if(ix0 >=0 && ix0 < fArray.length ){
+        value = fArray[ix0] = valSet;
+      } else {
+        value = -99999.99999f;
+      }
     } else {
       field.setFloat(objM.obj(), valSet);
       value = valSet;

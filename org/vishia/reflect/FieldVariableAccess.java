@@ -105,8 +105,8 @@ public class FieldVariableAccess implements VariableAccess_ifc
 
   @Override
   public float setFloat(float value, int... ixArray)
-  {
-    // TODO Auto-generated method stub
+  { try{ value = theField.setFloat(instance, value, ixArray);}
+    catch(Exception exc){ throw new IllegalArgumentException(exc); }
     return value;
   }
   
