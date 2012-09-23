@@ -187,8 +187,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   /**The Event callback routine which is invoked if all 
    * 
    */
-  final EventConsumer XXXcallback = new EventConsumer(){
-    @Override public boolean processEvent(Event ev)
+  final EventConsumer XXXcallback = new EventConsumer("InspcMng - callback rxdata"){
+    @Override protected boolean processEvent_(Event ev)
     { callbackOnRxData(ev); 
       return true;
     }
@@ -198,7 +198,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   Thread inspcThread = new Thread("InspcMng"){ @Override public void run() { runInspcThread(); } };
 
   
-  final Event XXXcallbackOnRx = new Event(this, XXXcallback, null);
+  final Event XXXcallbackOnRx = new Event(null, this, XXXcallback, null);
   
 
   /**True if the {@link #inspcThread} is running. If set to false, the thread ends. */
