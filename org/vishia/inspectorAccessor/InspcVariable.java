@@ -11,6 +11,7 @@ public class InspcVariable implements VariableAccess_ifc
   
   /**Version, history and license.
    * <ul>
+   * <li>2012-09-24 Hartmut new {@link #getLong(int...)} and {@link #setLong(long, int...)} not implemented, only formal 
    * <li>2012-04-22 Hartmut adapt: {@link #requestValue(long)} etc. from {@link VariableAccess_ifc}.
    * <li>2012-04-17 Hartmut new: Access via getValuePerPath for downward compatibility with target device.
    * <li>2012-04-08 Hartmut new: Support of GetValueByIdent
@@ -177,6 +178,12 @@ public class InspcVariable implements VariableAccess_ifc
   }
 
   @Override
+  public long getLong(int... ixArray)
+  {
+    return valueI;
+  }
+
+  @Override
   public String getString(int ...ixArray)
   {
     // TODO Auto-generated method stub
@@ -199,6 +206,13 @@ public class InspcVariable implements VariableAccess_ifc
 
   @Override
   public int setInt(int value, int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+  @Override
+  public long setLong(long value, int... ixArray)
   {
     // TODO Auto-generated method stub
     return 0;

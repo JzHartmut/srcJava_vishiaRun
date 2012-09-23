@@ -16,6 +16,7 @@ public class FieldVariableAccess implements VariableAccess_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2012-09-24 Hartmut new {@link #getLong(int...)} and {@link #setLong(long, int...)} not implemented, only formal 
    * <li>2012-04-22 Hartmut adapt: {@link #requestValue(long)} etc. from {@link VariableAccess_ifc}.
    * <li>2010-06-00 Hartmut created. See {@link InspcMng#version}. 
    * </ul>
@@ -160,6 +161,13 @@ public class FieldVariableAccess implements VariableAccess_ifc
 
   @Override
   public int setInt(int value, int ...ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+  @Override
+  public long setLong(long value, int ...ixArray)
   {
     // TODO Auto-generated method stub
     return 0;
