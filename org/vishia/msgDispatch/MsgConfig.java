@@ -109,6 +109,7 @@ public class MsgConfig implements MsgText_ifc
       }
     }
     setRange(msgDispatcher, dstMsg, firstIdent, lastIdent, chnChars);  //for the last block.
+    setRange(msgDispatcher, "", lastIdent, Integer.MAX_VALUE, chnChars);  //for the last block.
     System.err.println("MsgReceiver - test message; test");
     return true;
   }
