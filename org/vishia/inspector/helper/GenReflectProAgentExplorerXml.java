@@ -48,7 +48,7 @@ public class GenReflectProAgentExplorerXml
 	void execute(String sStartDir)
 	{
 		dir = new File(sStartDir);
-		xmlTop = new XmlNodeSimple("AgentExplorerStructure");
+		xmlTop = new XmlNodeSimple<Object>("AgentExplorerStructure");
 		xmlTop.setAttribute("version", "1.0");
 		try{ getInDirectory(dir, xmlTop);
 		} catch(XmlException exc){
@@ -71,14 +71,14 @@ public class GenReflectProAgentExplorerXml
 		files = dir.listFiles();
 		for(File file: files){
 			if(file.isDirectory()){
-				XmlNode xmlDir1 = new XmlNodeSimple("label");
+				XmlNode xmlDir1 = new XmlNodeSimple<Object>("label");
 				xmlDir1.setAttribute("name", file.getName());
 				xmlDir1.setAttribute("expanded", "no");
 				xmlDir.addContent(xmlDir1);
 				getInDirectory(file, xmlDir1);
 			} else if(file.getName().endsWith(".rag")){
 				//rag file found
-				XmlNode xmlFile = new XmlNodeSimple("agent");
+				XmlNode xmlFile = new XmlNodeSimple<Object>("agent");
 				xmlFile.setAttribute("filename", file.getAbsolutePath());
 				xmlFile.setAttribute("type", "1");
 				xmlFile.setAttribute("state", "1");
