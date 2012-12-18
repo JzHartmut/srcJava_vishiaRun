@@ -275,11 +275,11 @@ public final class ClassContent implements CmdConsumer_ifc
 	        }
 	        //adds the answer to the telegram:
           answer.addChild(answerItem);
-          answerItem.setInfoHead(lengthAnswer4 + InspcDataExchangeAccess.Info.sizeofHead
-          	, InspcDataExchangeAccess.Info.kAnswerFieldMethod, nOrderNr);
           /**@java2c=nonPersistent,toStringNonPersist. */
           String sAnswer = uAnswer.toString();
-          answerItem.addChildString(sAnswer);
+          answerItem.addChildString(sAnswer);  //Note: first add the string, then set the head because the setInfoHead adjusts the length of head child.
+          answerItem.setInfoHead(lengthAnswer4 + InspcDataExchangeAccess.Info.sizeofHead
+          	, InspcDataExchangeAccess.Info.kAnswerFieldMethod, nOrderNr);
           //  
 	      } else if(clazz != null) {
           //not a question to collection size, but real clazz found:
