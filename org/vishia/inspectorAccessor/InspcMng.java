@@ -38,12 +38,25 @@ import org.vishia.util.StringFunctions;
  * inspector reflex access communication via {@link InspcAccessor#open(String)} which may use an
  * {@link org.vishia.communication.InterProcessComm} instance.
  * <br><br>
+ * The references to all known variables of the user are hold in an indexed list {@link #idxAllVars} sorted by name.
+ * The variable reference of type {@link VariableAccess_ifc} stores the access path to the target if necessary and the 
+ * actual value. The actual value may be read from a target device or not in the last time. A variable can be registered
+ * to the manager calling {@link #getVariable(String)}. That routine build the correct instance for the variable access,
+ * that is either {@link InspcVariable} or an {@link org.vishia.reflect.FieldJcVariableAccess} for java-internal variables.
+ * The variable will be wrapped in an {@link org.vishia.byteData.VariableAccessWithIdx}. The variable knows the 
+ * {@link InspcAccessor} and can get values from the target.
+ * <br><br>
  * <b>Communication principle</b>:
  * The {@link #inspcThread} respectively the called method {@link #runInspcThread()} runs in a loop,
  * if the communication was opened till {@link #close()} is called. In this loop all requested variables
  * were handled with a request-value telegram and all {@link #addUserOrder(Runnable)} are processed.
+ * <br><br>
+ * In the {@link #runInspcThread()} all known variables from {@link #idxAllVars} are processed, see {@link #getVariable(String)}. 
+ * But only if a value from a variable was requested in the last time, a new value is requested from a target device.
  * With that requests one send telegram is built. If the telegram is filled, it will be send.
- * Then the answer of the target device is awaiting, see {@link InspcAccessor#sendAndAwaitAnswer()}.
+ * Then the answer of the target device is awaiting, see {@link InspcAccessor#sendAndAwaitAnswer()}. 
+ * In this time the loop is blocked till a timeout is occurred while waiting of the embedded device's answer.
+ * Normally the embedded device or other target should answer in a few milliseconds.
  * <br><br>
  * The receiving of telegrams is executing in an extra receive Thread, see {@link InspcAccessor#receiveThread}.
  * The receive thread handles receiving from the one port of communication, which is opened with the 
@@ -81,6 +94,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   /**Version, history and license.
    * <ul>
+   * <li>2013-01-10 Hartmut bugfix: If a variable can't be requested in {@link #requestValueByPath(String, InspcAccessExecRxOrder_ifc)} because
+   *   the telegram is full, the same variable should be requested repeatedly in the next telegram. It was forgotten.
    * <li>2012-06-09 Hartmut new: Now it knows java-internal variable too, the path for the argument of {@link #getVariable(String)}
    *   should start with "java:" then the variable is searched internally. TODO now it isn't tested well, the start instance
    *   should be given by constructor, because it should be either the start instance of the whole application or a special
@@ -346,13 +361,18 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         InspcVariable varInspc = (InspcVariable)var;
         if(varInspc.timeRequested >= timeReceived){  //only requests communication if the variable was requested:
           bRequest = true;
-          varInspc.getValueFromTarget(timeCurr);
+          if(!varInspc.requestValueFromTarget(timeCurr)){
+            //the value can't be requested. The Telegram is sent and the answer or a timeout is gotten.
+            //Start with the same request in the next telegram, yet.
+            boolean bOk = varInspc.requestValueFromTarget(timeCurr);
+            assert(bOk);
+          }
         }
       }
     }
     Runnable userOrder;
     while( (userOrder = userOrders.poll()) !=null){
-      userOrder.run();
+      userOrder.run(); //maybe add some more requests to the current telegram.
     }
     if( !inspcAccessor.txCmdGetValueByIdent()  //calls sendAndAwaitAnswer internally 
       && inspcAccessor.isFilledTxTelg()){       //only call if necessary
@@ -383,7 +403,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   
   
-  void getValueByPath(String sDataPath, InspcAccessExecRxOrder_ifc commAction){
+  /**Requests the value from the target.
+   * @param sDataPath
+   * @param commAction
+   * @return true then the telegram has not space. The value is not requested. It should be repeated.
+   */
+  boolean requestValueByPath(String sDataPath, InspcAccessExecRxOrder_ifc commAction){
+    boolean bRepeattheRequest = false;
     int posSepDevice = sDataPath.indexOf(':');
     if(posSepDevice >0){
       String sDevice = sDataPath.substring(0, posSepDevice);
@@ -410,11 +436,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       if(order !=0){
         //save the order to the action. It is taken on receive.
         inspcAccessor.rxEval.setExpectedOrder(order, commAction);
+        bRepeattheRequest = true;
       } else {
         inspcAccessor.sendAndAwaitAnswer();  //calls execInspcRxOrder as callback.
         //sent = true;
       } 
     }    
+    return bRepeattheRequest;
   }
   
 

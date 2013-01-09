@@ -11,6 +11,8 @@ public class InspcVariable implements VariableAccess_ifc
   
   /**Version, history and license.
    * <ul>
+   * <li>2013-01-10 Hartmut bugfix: If a variable can't be requested in {@link #requestValueFromTarget(long)} because
+   *   the telegram is full, the same variable should be requested repeatedly in the next telegram. It was forgotten.
    * <li>2012-09-24 Hartmut new {@link #getLong(int...)} and {@link #setLong(long, int...)} not implemented, only formal 
    * <li>2012-04-22 Hartmut adapt: {@link #requestValue(long)} etc. from {@link VariableAccess_ifc}.
    * <li>2012-04-17 Hartmut new: Access via getValuePerPath for downward compatibility with target device.
@@ -133,24 +135,25 @@ public class InspcVariable implements VariableAccess_ifc
   }
   
   
-  void getValueFromTarget(long timeCurrent)  
+  boolean requestValueFromTarget(long timeCurrent)  
   { //check whether the widget has an comm action already. 
     //First time a widgets gets its WidgetCommAction. Then for ever the action is kept.
     if(idTarget !=-1){
       targetAccessor.cmdGetValueByIdent(this.idTarget, this.rxAction);
+      return false;
     } else if(idTarget ==-2 || !varMng.bUseGetValueByIndex){
       //get by ident is not supported:
       String sPathComm = this.sPath  + ".";
       Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
       idx.put(this.sPath, this);
-      varMng.getValueByPath(sPathComm, this.rxAction);
+      return varMng.requestValueByPath(sPathComm, this.rxAction);
     } else {
       //register the variable in the target system:
       String sPathComm = this.sPath  + ".";
       Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
       idx.put(this.sPath, this);
       targetAccessor = varMng.registerByPath(sPathComm, this.rxAction);
-      
+      return false;  //the value will be gotten in next request.
     }
   }
   

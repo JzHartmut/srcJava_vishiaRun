@@ -23,6 +23,10 @@ public final class ClassContent implements CmdConsumer_ifc
 
   /**Version, history and license
    * <ul>
+   * <li>2013-01-10 Hartmut bugfix: If the path failes in 
+   *   {@link #getSetValueByPath(org.vishia.communication.InspcDataExchangeAccess.Info, org.vishia.communication.InspcDataExchangeAccess.SetValue, org.vishia.communication.InspcDataExchangeAccess.Datagram, String, int)},
+   *   It should be returned a message anyway. If nothing is returned, the calling doesn't know that problem 
+   *   and the whole telegram may not be sent. It would cause a timeout.
    * <li>2012-04-08 Hartmut new: Support of GetValueByIdent
    * <li>2011-02-00 Hartmut created, converted from the C implementation.
    * <li>2006-00-00 Hartmut created for C/C++
@@ -464,7 +468,12 @@ public final class ClassContent implements CmdConsumer_ifc
         getSetValue(theField, idx, theObject, accSetValue, maxNrofAnswerBytes);
         int nBytesItem = answerItem.getLength();
         answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Info.kAnswerValue, nOrderNr);
-
+      } else {
+        //Info failed value to return. Note: If nothing is returned, the calling doesn't know that problem 
+        //and the whole telegram may not be sent. It would cause a timeout. Bugfix on 2013-01-10
+        answer.addChild(answerItem);
+        int nBytesItem = answerItem.getLength();
+        answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Info.kFailedPath, nOrderNr);
       }
     }catch(Exception exc){
     	/**Unexpected ...*/
