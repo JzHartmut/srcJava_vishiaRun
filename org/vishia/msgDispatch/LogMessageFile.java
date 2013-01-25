@@ -49,7 +49,7 @@ import org.vishia.bridgeC.Va_list;
 public class LogMessageFile implements LogMessage
 {
 
-  /**Version, history and license
+  /**Version, history and license.
    * <ul>
    * <li>2012-04-05 Hartmut chg: If only a simple file name is given, it is closed and re-opened with append.
    *   This is proper if the logging file is written only on demand and it is removed or copied manually.

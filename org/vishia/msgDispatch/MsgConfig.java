@@ -10,7 +10,8 @@ import org.vishia.bridgeC.Va_list;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.zbnf.ZbnfJavaOutput;
 
-/**This class holds all configuarion informations about messages. */
+/**This class holds all configuration information about messages, especially the message text associated to a ident number. 
+ * */
 public class MsgConfig implements MsgText_ifc
 {
 
@@ -48,12 +49,20 @@ public class MsgConfig implements MsgText_ifc
   public final static int version = 20120822;
 
   
+  /**One item for each message. 
+   * From Zbnf: This class is used as setting class for Zbnf2Java, therefore all is public. The identifiers have to be used
+   * as semantic in the parser script.
+   *
+   */
   public static class MsgConfigItem
   {
+    /**The message text can contain format specifier for the additional values. */
     public String text;
     
+    /**The message ident.*/
     public int identNr;
     
+    /**Some chars which can specify the destination (output) for the message. */
     public String dst;
     
     private char type_;
@@ -62,6 +71,9 @@ public class MsgConfig implements MsgText_ifc
   }
   
   
+  /**From Zbnf: This class is used as setting class for Zbnf2Java, therefore all is public. The identifiers have to be used
+   * as semantic in the parser script.
+   */
   public static class MsgConfigZbnf
   { public final List<MsgConfigItem> item = new LinkedList<MsgConfigItem>();
   }
@@ -81,25 +93,47 @@ public class MsgConfig implements MsgText_ifc
   
   
   
+  /**Reads the configuration from a file with given syntax.An example for such a syntax file is:
+   * <pre>
+MsgConfig::= { <item> } \e.
+
+item::= <#?identNr>  <!.?type> <*|\t|\ \ ?dst> <*|\r|\n|\t|\ \ ?text>.
+   * </pre>
+   * Any line is designated with the semantic 'line'. A line is build by the shown syntax elements. 
+   * The semantic have to be used like shown. The semantic identifier are given by the element names of the classes 
+   * {@link MsgConfigZbnf} and {@link MsgConfigItem}. The syntax can be another one.
+   *  
+   * @param fileConfig
+   * @param fileSyntax
+   * @param log Output while parsing.
+   * @return null if successfully, an error hint on error.
+   */
   public String readConfig(File fileConfig, File fileSyntax, MainCmdLogging_ifc log){
     ZbnfJavaOutput parser = new ZbnfJavaOutput(log);
     MsgConfigZbnf rootParseResult = new MsgConfigZbnf();
     String sError = parser.parseFileAndFillJavaObject(MsgConfigZbnf.class, rootParseResult, fileConfig, fileSyntax);
-    if(sError != null){
-      log.writeError(sError);
-    } else {
+    if(sError == null){
       //success parsing
       for(MsgConfigItem item: rootParseResult.item){
         indexIdentNr.put(item.identNr, item);
       }
-      log.writeInfoln("message-config file "+ fileConfig.getAbsolutePath() + " red, " + indexIdentNr.size() + " entries.");
     }
     return sError;
   }
   
+
+  public int getNrofItems(){ return indexIdentNr.size(); }
   
   
-  public boolean setMsgDispaching(MsgDispatcher msgDispatcher, String chnChars){
+  /**Sets the dispatching of all captured messages.
+   * @param msgDispatcher
+   * @param chnChars The characters which are associated to dstBits 0x0001, 0x0002 etc in
+   *   {@link MsgDispatcher#setOutputRange(int, int, int, int, int)} in respect to the characters
+   *   stored in the message config dst field. For example "df" if the dstBit 0x0001 is associated to the display
+   *   and the dstBit 0x0002 is associated to an output file and "d" means "Display" and "f" means "File" in the config text.
+   * @return The last message ident number which was used by this configuration.
+   */
+  public int setMsgDispaching(MsgDispatcher msgDispatcher, String chnChars){
 
     String dstMsg = "";
     int firstIdent = 0, lastIdent = -1;
@@ -118,9 +152,10 @@ public class MsgConfig implements MsgText_ifc
       }
     }
     setRange(msgDispatcher, dstMsg, firstIdent, lastIdent, chnChars);  //for the last block.
-    setRange(msgDispatcher, "", lastIdent, Integer.MAX_VALUE, chnChars);  //for the last block.
-    System.err.println("MsgReceiver - test message; test");
-    return true;
+    //prevent the output of all other messages ???
+    //do not so! //setRange(msgDispatcher, "", lastIdent, Integer.MAX_VALUE, chnChars);  //for the last block.
+    System.err.println("MsgConfig - test message; test");
+    return lastIdent;
   }
   
   
