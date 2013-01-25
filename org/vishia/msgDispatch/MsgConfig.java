@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.vishia.bridgeC.Va_list;
-import org.vishia.mainCmd.Report;
+import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.zbnf.ZbnfJavaOutput;
 
 /**This class holds all configuarion informations about messages. */
@@ -71,12 +71,19 @@ public class MsgConfig implements MsgText_ifc
   private final Map<Integer, MsgConfigItem> indexIdentNr = new TreeMap<Integer, MsgConfigItem>(); 
   
   
-  public MsgConfig(Report log, String sPathZbnf)
+  /**
+   * @param log
+   * @param sPathCfg
+   */
+  public MsgConfig()
   {
+  }
+  
+  
+  
+  public String readConfig(File fileConfig, File fileSyntax, MainCmdLogging_ifc log){
     ZbnfJavaOutput parser = new ZbnfJavaOutput(log);
     MsgConfigZbnf rootParseResult = new MsgConfigZbnf();
-    File fileConfig = new File(sPathZbnf + "/msg.cfg");
-    File fileSyntax = new File(sPathZbnf + "/msgCfg.zbnf");
     String sError = parser.parseFileAndFillJavaObject(MsgConfigZbnf.class, rootParseResult, fileConfig, fileSyntax);
     if(sError != null){
       log.writeError(sError);
@@ -87,7 +94,9 @@ public class MsgConfig implements MsgText_ifc
       }
       log.writeInfoln("message-config file "+ fileConfig.getAbsolutePath() + " red, " + indexIdentNr.size() + " entries.");
     }
+    return sError;
   }
+  
   
   
   public boolean setMsgDispaching(MsgDispatcher msgDispatcher, String chnChars){
