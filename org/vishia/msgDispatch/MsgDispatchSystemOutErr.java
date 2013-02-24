@@ -81,7 +81,7 @@ public final class MsgDispatchSystemOutErr {
     Assert.check(true);  //capture the System.err and System.out for Assert.consoleOut(...).
     cmdlineOut = new LogMessageStream(System.out);
     cmdlineErr = new LogMessageStream(System.err);
-    MsgDispatcher msgDispatcher = new MsgDispatcher(1000, 100, 3, 0);
+    MsgDispatcher msgDispatcher = new MsgDispatcher(1000, 100, 3, 0, null);
     this.msgDispatcher = msgDispatcher;
     
     printOut = new MsgPrintStream(msgDispatcher, 10000, 5000, 20);
@@ -101,8 +101,8 @@ public final class MsgDispatchSystemOutErr {
     msgDispatcher.setOutputRoutine(ixMsgOutputStdErr, "stderr", false, cmdlineErr);
     msgDispatcher.setOutputRange(0, 49999, maskOut | (1<<ixMsgOutputStdOut), MsgDispatcher.mSet, 0);
     msgDispatcher.setOutputRange(50000, Integer.MAX_VALUE, maskOut | (1<<ixMsgOutputStdErr), MsgDispatcher.mSet, 0);
-    System.setOut(printOut.getPrintStreamLog());
-    System.setErr(printErr.getPrintStreamLog());
+    System.setOut(printOut.getPrintStreamLog(""));
+    System.setErr(printErr.getPrintStreamLog(""));
   }
   
   
