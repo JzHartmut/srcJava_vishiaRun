@@ -81,7 +81,7 @@ public final class MsgDispatchSystemOutErr {
     Assert.check(true);  //capture the System.err and System.out for Assert.consoleOut(...).
     cmdlineOut = new LogMessageStream(System.out);
     cmdlineErr = new LogMessageStream(System.err);
-    MsgDispatcher msgDispatcher = new MsgDispatcher(1000, 100, 3, 0, null);
+    MsgDispatcher msgDispatcher = new MsgDispatcher(1000, 100, 3, 0, 1, null);
     this.msgDispatcher = msgDispatcher;
     
     printOut = new MsgPrintStream(msgDispatcher, 10000, 5000, 20);
@@ -92,13 +92,13 @@ public final class MsgDispatchSystemOutErr {
     if(msgFiles !=null){
       fileOutput = new LogMessageFile(msgFiles, secondsToClose, hoursPerFile, null
         , timeZoneForFile, msgDispatcher.getSharedFreeEntries());
-      msgDispatcher.setOutputRoutine(ixMsgOutputFile, "File", false, fileOutput);
+      msgDispatcher.setOutputRoutine(ixMsgOutputFile, "File", false, true, fileOutput);
       maskOut = 1 << ixMsgOutputFile;
     } else {
       fileOutput = null;
     }
-    msgDispatcher.setOutputRoutine(ixMsgOutputStdOut, "stdout", false, cmdlineOut);
-    msgDispatcher.setOutputRoutine(ixMsgOutputStdErr, "stderr", false, cmdlineErr);
+    msgDispatcher.setOutputRoutine(ixMsgOutputStdOut, "stdout", false, true, cmdlineOut);
+    msgDispatcher.setOutputRoutine(ixMsgOutputStdErr, "stderr", false, true, cmdlineErr);
     msgDispatcher.setOutputRange(0, 49999, maskOut | (1<<ixMsgOutputStdOut), MsgDispatcher.mSet, 0);
     msgDispatcher.setOutputRange(50000, Integer.MAX_VALUE, maskOut | (1<<ixMsgOutputStdErr), MsgDispatcher.mSet, 0);
     System.setOut(printOut.getPrintStreamLog(""));
