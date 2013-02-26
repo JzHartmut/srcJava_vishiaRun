@@ -187,12 +187,12 @@ public class LogMessageFile implements LogMessage
   /**List of messages to process if the file is able to open.
    * @java2c=noGC.
    */
-  final ConcurrentLinkedQueue<MsgDispatcher.Entry> parkedOrders;
+  final ConcurrentLinkedQueue<MsgDispatcherCore.Entry> parkedOrders;
 
   /**Common poop of entries to save messages.
    * @java2c=noGC.
    */
-  final ConcurrentLinkedQueue<MsgDispatcher.Entry> freeEntries;
+  final ConcurrentLinkedQueue<MsgDispatcherCore.Entry> freeEntries;
   
   /**The date format is fix. 
    * Use ' no . to separate milliseconds, because elsewhere MS-Excel shows it badly.
@@ -233,7 +233,7 @@ public class LogMessageFile implements LogMessage
   , final int nrofHoursPerFile
   , final Locale localization
   , final TimeZone timeZoneP
-  , final ConcurrentLinkedQueue<MsgDispatcher.Entry> freeEntriesP
+  , final ConcurrentLinkedQueue<MsgDispatcherCore.Entry> freeEntriesP
   )
   { if(localization ==null){
   	  this.localization = Locale.ROOT;
@@ -246,7 +246,7 @@ public class LogMessageFile implements LogMessage
   	String sTimestampInFilename;
     this.freeEntries = freeEntriesP;
     if(freeEntriesP != null)
-    { parkedOrders = new ConcurrentLinkedQueue<MsgDispatcher.Entry>(freeEntriesP); 
+    { parkedOrders = new ConcurrentLinkedQueue<MsgDispatcherCore.Entry>(freeEntriesP); 
     }
     else
     { parkedOrders = null;
@@ -470,7 +470,7 @@ public class LogMessageFile implements LogMessage
     if(file.isOpen())
     { 
       if(parkedOrders != null)
-      { MsgDispatcher.Entry parkedEntry;
+      { MsgDispatcherCore.Entry parkedEntry;
         do
         { parkedEntry = parkedOrders.poll();
           if(parkedEntry != null)
@@ -489,7 +489,7 @@ public class LogMessageFile implements LogMessage
     else
     { //file can't open, 
       if(freeEntries != null)
-      { MsgDispatcher.Entry entry = freeEntries.poll();  //get a new Entry from static data store
+      { MsgDispatcherCore.Entry entry = freeEntries.poll();  //get a new Entry from static data store
         if(entry == null)
         { /**Not able to send, because no entries. */
           sent = false;
