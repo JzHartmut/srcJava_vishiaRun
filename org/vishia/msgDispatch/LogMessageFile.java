@@ -40,6 +40,7 @@ import java.util.Formatter;
 import java.util.IllegalFormatConversionException;
 import java.util.IllegalFormatPrecisionException;
 import java.util.Locale;
+import java.util.MissingFormatArgumentException;
 import java.util.TimeZone;
 
 import org.vishia.bridgeC.ConcurrentLinkedQueue;
@@ -51,6 +52,8 @@ public class LogMessageFile implements LogMessage
 
   /**Version, history and license.
    * <ul>
+   * <li>2013-03-24 Hartmut bugfix: If a message text contains '%' formatting character but the variable arguments
+   *   are empty, it should not call format(). In this case the text should keep its '%' characters.
    * <li>2012-04-05 Hartmut chg: If only a simple file name is given, it is closed and re-opened with append.
    *   This is proper if the logging file is written only on demand and it is removed or copied manually.
    * <li>2009-09-27: Hartmut ctor, param nrofSecondsToFlush: if ==0, than it doesn't close, but flush any time on write. 
@@ -82,7 +85,7 @@ public class LogMessageFile implements LogMessage
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20120402;
+  public static final int version = 20130324;
 
 
   
@@ -571,15 +574,24 @@ public class LogMessageFile implements LogMessage
   {
     /**@java2c=stackInstance, fixStringBuffer. */
     final StringBuilder bufferFormat = new StringBuilder(1000);
-    /**@java2c=stackInstance. */
-    final Formatter formatter = new Formatter(bufferFormat, localization);
-    String textFormatted;
-    try{ formatter.format(text, args.get());
-		} catch(IllegalFormatConversionException exc){
-			bufferFormat.append("error in text format: " + text);
-		} catch(IllegalFormatPrecisionException exc){
-			bufferFormat.append("error-precision in text format: " + text);
-		}
+    final CharSequence formattedText;
+    if(args.size() >0){
+      /**@java2c=stackInstance. */
+      final Formatter formatter = new Formatter(bufferFormat, localization);
+      try{ formatter.format(text, args.get());
+  		} catch(IllegalFormatConversionException exc){
+  			bufferFormat.append("error in text format: " + text);
+  		} catch(IllegalFormatPrecisionException exc){
+        bufferFormat.append("error-precision in text format: " + text);
+  		} catch(MissingFormatArgumentException exc){
+        bufferFormat.append("error-argument in text format: " + text);
+      } catch(Exception exc){
+  		  bufferFormat.append("error-unknown in text format: " + text);
+  	  }
+      formattedText = bufferFormat;
+    } else {
+      formattedText = text;   //without args, don't try to format! The text may contain format characters.    
+    }
 		/**@java2c=stackInstance, fixStringBuffer. */
     final StringBuffer bufferTimestamp = new StringBuffer(30);
     dateFormat.format(creationTime, bufferTimestamp, formatField);
@@ -597,7 +609,7 @@ public class LogMessageFile implements LogMessage
            .append("; ")   //hint: use semicolon to view the data with ms-excel in csv-format.
            .append(identNumber)
            .append(";").append(sComGo).append(";")  //do not concat strings, no using temp memory!
-           .append(bufferFormat)
+           .append(formattedText)
            //.append(String.format(text,args.buffer.get()))
            .append("\r\n")
            ;

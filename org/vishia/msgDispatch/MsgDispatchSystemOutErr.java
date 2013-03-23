@@ -3,7 +3,6 @@ package org.vishia.msgDispatch;
 import java.util.TimeZone;
 
 import org.vishia.util.Assert;
-import org.vishia.util.FileSystem;
 
 /**This class replaces the System.out and System.err with 2 inputs which creates
  * a LogMessage and dispatch it with the Message Dispatcher.
@@ -11,7 +10,8 @@ import org.vishia.util.FileSystem;
  * System.out and System.err output, but with additional time stamp and identification number.
  * <br><br>
  * The messages can be redirected and prevented using the {@link MsgDispatcher} capability.
- * 
+ * <br><br>
+ * Note that this class is a simple variant for redirection. It is limited
  * @author Hartmut Schorrig
  *
  */
@@ -77,15 +77,15 @@ public final class MsgDispatchSystemOutErr {
    * @param msgFiles A file path. If not null, then all messages will be written to the file additionally to the console.
    *   Note that the {@link MsgDispatcher} can be configured after this constructor to modify the outputs.
    */
-  private MsgDispatchSystemOutErr(String msgFiles){
+  private MsgDispatchSystemOutErr(String msgFiles, int identStartOut, int identStartErr, int sizeNoGroup, int sizeGroup){
     Assert.check(true);  //capture the System.err and System.out for Assert.consoleOut(...).
     cmdlineOut = new LogMessageStream(System.out);
     cmdlineErr = new LogMessageStream(System.err);
     MsgDispatcher msgDispatcher = new MsgDispatcher(1000, 100, 3, 0, 1, null);
     this.msgDispatcher = msgDispatcher;
     
-    printOut = new MsgPrintStream(msgDispatcher, 10000, 5000, 20);
-    printErr = new MsgPrintStream(msgDispatcher, 50000, 5000, 20);
+    printOut = new MsgPrintStream(msgDispatcher, identStartOut, sizeNoGroup, sizeGroup);
+    printErr = new MsgPrintStream(msgDispatcher, identStartErr, sizeNoGroup, sizeGroup);
     int secondsToClose = -10; //any 10 seconds, the file will be closed, and re-openened at least after 10 seconds.
     int hoursPerFile = -3600; //This is 3600 seconds.
     int maskOut = 0;
@@ -111,8 +111,8 @@ public final class MsgDispatchSystemOutErr {
    *   Note that the {@link MsgDispatcher} can be configured after this constructor to modify the outputs.
    * @return The instance, able to get with {@link #singleton} too.
    */
-  public static MsgDispatchSystemOutErr create(String msgFiles){
-    singleton = new MsgDispatchSystemOutErr(msgFiles);
+  public static MsgDispatchSystemOutErr create(String msgFiles, int identStartOut, int identStartErr, int sizeNoGroup, int sizeGroup){
+    singleton = new MsgDispatchSystemOutErr(msgFiles, identStartOut, identStartErr, sizeNoGroup, sizeGroup);
     return singleton;
   }
 }
