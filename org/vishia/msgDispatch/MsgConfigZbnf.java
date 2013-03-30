@@ -7,6 +7,10 @@ import java.util.List;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.zbnf.ZbnfJavaOutput;
 
+/**See MsgConfig.
+ * @author Hartmut
+ * @deprecated use MsgConfig. This uses ZbnfParser, but it may be not necessary for it.
+ */
 public class MsgConfigZbnf extends MsgConfig
 {
   
