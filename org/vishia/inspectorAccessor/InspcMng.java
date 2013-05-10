@@ -202,11 +202,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   /**The Event callback routine which is invoked if all 
    * 
    */
-  final EventConsumer XXXcallback = new EventConsumer("InspcMng - callback rxdata"){
-    @Override protected boolean processEvent_(Event ev)
+  final EventConsumer XXXcallback = new EventConsumer(){
+    @Override public int processEvent(Event ev)
     { callbackOnRxData(ev); 
-      return true;
+      return 1;
     }
+    @Override public String toString(){ return "InspcMng - callback rxdata"; }
+
   };
   
   /**The thread which calls the {@link #callbackOnRxData} method to show all received data. */
