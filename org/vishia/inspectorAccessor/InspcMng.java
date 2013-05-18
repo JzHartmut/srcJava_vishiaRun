@@ -296,7 +296,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     final String sDataPathVariable;
     char cc;
     int mask, bit;
-    if(posIndex > 0 && sDataPathP.length() > posIndex && (cc = sDataPathP.charAt(posIndex +1)) >='0' && cc <='9'){
+    if(posIndex > 0 && sDataPathP.length() > posIndex+1 && (cc = sDataPathP.charAt(posIndex +1)) >='0' && cc <='9'){
       //it is a bit designation:
       if(sDataPathP.charAt(posIndex -1) =='.'){ //a double .. for bit space like 12..8
         int posIndex1 = sDataPathP.lastIndexOf('.', posIndex -2);
