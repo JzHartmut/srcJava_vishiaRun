@@ -54,7 +54,13 @@ public class WriteCurveCsv  implements WriteCurve_ifc{
   
   StringBuilder uLine = new StringBuilder(5000);
   
-  @Override public void setTrackInfo(int nrofTracks, int ixTrack, String sPath, String sName){
+  @Override public void setFile(File fOut){
+    this.fOut = fOut;
+    sColumn = null;
+  }
+  
+  @Override public void setTrackInfo(int nrofTracks, int ixTrack, String sPath, String sName
+      , String sColor, float scale7div, float mid, float line0){
     if(sColumn == null){
       sColumn = new String[nrofTracks];
     }
@@ -64,10 +70,6 @@ public class WriteCurveCsv  implements WriteCurve_ifc{
   public WriteCurveCsv() {
   }
   
-  
-  @Override public void setFile(File fOut){
-    this.fOut = fOut;
-  }
   
   @Override public void writeCurveError(String msg) throws IOException {
     if(out !=null){

@@ -62,7 +62,7 @@ public interface WriteCurve_ifc {
    * @param sPath
    * @param sName
    */
-  void setTrackInfo(int nrofTracks, int ixTrack, String sPath, String sName);
+  void setTrackInfo(int nrofTracks, int ixTrack, String sPath, String sName, String sColor, float scale7div, float mid, float line0);
   
   void writeCurveTimestamp(Timeshort timeshortabs);
   

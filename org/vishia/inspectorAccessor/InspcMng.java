@@ -366,7 +366,10 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
             //the value can't be requested. The Telegram is sent and the answer or a timeout is gotten.
             //Start with the same request in the next telegram, yet.
             boolean bOk = varInspc.requestValueFromTarget(timeCurr);
-            assert(bOk);
+            if(!bOk){
+              System.out.println("InspcMng.procComm - nok; ");
+            }
+            //assert(bOk);
           }
         }
       }

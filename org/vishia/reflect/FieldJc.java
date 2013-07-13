@@ -312,7 +312,8 @@ public class FieldJc
         case 'B': type = ClassJc.primitive("byte"); break;
         case 'S': type = ClassJc.primitive("short"); break;
         case 'I': type = ClassJc.primitive("int"); break;
-        case 'L': type = ClassJc.primitive("long"); break;
+        case 'J': type = ClassJc.primitive("long"); break;
+        case 'L': type = ClassJc.primitive("long"); break;  //it is wrong. J is correct.
         case 'F': type = ClassJc.primitive("float"); break;
         case 'D': type = ClassJc.primitive("double"); break;
         case 'Z': type = ClassJc.primitive("boolean"); break;

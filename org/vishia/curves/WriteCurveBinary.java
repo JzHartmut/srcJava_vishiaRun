@@ -49,7 +49,8 @@ public class WriteCurveBinary implements WriteCurve_ifc{
   
   OutputStream out;
 
-  @Override public void setTrackInfo(int nrofTracks, int ixTrack, String sPath, String sName){
+  @Override public void setTrackInfo(int nrofTracks, int ixTrack, String sPath, String sName
+      , String sColor, float scale7div, float mid, float line0){
     
   }
   
