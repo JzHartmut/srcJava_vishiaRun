@@ -15,13 +15,13 @@ import org.vishia.byteData.VariableContainer_ifc;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessComm_SocketImpl;
+import org.vishia.event.Event;
+import org.vishia.event.EventConsumer;
 import org.vishia.inspector.SearchElement;
 import org.vishia.reflect.FieldJc;
 import org.vishia.reflect.FieldJcVariableAccess;
 import org.vishia.reflect.FieldVariableAccess;
 import org.vishia.util.CompleteConstructionAndStart;
-import org.vishia.util.Event;
-import org.vishia.util.EventConsumer;
 import org.vishia.util.StringFunctions;
 
 /**This class supports the communication via the inspector reflex access. 
