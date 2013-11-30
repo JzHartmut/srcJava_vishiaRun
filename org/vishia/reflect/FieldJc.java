@@ -175,7 +175,7 @@ public class FieldJc
    * for indexed access.
    * @param <ElementType> The type like int[] or short[] 
    */
-  private abstract class GetSetContainerElement<ElementType, ArrayType>
+  abstract class GetSetContainerElement<ElementType, ArrayType>
   {
     /**Helper class containing a template method to get the last array and the last index
      * for indexed access.

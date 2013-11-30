@@ -58,6 +58,9 @@ public class SocketTester extends MainCmd
   /**Cmdline-argument, set on -o option. Outputfile to output something. :TODO: its a example.*/
   String sFileOut = null;
 
+  
+  String sOwnAddress = "UDP:127.0.0.1:0xeac0";
+  
   final Report report = this;
 
   /** The Interprocess communication. */
@@ -102,7 +105,7 @@ public class SocketTester extends MainCmd
     super.addHelpInfo("param: -aIADR -pPORT -oOUT");
     super.addHelpInfo("-iIADR  The destination internetAdress, default is localhost");
     super.addHelpInfo("-pPORT  The destination port, default is 1002");
-    super.addHelpInfo("-rPORT  The own port, default is 1001");
+    super.addHelpInfo("-rPORT  The own port, default is UDP:127.0.0.1.0xeac0");
     super.addHelpInfo("-oOUT   File to write the received data.");
     super.addStandardHelpInfo();
 
@@ -138,14 +141,18 @@ public class SocketTester extends MainCmd
     { /** The execution class knows the SocketTester Main class in form of the MainCmd super class
           to hold the contact to the command line execution.
       */
-      comm = InterProcessCommFactoryAccessor.getInstance().create("UDP:0.0.0.0", nReceivePort);
+      //comm = InterProcessCommFactoryAccessor.getInstance().create("UDP:0.0.0.0", nReceivePort);
+      
+      InterProcessCommFactory ipcFactory = InterProcessCommFactoryAccessor.getInstance();
+      comm = ipcFactory.create(sOwnAddress); //It creates and opens the UDP-Port.
+      
       
       //dstAddress    = InterProcessCommFactory.makeRemoteAddress(sDestinationInetAddress, nDestinationPort);
       dstAddress    = comm.createAddress("127.0.0.1", nDestinationPort);
       senderAddress = comm.createAddress();
       ownAddress    = comm.createAddress("127.0.0.1", nReceivePort);
       
-      error = 0; ///test comm.open(ownAddress, true); //InterProcessComm.receiverShouldbeBlocking);
+      error = comm.open(ownAddress, true); //InterProcessComm.receiverShouldbeBlocking);
       if(error <0)
       { main.writeError("Problem at open socket" + comm.translateErrorMsg(error));
         bOk = false;
@@ -155,15 +162,17 @@ public class SocketTester extends MainCmd
         UDPdebugReceiver rxExec = new UDPdebugReceiver(sFileOut);
         UDPdebugTransmitter txExec = new UDPdebugTransmitter();
   
+        rxExec.start();
+        System.out.println("SocketTester receives from " + sOwnAddress);
         try
         { //rxExec.start();
           //txExec.start();
           int nrWait = 0;
           while(true)
-          { synchronized(this)
-            { wait(10);
+          { System.out.print("+");
+            synchronized(this)
+            { wait(10000);
             }
-            System.out.println("working..." + (++nrWait));
           }
         }
         catch(Exception exception)
@@ -196,6 +205,7 @@ public class SocketTester extends MainCmd
               false if the argument doesn't match. The parseArgument method in MainCmd throws an exception,
               the application should be aborted.
   */
+  @Override
   public boolean testArgument(String arg, int nArg)
   { boolean bOk = true;  //set to false if the argc is not passed
 
@@ -213,14 +223,8 @@ public class SocketTester extends MainCmd
       }
     }
     else if(arg.startsWith("-r"))
-    { String sValue = getArgument(2);
-      try
-      { Integer val = Integer.decode(sValue);
-        nReceivePort = val.intValue();
-      }
-      catch(NumberFormatException exception)
-      { main.writeError("Parameter -r is not a valid integer:" + sValue);
-      }
+    { sOwnAddress = getArgument(2);
+      
     }
     else if(arg.startsWith("-o"))
     { sFileOut = getArgument(2);
@@ -236,10 +240,11 @@ public class SocketTester extends MainCmd
    * @throws ParseException 
    *
    */
+  @Override
   protected void callWithoutArguments() throws ParseException
   { //:TODO: overwrite with empty method - if the calling without arguments
     //having equal rights than the calling with arguments - no special action.
-    super.callWithoutArguments();  //it needn't be overwritten if it is unnecessary
+    //super.callWithoutArguments();  //it needn't be overwritten if it is unnecessary
   }
 
 
@@ -251,11 +256,12 @@ public class SocketTester extends MainCmd
      :TODO: the user only should determine the specific checks, this is a sample.
      @return true if successfull, false if failed.
   */
+  @Override
   protected boolean checkArguments()
   { boolean bOk = true;
 
-    if(sFileOut == null)           { writeWarning("argument -o no outputfile is given, use default"); sFileOut = "out.txt";}
-    else if(sFileOut.length()==0)  { bOk = false; writeError("argument -o without content"); }
+    //if(sFileOut == null)           { writeWarning("argument -o no outputfile is given, use default"); sFileOut = "out.txt";}
+    //else if(sFileOut.length()==0)  { bOk = false; writeError("argument -o without content"); }
 
     if(!bOk) setExitErrorLevel(exitWithArgumentError);
 
@@ -268,6 +274,7 @@ public class SocketTester extends MainCmd
   {
     byte[] bufferInput = new byte[100];
     
+    @Override
     public void run()
     { int nChars = 0;
       
@@ -324,6 +331,7 @@ public class SocketTester extends MainCmd
   
   
   
+    @Override
     public void run()
     { int[] receivedBytes = new int[1];
       while(!bAbort)
@@ -339,7 +347,7 @@ public class SocketTester extends MainCmd
           int idx = 0;
           main.writeInfoln("received " + length + "bytes from ");
           while(length > 0)
-          { int nBytes = length > 16 ? 16 : length;
+          { int nBytes = length > 64 ? 64 : length;
             StringFormatter output = new StringFormatter(120);
             output.addHexLine(data, idx, nBytes, StringFormatter.k4right);
             main.writeInfoln(output.toString());
