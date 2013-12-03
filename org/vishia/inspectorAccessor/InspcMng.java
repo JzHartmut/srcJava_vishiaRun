@@ -21,6 +21,7 @@ import org.vishia.inspector.SearchElement;
 import org.vishia.reflect.FieldJc;
 import org.vishia.reflect.FieldJcVariableAccess;
 import org.vishia.reflect.FieldVariableAccess;
+import org.vishia.util.Assert;
 import org.vishia.util.CompleteConstructionAndStart;
 import org.vishia.util.StringFunctions;
 
@@ -565,7 +566,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
           //It may be the same, it may be other.
         }
       }catch(Exception exc){
-        System.err.println("InspcMng - runInspcThread - unexpected Exception; " + exc.getMessage());
+        System.err.println(Assert.exceptionInfo("InspcMng - unexpected Exception; ", exc, 0, 7));
         exc.printStackTrace(System.err);
       }
     }

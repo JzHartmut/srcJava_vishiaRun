@@ -4,6 +4,7 @@ import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessCommFactory;
 import org.vishia.communication.InterProcessCommFactoryAccessor;
+import org.vishia.util.Assert;
 import org.vishia.util.Java4C;
 
 public class Comm implements Runnable
@@ -83,7 +84,7 @@ public class Comm implements Runnable
     InterProcessComm ipcMtbl = ipc; 
     //------------------------------------------->Open the communication:
     ok = ipcMtbl.open(null, blocking);
-		state = (char)(ok >=0 ? 'o' : 'e');
+		state = (ok >=0 ? 'o' : 'e');
     if(bEnablePrintfOnComm)
     { //only for debug:
     	if(ok >=0)
@@ -159,7 +160,7 @@ public class Comm implements Runnable
         }
 	  	} catch(Exception exc){
 	  	  /** @java2c=toStringNonPersist, StringBuilderInStack=100. */
-	      String msg = "org.vishia.inspector.Comm - unexpected Exception; " + exc.getMessage();
+	      CharSequence msg = Assert.exceptionInfo("org.vishia.inspector.Comm - unexpected Exception; ", exc, 0, 7);
 	  	  System.err.println(msg);
 	  	  exc.printStackTrace( System.err);
 	  	}
