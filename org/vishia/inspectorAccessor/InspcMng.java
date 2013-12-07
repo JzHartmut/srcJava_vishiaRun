@@ -368,7 +368,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
             //Start with the same request in the next telegram, yet.
             boolean bOk = varInspc.requestValueFromTarget(timeCurr);
             if(!bOk){
-              System.out.println("InspcMng.procComm - nok; ");
+              //System.out.println("InspcMng.procComm - nok; ");
             }
             //assert(bOk);
           }

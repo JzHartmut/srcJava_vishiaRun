@@ -84,7 +84,10 @@ public class InspcDataInfo
   /**If it is a recording order, size of the buffer. */
   short lengthData;  
   
-  /**The indendificator should be sent from request to safety the correctness of request. */
+  /**The indendificator should be sent from request to safety the correctness of request. 
+   * seconds: 65536 = 18 h. 
+   * Don't start at 0. A reset on target seems to have a valid check.
+   * */
   short check;  
   //OS_ValuePtr theObject;
       

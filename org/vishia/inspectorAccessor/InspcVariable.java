@@ -11,6 +11,12 @@ public class InspcVariable implements VariableAccess_ifc
   
   /**Version, history and license.
    * <ul>
+   * <li>2013-12-07 Hartmut chg: In {@link VariableRxAction}: Answer from target with info.cmd = {@link InspcDataExchangeAccess.Info#kFailedPath} 
+   *   disables this variable from data communication. TODO enable with user action if the target was changed (recompiled, restarted etc).
+   * <li>2013-12-07 Hartmut chg: In {@link VariableRxAction}: Answer from target with variable type designation = {@link InspcDataExchangeAccess#kInvalidIndex}
+   *   The requester should remove that index. Then a new {@link InspcAccessor#cmdRegisterByPath(String, InspcAccessExecRxOrder_ifc)}
+   *   is forced to get a valid index.
+   * <li>2013-12-07 Hartmut chg: {@link #requestValueFromTarget(long)}: If the path starts with '#', it is not requested.       
    * <li>2013-01-10 Hartmut bugfix: If a variable can't be requested in {@link #requestValueFromTarget(long)} because
    *   the telegram is full, the same variable should be requested repeatedly in the next telegram. It was forgotten.
    * <li>2012-09-24 Hartmut new {@link #getLong(int...)} and {@link #setLong(long, int...)} not implemented, only formal 
@@ -29,7 +35,7 @@ public class InspcVariable implements VariableAccess_ifc
    * <li> You can redistribute copies of this source to everybody.
    * <li> Every user of this source, also the user of redistribute copies
    *    with or without payment, must accept this license for further using.
-   * <li> But the LPGL ist not appropriate for a whole software product,
+   * <li> But the LPGL is not appropriate for a whole software product,
    *    if this source is only a part of them. It means, the user
    *    must publish this part of source,
    *    but don't need to publish the whole source of the own product.
@@ -77,7 +83,10 @@ public class InspcVariable implements VariableAccess_ifc
         case InspcDataExchangeAccess.Info.kAnswerValue: {
           int typeInspc = InspcAccessEvaluatorRxTelg.getInspcTypeFromRxValue(info);
           InspcVariable.this.cType = InspcAccessEvaluatorRxTelg.getTypeFromInspcType(typeInspc);
-          if("BSI".indexOf(cType) >=0){
+          if(typeInspc == InspcDataExchangeAccess.kTypeNoValue || typeInspc == InspcDataExchangeAccess.kInvalidIndex){
+            idTarget = 0;  //try again.
+          }
+          else if("BSI".indexOf(cType) >=0){
             valueI = InspcAccessEvaluatorRxTelg.valueIntFromRxValue(info, typeInspc);
             valueF = valueI;
           } else { 
@@ -89,6 +98,11 @@ public class InspcVariable implements VariableAccess_ifc
           }
           varMng.variableIsReceived(InspcVariable.this);
         } break;
+        case InspcDataExchangeAccess.Info.kFailedPath:{
+          System.err.println("InspcAccessEvaluatorRxTelg - failed path; " + sPath);
+          idTarget = -3;
+        } break;
+        
       }//switch
     }
   }
@@ -138,21 +152,28 @@ public class InspcVariable implements VariableAccess_ifc
   boolean requestValueFromTarget(long timeCurrent)  
   { //check whether the widget has an comm action already. 
     //First time a widgets gets its WidgetCommAction. Then for ever the action is kept.
-    if(idTarget !=-1){
+    if(idTarget >= 1 && varMng.bUseGetValueByIndex){
       targetAccessor.cmdGetValueByIdent(this.idTarget, this.rxAction);
       return false;
+    } else if(idTarget ==-3){
+      idTarget = 0;
+      return false;  //do nothing, path not found.
     } else if(idTarget ==-2 || !varMng.bUseGetValueByIndex){
       //get by ident is not supported:
       String sPathComm = this.sPath  + ".";
-      Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
-      idx.put(this.sPath, this);
-      return varMng.requestValueByPath(sPathComm, this.rxAction);
+      if(sPathComm.charAt(0) != '#'){
+        Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
+        idx.put(this.sPath, this);
+        return varMng.requestValueByPath(sPathComm, this.rxAction);
+      } else return false;
     } else {
       //register the variable in the target system:
       String sPathComm = this.sPath  + ".";
-      Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
-      idx.put(this.sPath, this);
-      targetAccessor = varMng.registerByPath(sPathComm, this.rxAction);
+      if(sPathComm.charAt(0) != '#'){
+        Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
+        idx.put(this.sPath, this);
+        targetAccessor = varMng.registerByPath(sPathComm, this.rxAction);
+      }
       return false;  //the value will be gotten in next request.
     }
   }

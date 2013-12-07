@@ -34,8 +34,17 @@ public class InspcDataExchangeAccess
 {
 
 	
-  /**Version, history and license
+  /**Version, history and license.
    * <ul>
+   * <li>2013-12-07 Hartmut chg:
+   *   <ul>
+   *   <li>{@link Datagram#setHeadRequest(int, int, int)} with answerNr = 0 and {@link Datagram#setHeadAnswer(int, int, int)}
+   *     with previous behavior, answerNr = 1 initial. A request telegram sends the answerNr = 0 up to now.
+   *   <li>Some {@link Datagram#knrofBytes} etc. now private. Any application uses the access methods.
+   *   <li>new {@link Datagram#getAnswerNr()} and {@link Datagram#lastAnswer()}  
+   *   <li>new {@link Info#kSetvaluedata}, {@link Info#kAnswervaluedata} as a new kind of request.
+   *   <li>new {@link #kInvalidIndex} to distinguish an index error from a value error. 
+   *   </ul> 
    * <li>2012-04-09 Hartmut new: Some enhancements, especially {@link Info#kGetValueByIndex} 
    *   The {@link Info#setInfoHead(int, int, int)} and {@link Info#setLength(int)} now adjusts the
    *   length of the element and parent in the {@link ByteDataAccess} data with the same.
@@ -79,12 +88,14 @@ public class InspcDataExchangeAccess
 	 */
 	public final static class Datagram extends ByteDataAccess
 	{
-		public static final int knrofBytes = 0;
-		public static final int knEntrant = 2;  //2
-		public static final int kencryption = 4; //4
-		public static final int kseqnr = 8;   //8
-		public static final int kanswerNr =12;      //12
-		public static final int sizeofHead = 16;
+		private static final int knrofBytes = 0;
+		private static final int knEntrant = 2;  //2
+		private static final int kencryption = 4; //4
+		private static final int kseqnr = 8;   //8
+		private static final int kanswerNr =12;      //12
+		private static final int kspare13 =13;      //12
+		private static final int kspare14 =14;      //12
+    public static final int sizeofHead = 16;
 
 		public Datagram(byte[] buffer)
 		{ this();
@@ -114,15 +125,40 @@ public class InspcDataExchangeAccess
 		
 		public final int getLengthDatagram(){ return getInt16(0); }
 		
-		public final void setHead(int entrant, int seqNr, int encryption){
-			setInt16(knrofBytes, sizeofHead);
-			setInt16(knEntrant, entrant);
-			setInt32(kseqnr,seqNr);
-			setInt16(kanswerNr, 0x1);
-			//int encryption = (int)(((0x10000 * Math.random())-0x8000) * 0x10000);
-			setInt32(kencryption, encryption);
-		}
-		
+    /**Sets the head for an answer telegram. Sets the answer number to 1. 
+     * Therefore it is for the first answer. All following answers uses {@link #incrAnswerNr()}
+     * and {@link #markAnswerNrLast()} to change the answer nr.
+     * @param entrant
+     * @param seqNr
+     * @param encryption
+     */
+    public final void setHeadRequest(int entrant, int seqNr, int encryption){
+      setInt16(knrofBytes, sizeofHead);
+      setInt16(knEntrant, entrant);
+      setInt32(kseqnr,seqNr);
+      setInt8(kanswerNr, 0x0);
+      setInt8(kspare13, 0x0);
+      setInt16(kspare14, 0x0);
+      //int encryption = (int)(((0x10000 * Math.random())-0x8000) * 0x10000);
+      setInt32(kencryption, encryption);
+    }
+    
+    /**Sets the head for an request telegram. Sets the answer number to 0. 
+     * @param entrant
+     * @param seqNr
+     * @param encryption
+     */
+    public final void setHeadAnswer(int entrant, int seqNr, int encryption){
+      setInt16(knrofBytes, sizeofHead);
+      setInt16(knEntrant, entrant);
+      setInt32(kseqnr,seqNr);
+      setInt8(kanswerNr, 0x1);
+      setInt8(kspare13, 0x0);
+      setInt16(kspare14, 0x0);
+      //int encryption = (int)(((0x10000 * Math.random())-0x8000) * 0x10000);
+      setInt32(kencryption, encryption);
+    }
+    
 		public final void setEntrant(int nr){ setInt16(knEntrant, nr); }
 		
 		public final int getEntrant(){ return getInt16(knEntrant); }
@@ -140,13 +176,23 @@ public class InspcDataExchangeAccess
 		  setInt8(kanswerNr, nr);
 		}
 		
-		/**Increments the number for the answer datagram. */
-		public final void incrAnswerNr()
-		{ int nr = getInt8(kanswerNr);
-	  	nr = (nr & 0x7f) +1;
-	  	assert((nr & 0x80) ==0);
-	  	setInt8(kanswerNr, nr);
-		}
+    /**Increments the number for the answer datagram. */
+    public final void incrAnswerNr()
+    { int nr = getInt8(kanswerNr);
+      nr = (nr & 0x7f) +1;
+      assert((nr & 0x80) ==0);
+      setInt8(kanswerNr, nr);
+    }
+
+    /**Gets the number of the answer datagram. */
+    public final int getAnswerNr()
+    { return getInt8(kanswerNr);
+    }
+
+    /**Gets the information about the last answer datagram. */
+    public final boolean lastAnswer()
+    { return (getInt8(kanswerNr) & 0x80) == 0x80;
+    }
 	}
 	
 	
@@ -179,9 +225,9 @@ public class InspcDataExchangeAccess
 		    Im Cmd wird der PATH des Objektes uebergeben. Das geschieht in einer Struktur DataExchangeString_OBM.
 		    
 		    ,  Cmd:
-		    ,  +------head-----------+-int32-+---------string------------------+
-		    ,  |kGetFields           | ix    | PATH mit Punkt am Ende             |
-		    ,  +---------------------+-------+-----------------------------+
+		    ,  +------head------------+---------string--------------+
+		    ,  |kGetFields            | PATH mit Punkt am Ende      |
+		    ,  +----------------------+-----------------------------+
 		    
 		    Dabei wird mit dem ,,head.index,, ein Startindex uebergeben. Dieser soll bei der ersten Abfrage =0 sein.
 		    
@@ -193,21 +239,12 @@ public class InspcDataExchangeAccess
 		    ,  +---------------------+-------------+---------------------+-------------
 		
 		    Der Aufbau des Strings ist bei ,,kAnswerFieldMethod,, beschrieben.
-		    
-		    Wenn nicht alle Attribute und Assoziationen in ein Antworttelegramm passen, dann wird als letztes Item gesendet:
-		
-		    ,  Answer:
-		    ,  ----+------head--------------------+---data--+
-		    ,      |kAnswerFurtherFieldsMethods   |  ix
-		    ,  ----+------------------------------+---------=
-		
-		    Der Index ist hierbei derjenige Index, der in einer weiteren Anforderung mit kGetFields 
-		    als ,,head.index,, angegeben werden soll. Damit werden ab diesem Index weitere Attribute und Methoden abgefragt.
 		 */
 		public final static int kGetFields = 0x10;
 		
 		/**@deprecated */
-		public final static int kGetFieldsFurther = 0x12; 
+		@Deprecated
+    public final static int kGetFieldsFurther = 0x12; 
 
 		
 		/**Antwort auf Aufforderung zur Rueckgabe einer Liste von Attributen, Assoziationen oder Methoden.
@@ -295,6 +332,17 @@ public class InspcDataExchangeAccess
     public final static int kAnswerRemoveMsgOk = 0x141;
     public final static int kAnswerRemoveMsgNok = 0x241;
 
+    
+    
+    /**This item sets a value with a given position:
+     * <pre>
+     * <@8+4#?position> <@12+4#?length> <@16..SIZE#?bitImageValue>
+     * </pre>
+     * The position may be a memory address which is known in the client proper to the target
+     * or it may be a relative offset in any target's data. The type of data is target-specific. 
+     */
+    public final static int kSetvaluedata = 0x50, kAnswervaluedata = 0x150;
+    
     public final static int kFailedPath = 0xFe;
     
     public final static int kNoRessource = 0xFd;
@@ -338,6 +386,9 @@ public class InspcDataExchangeAccess
 		{ setInt16(2, cmd); 
 		}
 		
+		/**Returns the cmd in a Reflitem. The cmd is coded see {@link #kFailedCommand}, {@link #kAnswerFieldMethod} etc.
+		 * @return
+		 */
 		public final int getCmd(){ return getInt16(2); }
 		
 		public final int getLenInfo(){ return getInt16(0); }
@@ -368,6 +419,11 @@ public class InspcDataExchangeAccess
     /**This type identification designates that the value is not available.
      */
     public static final int kTypeNoValue = 0xde;
+    
+    
+    /**This type identification designates that the index to access by index is invalid.
+     */
+    public static final int kInvalidIndex = 0xdd;
     
     
 		

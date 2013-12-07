@@ -21,9 +21,13 @@ import org.vishia.util.Java4C;
 public final class ClassContent implements CmdConsumer_ifc
 {
 
-  /**Version, history and license
+  /**Version, history and license.
    * <ul>
-   * <li>2013-01-10 Hartmut bugfix: If the path failes in 
+   * <li>2013-12-07 Hartmut requfix: Check of the Index for getValueByIndex: Don't start from 0, because a reseted target 
+   *   starts by 0 always. Use 16 bit of seconds, about 18 h. Only a new restart in exactly 65536 seconds are faulty. 
+   *   If the index is invalid, the {@link InspcDataExchangeAccess#kInvalidIndex} is returned for this value.
+   *   The requester should remove that index. It is implemented in {@link org.vishia.inspectorAccessor.InspcVariable}.
+   * <li>2013-01-10 Hartmut bugfix: If the path fails in 
    *   {@link #getSetValueByPath(org.vishia.communication.InspcDataExchangeAccess.Info, org.vishia.communication.InspcDataExchangeAccess.SetValue, org.vishia.communication.InspcDataExchangeAccess.Datagram, String, int)},
    *   It should be returned a message anyway. If nothing is returned, the calling doesn't know that problem 
    *   and the whole telegram may not be sent. It would cause a timeout.
@@ -819,8 +823,9 @@ public final class ClassContent implements CmdConsumer_ifc
         freeOrder.lastUsed = currentTime;
         freeOrder.addrValue = theField;
         freeOrder.addr.set(theObject);
-        //freeOrder.timeout_millisec = 5000;  //after 5 seconds, forget it.
-        freeOrder.check +=1; //change it to detect old requests at same index.
+        //don't start by 0 on reset of the target! date-20131208
+        //- freeOrder.check +=1; //change it to detect old requests at same index.
+        freeOrder.check = (short)(currentTime);
         int ixAnswer = ixReg | (freeOrder.check <<12);
         answerItem.addChildInteger(4, ixAnswer); 
         getSetValue(theField, idx, theObject, null, maxNrofAnswerBytes);
@@ -865,7 +870,7 @@ public final class ClassContent implements CmdConsumer_ifc
           getSetValue(order.addrValue, 0, order.addr, null, maxNrofAnswerBytes);
         } else {
           //The ident is faulty. Any ident request should have its answer.
-          answerItem.addChildInteger(1, InspcDataExchangeAccess.kTypeNoValue);
+          answerItem.addChildInteger(1, InspcDataExchangeAccess.kInvalidIndex);
         }
       }//while
       int nBytesItem = answerItem.getLength();

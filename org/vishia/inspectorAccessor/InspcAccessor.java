@@ -74,7 +74,7 @@ public class InspcAccessor implements Closeable
   
   int identLogTelg;
   
-	private InspcAccessGenerateOrder orderGenerator = new InspcAccessGenerateOrder();
+	private final InspcAccessGenerateOrder orderGenerator = new InspcAccessGenerateOrder();
 	
 	private final byte[] txBuffer = new byte[1400];
 
@@ -206,14 +206,14 @@ public class InspcAccessor implements Closeable
   { if(!bFillTelg){
       txAccess.assignEmpty(txBuffer);
       if(++nSeqNumber == 0){ nSeqNumber = 1; }
-      txAccess.setHead(nEntrant, nSeqNumber, nEncryption);
+      txAccess.setHeadRequest(nEntrant, nSeqNumber, nEncryption);
       bFillTelg = true;
     } else {
       int lengthDatagram = txAccess.getLength();
       if(lengthDatagram + zBytesInfo > txBuffer.length){
         send();
         assert(!bFillTelg);
-        txAccess.setHead(nEntrant, nSeqNumber, nEncryption);
+        txAccess.setHeadRequest(nEntrant, nSeqNumber, nEncryption);
         bFillTelg = true;
       }
     }
@@ -237,7 +237,7 @@ public class InspcAccessor implements Closeable
   { if(!bFillTelg){
       txAccess.assignEmpty(txBuffer);
       if(++nSeqNumber == 0){ nSeqNumber = 1; }
-      txAccess.setHead(nEntrant, nSeqNumber, nEncryption);
+      txAccess.setHeadRequest(nEntrant, nSeqNumber, nEncryption);
       bFillTelg = true;
       assert(zBytesInfo + txAccess.getLengthTotal() <= txBuffer.length);  //1 info block should match in size!
       return true;
@@ -272,7 +272,7 @@ public class InspcAccessor implements Closeable
     if(!bFillTelg){
       txAccess.assignEmpty(txBuffer);
       if(++nSeqNumber == 0){ nSeqNumber = 1; }
-      txAccess.setHead(nEntrant, nSeqNumber, nEncryption);
+      txAccess.setHeadRequest(nEntrant, nSeqNumber, nEncryption);
       bFillTelg = true;
       return txBuffer.length - txAccess.getLengthHead();
     }

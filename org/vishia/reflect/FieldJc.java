@@ -271,6 +271,9 @@ public class FieldJc
     this.name = field.getName();
     Class fieldType = field.getType();
     String sTypeName = fieldType.getName();
+    if(fieldType.isPrimitive()){
+      modifier |= ModifierJc.mPrimitiv;  //designate on field that it is a primitive, like in C-reflection. 
+    }
     annotations = field.getAnnotations();
     
     for(Annotation annotation: annotations){

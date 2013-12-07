@@ -18,7 +18,7 @@ public class CmdExecuter implements AnswerComm_ifc
 	/**@java2c=simpleRef. */
 	private final CmdConsumer_ifc cmdConsumer;
 	
-	private int maxNrofAnswerBytes = 1400;
+	private final int maxNrofAnswerBytes = 1400;
   
   private int nrofBytesAnswer;
   
@@ -74,7 +74,7 @@ public class CmdExecuter implements AnswerComm_ifc
       //prepare the answer telg:
       int seqNr = datagramCmd.getSeqnr();
       int encryption = datagramCmd.getEncryption();
-      myAnswerData.setHead(nEntrant, seqNr, encryption);
+      myAnswerData.setHeadAnswer(nEntrant, seqNr, encryption);
       nrofBytesAnswer = InspcDataExchangeAccess.Datagram.sizeofHead;
       while(bOk && nrofBytesTelg >= (nrofBytesProcessed + InspcDataExchangeAccess.Info.sizeofHead)){
         //The next telg Part will be found after the processed part.
@@ -112,7 +112,7 @@ public class CmdExecuter implements AnswerComm_ifc
       //It is the old style of communication, exclusively used until 2010-0216.
       useTelgHead = false;
       //dummy head with 2 empty information units.
-      myAnswerData.setHead(0, 0x080000, 0);
+      myAnswerData.setHeadAnswer(0, 0x080000, 0);
       myAnswerData.setLengthDatagram(8);
       infoCmd.assignData(buffer, nrofBytesReceived);
       infoCmd.setBigEndian(true);
