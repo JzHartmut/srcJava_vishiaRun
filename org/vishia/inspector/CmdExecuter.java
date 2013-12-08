@@ -10,10 +10,10 @@ public class CmdExecuter implements AnswerComm_ifc
 {
 
 	/**@ java2c=simpleRef. */
-	final InspcDataExchangeAccess.Datagram datagramCmd = new InspcDataExchangeAccess.Datagram(); 
+	final InspcDataExchangeAccess.ReflDatagram datagramCmd = new InspcDataExchangeAccess.ReflDatagram(); 
 	
 	/**@ java2c=simpleRef. */
-	final InspcDataExchangeAccess.Info infoCmd = new InspcDataExchangeAccess.Info();  
+	final InspcDataExchangeAccess.Reflitem infoCmd = new InspcDataExchangeAccess.Reflitem();  
 	
 	/**@java2c=simpleRef. */
 	private final CmdConsumer_ifc cmdConsumer;
@@ -31,7 +31,7 @@ public class CmdExecuter implements AnswerComm_ifc
   
   private final byte[] bufferAnswerData = new byte[1500]; 
   
-  private final InspcDataExchangeAccess.Datagram myAnswerData = new InspcDataExchangeAccess.Datagram(bufferAnswerData); 
+  private final InspcDataExchangeAccess.ReflDatagram myAnswerData = new InspcDataExchangeAccess.ReflDatagram(bufferAnswerData); 
   
   /**true than the myAnswerdata is of type DataExchangeTelg_Inspc, 
    * false: older form: without head.
@@ -75,12 +75,12 @@ public class CmdExecuter implements AnswerComm_ifc
       int seqNr = datagramCmd.getSeqnr();
       int encryption = datagramCmd.getEncryption();
       myAnswerData.setHeadAnswer(nEntrant, seqNr, encryption);
-      nrofBytesAnswer = InspcDataExchangeAccess.Datagram.sizeofHead;
-      while(bOk && nrofBytesTelg >= (nrofBytesProcessed + InspcDataExchangeAccess.Info.sizeofHead)){
+      nrofBytesAnswer = InspcDataExchangeAccess.ReflDatagram.sizeofHead;
+      while(bOk && nrofBytesTelg >= (nrofBytesProcessed + InspcDataExchangeAccess.Reflitem.sizeofHead)){
         //The next telg Part will be found after the processed part.
       	datagramCmd.addChild(infoCmd);
       	partLength = infoCmd.getLenInfo();
-      	if(  partLength >= InspcDataExchangeAccess.Info.sizeofHead
+      	if(  partLength >= InspcDataExchangeAccess.Reflitem.sizeofHead
       		&& partLength <= (nrofBytesTelg - nrofBytesProcessed)){
       	  //valid head data.
           boolean lastPart = (nrofBytesProcessed + partLength) == nrofBytesTelg;
@@ -102,7 +102,7 @@ public class CmdExecuter implements AnswerComm_ifc
         nrofBytesProcessed += partLength;
       }
       int nrofAnswer = myAnswerData.getLengthTotal();
-      if(nrofAnswer > InspcDataExchangeAccess.Datagram.sizeofHead){
+      if(nrofAnswer > InspcDataExchangeAccess.ReflDatagram.sizeofHead){
       	//more as the head:
       	txAnswer(nrofAnswer, true);
       }
@@ -124,7 +124,7 @@ public class CmdExecuter implements AnswerComm_ifc
       	nrofBytesAnswerPart =0; //TODO send a nack
       }
       int nrofAnswer = myAnswerData.getLengthTotal();
-      if(nrofAnswer > InspcDataExchangeAccess.Datagram.sizeofHead){
+      if(nrofAnswer > InspcDataExchangeAccess.ReflDatagram.sizeofHead){
       	//more as the head:
       	txAnswer(nrofAnswer, true);
       }
@@ -134,7 +134,7 @@ public class CmdExecuter implements AnswerComm_ifc
 
 	
   /**Send the current answer datagram as answer.
-   * The length of the datagram is set to the head using {@link InspcDataExchangeAccess.Datagram#setLengthDatagram(int)}
+   * The length of the datagram is set to the head using {@link InspcDataExchangeAccess.ReflDatagram#setLengthDatagram(int)}
    * 
    * @see org.vishia.inspector.AnswerComm_ifc#txAnswer(int, boolean)
    */
@@ -148,7 +148,7 @@ public class CmdExecuter implements AnswerComm_ifc
 	  //ythis->answer.nrofSentBytes = txAnswerRawData_Comm_Inspc(ythis, &ythis->answer.myAnswerData, ythis->answer.nrofAnswerBytes, &ythis->myAnswerAddress);
 		nrofBytesAnswer = nrofAnswerBytesPart;
 	  if(  !useTelgHead                                 //the older form without head
-	    || nrofBytesAnswer > InspcDataExchangeAccess.Datagram.sizeofHead  //more data as the head only.
+	    || nrofBytesAnswer > InspcDataExchangeAccess.ReflDatagram.sizeofHead  //more data as the head only.
 	    ){
 	    if(bLastTelg && useTelgHead) { 
 	    	myAnswerData.markAnswerNrLast(); //mark as last telg
@@ -161,13 +161,13 @@ public class CmdExecuter implements AnswerComm_ifc
 			} else {
 				//prepare the next telg:
 				myAnswerData.incrAnswerNr();
-				nrofBytesAnswer = InspcDataExchangeAccess.Datagram.sizeofHead;
-        ret = InspcDataExchangeAccess.Datagram.sizeofHead - nrofBytesAnswer;
+				nrofBytesAnswer = InspcDataExchangeAccess.ReflDatagram.sizeofHead;
+        ret = InspcDataExchangeAccess.ReflDatagram.sizeofHead - nrofBytesAnswer;
 			}
 	    
 	  } else {
 	  	//nothing to sent.
-	    ret = InspcDataExchangeAccess.Datagram.sizeofHead - nrofBytesAnswer;
+	    ret = InspcDataExchangeAccess.ReflDatagram.sizeofHead - nrofBytesAnswer;
 		}
 		return ret;
 	}

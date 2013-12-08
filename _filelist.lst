@@ -1,8 +1,8 @@
-2016-09-01 22:24:12  x     _filelist.lst                            ::           .  0  0000000000 
+2016-09-01 22:24:16  x     _filelist.lst                            ::           .  0  0000000000 
 2011-08-25 06:14:30  x     bzrGet_vishiaRun.bat                     ::           . 35 -0964060138 
 2012-04-25 12:31:14  x     revisions_srcJava_vishiaRun.txt          ::         12.026  0417654483 
 
-2016-09-01 22:24:12 Dx     === _make/ =============================================================
+2016-09-01 22:24:16 Dx     === _make/ =============================================================
 2011-03-22 07:46:54  x     GenReflectProAgentExplorerXml.manifest   ::           . 71  1639857466 
 2013-12-01 19:43:00  x     SocketTester.manifest                    ::           . 51  1607973022 
 2012-08-12 22:27:24  x     genDownload.sh                           ::           . 79  0439517562 
@@ -15,14 +15,14 @@
 2011-02-27 18:09:54  x     vishiaRun.manifest                       ::           . 59 -1763424704 
 2012-06-29 13:56:18  x     xxxjavacjar.sh                           ::          2.388 -0652346373 
 
-2016-09-01 22:24:12 Dx     === org/ ===============================================================
+2016-09-01 22:24:16 Dx     === org/ ===============================================================
 
-2016-09-01 22:24:12 Dx     === org/vishia/ =========================================================
+2016-09-01 22:24:16 Dx     === org/vishia/ =========================================================
 
-2016-09-01 22:24:12 Dx     === org/vishia/communication/ ===========================================
+2016-09-01 22:24:16 Dx     === org/vishia/communication/ ===========================================
 2011-02-21 17:25:36  x     Address_InterProcessComm.java            ::          1.631 -0211980600 
 2013-12-06 16:29:32  x     Address_InterProcessComm_Socket.java     ::          7.537  0121892810 
-2013-12-08 11:51:00  x     InspcDataExchangeAccess.java             ::         19.447 -1674340245 
+2013-12-09 07:44:46  x     InspcDataExchangeAccess.java             ::         21.379 -1327790573 
 2012-08-22 11:37:08  x     InterProcessComm.java                    ::          9.684 -1556742146 
 2011-02-21 17:25:36  x     InterProcessCommFactory.java             ::          2.691 -1747833757 
 2011-02-21 17:25:36  x     InterProcessCommFactoryAccessor.java     ::          1.931 -1558583456 
@@ -30,43 +30,43 @@
 2012-06-11 21:21:22  x     InterProcessComm_SocketImpl.java         ::          8.585 -0676043461 
 2013-12-01 19:43:00  x     SocketTester.java                        ::         12.497  2041910268 
 
-2016-09-01 22:24:12 Dx     === org/vishia/curves/ ==================================================
+2016-09-01 22:24:16 Dx     === org/vishia/curves/ ==================================================
 2013-07-14 13:17:52  x     WriteCurveBinary.java                    ::          2.830 -0692159512 
 2013-07-14 13:17:52  x     WriteCurveCsv.java                       ::          3.622  0763902545 
 2013-07-14 13:17:52  x     WriteCurve_ifc.java                      ::          3.448 -0224065991 
 
-2016-09-01 22:24:12 Dx     === org/vishia/inspector/ ===============================================
+2016-09-01 22:24:16 Dx     === org/vishia/inspector/ ===============================================
 2011-02-21 17:25:36  x     AnswerComm_ifc.java                      ::           .928 -0998812942 
-2013-12-08 11:51:00  x     ClassContent.java                        ::         36.664  1019304804 
-2011-02-21 17:25:36  x     CmdConsumer_ifc.java                     ::          2.051 -0195527118 
-2013-12-08 11:51:00  x     CmdExecuter.java                         ::          6.331  0806747630 
+2013-12-09 07:44:46  x     ClassContent.java                        ::         36.896  0644194700 
+2013-12-09 07:44:46  x     CmdConsumer_ifc.java                     ::          2.063 -0838816639 
+2013-12-09 07:44:46  x     CmdExecuter.java                         ::          6.395 -0844841691 
 2013-12-04 19:28:58  x     Comm.java                                ::          7.355  0710201077 
 2013-12-08 11:51:00  x     InspcDataInfo.java                       ::          3.322 -1784734210 
-2011-06-27 10:51:08  x     InspcTelgInfoSet.java                    ::          4.148  2034263793 
+2013-12-09 07:44:46  x     InspcTelgInfoSet.java                    ::          4.215  1613751851 
 2011-11-18 16:27:24  x     Inspector.java                           ::          1.371  0356733840 
 2011-02-21 17:25:36  x     SearchElement.java                       ::          5.934  1429427323 
 
-2016-09-01 22:24:12 Dx     === org/vishia/inspector/example/ =======================================
+2016-09-01 22:24:16 Dx     === org/vishia/inspector/example/ =======================================
 2011-05-06 21:35:52  x     ExampleInspector.java                    ::          2.196  1691237537 
 2011-02-21 17:25:36  x     WorkingThread.java                       ::          2.677 -2030105214 
 
-2016-09-01 22:24:12 Dx     === org/vishia/inspector/helper/ ========================================
+2016-09-01 22:24:16 Dx     === org/vishia/inspector/helper/ ========================================
 2012-11-01 22:02:22  x     GenReflectProAgentExplorerXml.java       ::          2.189 -1909722200 
 
-2016-09-01 22:24:12 Dx     === org/vishia/inspectorAccessor/ =======================================
-2012-04-05 18:57:50  x     InspcAccessCheckerRxTelg.java            ::          4.131  1301601022 
-2012-12-19 09:41:28  x     InspcAccessEvaluatorRxTelg.java          ::         11.518  1452917088 
-2012-04-05 18:57:50  x     InspcAccessExecAnswerTelg_ifc.java       ::           .413  1575995518 
-2012-04-05 18:57:50  x     InspcAccessExecRxOrder_ifc.java          ::           .424 -0646649992 
+2016-09-01 22:24:16 Dx     === org/vishia/inspectorAccessor/ =======================================
+2013-12-09 07:44:46  x     InspcAccessCheckerRxTelg.java            ::          4.159  1490702088 
+2013-12-09 07:44:46  x     InspcAccessEvaluatorRxTelg.java          ::         11.558  1218781234 
+2013-12-09 07:44:46  x     InspcAccessExecAnswerTelg_ifc.java       ::           .417  1330719720 
+2013-12-09 07:44:46  x     InspcAccessExecRxOrder_ifc.java          ::           .428 -1740489315 
 2011-05-25 20:38:14  x     InspcAccessGenerateOrder.java            ::           .929  2112380679 
-2013-12-08 11:51:00  x     InspcAccessor.java                       ::         26.139 -0302717145 
+2013-12-09 07:44:46  x     InspcAccessor.java                       ::         25.641  1738419516 
 2013-12-08 11:51:00  x     InspcMng.java                            ::         23.744 -1338158193 
 2012-04-03 12:30:16  x     InspcPlugUser_ifc.java                   ::           .551 -1731975075 
-2013-12-08 11:51:00  x     InspcVariable.java                       ::          9.631  1380538372 
-2012-04-05 18:57:50  x     TestAccessor.java                        ::          2.313  0079745268 
+2013-12-09 07:44:46  x     InspcVariable.java                       ::          9.659 -0363773785 
+2013-12-09 07:44:46  x     TestAccessor.java                        ::          2.329 -1472271182 
 2012-04-09 11:25:34  x     UserInspcPlug_ifc.java                   ::          2.357  1325278375 
 
-2016-09-01 22:24:12 Dx     === org/vishia/msgDispatch/ =============================================
+2016-09-01 22:24:16 Dx     === org/vishia/msgDispatch/ =============================================
 2012-06-04 22:22:00  x     InspcMsgDataExchg.java                   ::          1.375 -1157169406 
 2013-03-24 22:12:44  x     LogMessageFile.java                      ::         26.939  0070394927 
 2013-03-31 09:45:26  x     MsgConfigZbnf.java                       ::          2.649  0159208110 
@@ -75,7 +75,7 @@
 2012-08-22 16:28:54  x     MsgReceiver.java                         ::          8.373  0935492017 
 2012-08-22 16:28:54  x     MsgRecvComm.java                         ::          3.477 -0860490594 
 
-2016-09-01 22:24:12 Dx     === org/vishia/reflect/ =================================================
+2016-09-01 22:24:16 Dx     === org/vishia/reflect/ =================================================
 2012-08-23 10:47:46  x     ClassJc.java                             ::          8.982  1792104447 
 2013-12-08 11:51:00  x     FieldJc.java                             ::         34.685 -1144661946 
 2012-09-24 17:51:32  x     FieldJcVariableAccess.java               ::          3.554 -1304988675 

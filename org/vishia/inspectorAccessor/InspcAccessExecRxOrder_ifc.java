@@ -11,6 +11,6 @@ import org.vishia.msgDispatch.LogMessage;
 public interface InspcAccessExecRxOrder_ifc
 {
 
-  void execInspcRxOrder(InspcDataExchangeAccess.Info info, LogMessage log, int identLog);
+  void execInspcRxOrder(InspcDataExchangeAccess.Reflitem info, LogMessage log, int identLog);
   
 }

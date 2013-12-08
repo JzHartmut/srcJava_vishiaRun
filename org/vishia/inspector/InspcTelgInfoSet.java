@@ -3,13 +3,13 @@ package org.vishia.inspector;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.reflect.ClassJc;
 
-/**It is an extra class additonal to {@link InspcDataExchangeAccess.Info}
+/**It is an extra class additonal to {@link InspcDataExchangeAccess.Reflitem}
  * because the last one is used in a embedded target system translated with Java2C.
  * Not necessary code shouldn't lade it.
  * @author Hartmut Schorrig
  *
  */
-public class InspcTelgInfoSet extends InspcDataExchangeAccess.Info
+public class InspcTelgInfoSet extends InspcDataExchangeAccess.Reflitem
 {
   public void setCmdGetValueByPath(String path, int order)
   {
@@ -18,7 +18,7 @@ public class InspcTelgInfoSet extends InspcDataExchangeAccess.Info
     addChildString(path);
     if(restChars >0) { addChildInteger(restChars, 0); }
     int zInfo = getLength();
-    this.setInfoHead(zInfo, InspcDataExchangeAccess.Info.kGetValueByPath, order);
+    this.setInfoHead(zInfo, InspcDataExchangeAccess.Reflitem.kGetValueByPath, order);
   }
   
   /**Adds the info block to send 'get value by path'
@@ -29,17 +29,18 @@ public class InspcTelgInfoSet extends InspcDataExchangeAccess.Info
    * @return The order number. 0 if the cmd can't be created.
    * @deprecated see {@link org.vishia.inspectorAccessor.InspcAccessor#cmdSetValueByPath(String, double)}
    */
+  @Deprecated
   public void xxxsetCmdSetValueByPath(String path, long value, int typeofValue, int order)
   {
     int zPath = path.length();
     int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
-    InspcDataExchangeAccess.SetValue accessSetValue = new InspcDataExchangeAccess.SetValue(); 
+    InspcDataExchangeAccess.ReflSetValue accessSetValue = new InspcDataExchangeAccess.ReflSetValue(); 
     addChild(accessSetValue);
     accessSetValue.setLong(value);
     addChildString(path);
     if(restChars >0) { addChildInteger(restChars, 0); }
     int zInfo = getLength();
-    this.setInfoHead(zInfo, InspcDataExchangeAccess.Info.kSetValueByPath, order);
+    this.setInfoHead(zInfo, InspcDataExchangeAccess.Reflitem.kSetValueByPath, order);
   }
   
   /**Adds the info block to send 'get value by path'
@@ -53,13 +54,13 @@ public class InspcTelgInfoSet extends InspcDataExchangeAccess.Info
   {
     int zPath = path.length();
     int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
-    InspcDataExchangeAccess.SetValue accessSetValue = new InspcDataExchangeAccess.SetValue(); 
+    InspcDataExchangeAccess.ReflSetValue accessSetValue = new InspcDataExchangeAccess.ReflSetValue(); 
     addChild(accessSetValue);
     accessSetValue.setFloat(value);
     addChildString(path);
     if(restChars >0) { addChildInteger(restChars, 0); }
     int zInfo = getLength();
-    this.setInfoHead(zInfo, InspcDataExchangeAccess.Info.kSetValueByPath, order);
+    this.setInfoHead(zInfo, InspcDataExchangeAccess.Reflitem.kSetValueByPath, order);
   }
   
   /**Adds the info block to send 'get value by path'
@@ -73,13 +74,13 @@ public class InspcTelgInfoSet extends InspcDataExchangeAccess.Info
   {
     int zPath = path.length();
     int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
-    InspcDataExchangeAccess.SetValue accessSetValue = new InspcDataExchangeAccess.SetValue(); 
+    InspcDataExchangeAccess.ReflSetValue accessSetValue = new InspcDataExchangeAccess.ReflSetValue(); 
     addChild(accessSetValue);
     accessSetValue.setDouble(value);
     addChildString(path);
     if(restChars >0) { addChildInteger(restChars, 0); }
     int zInfo = getLength();
-    this.setInfoHead(zInfo, InspcDataExchangeAccess.Info.kSetValueByPath, order);
+    this.setInfoHead(zInfo, InspcDataExchangeAccess.Reflitem.kSetValueByPath, order);
   }
   
   public void setCmdGetAddressByPath(String path, int order)
@@ -89,7 +90,7 @@ public class InspcTelgInfoSet extends InspcDataExchangeAccess.Info
     addChildString(path);
     if(restChars >0) { addChildInteger(restChars, 0); }
     int zInfo = getLength();
-    this.setInfoHead(zInfo, InspcDataExchangeAccess.Info.kGetAddressByPath, order);
+    this.setInfoHead(zInfo, InspcDataExchangeAccess.Reflitem.kGetAddressByPath, order);
   }
   
 	

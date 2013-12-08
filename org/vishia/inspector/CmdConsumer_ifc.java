@@ -13,7 +13,7 @@ public interface CmdConsumer_ifc
 	 * The answer-Datagram is given with prepared head. The only one value is the current datagram length
 	 * which should be set to the head before it is send. But this action is done in the method
 	 * {@link AnswerComm_ifc#txAnswer(int, boolean)}. 
-	 * The user should add its {@link InspcDataExchangeAccess.Info}-elements for the answer there.
+	 * The user should add its {@link InspcDataExchangeAccess.Reflitem}-elements for the answer there.
 	 * Only if the datagram is full and a next info have to be add, the current datagram should be send.
 	 * Therefore the routine {@link AnswerComm_ifc#txAnswer(int, boolean)} should be called
 	 * with the current number of bytes and <code>false</code> as 2. parameter. A non-filled datagram
@@ -29,7 +29,7 @@ public interface CmdConsumer_ifc
 	 * @param maxNrofAnswerBytes The maximum of bytes inclusive head in the datagram.
 	 * @return 0
 	 */
-	int executeMonitorCmd(InspcDataExchangeAccess.Info cmd, InspcDataExchangeAccess.Datagram answer, int maxNrofAnswerBytes)
+	int executeMonitorCmd(InspcDataExchangeAccess.Reflitem cmd, InspcDataExchangeAccess.ReflDatagram answer, int maxNrofAnswerBytes)
 	throws IllegalArgumentException, UnsupportedEncodingException 
 	;
 

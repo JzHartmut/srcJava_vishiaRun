@@ -2,7 +2,6 @@ package org.vishia.inspectorAccessor;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import org.vishia.byteData.ByteDataAccess;
 import org.vishia.byteData.ByteDataAccessSimple;
@@ -12,7 +11,6 @@ import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessCommFactory;
 import org.vishia.communication.InterProcessCommFactoryAccessor;
-import org.vishia.communication.InspcDataExchangeAccess.Info;
 import org.vishia.inspector.InspcTelgInfoSet;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.ClassJc;
@@ -21,8 +19,8 @@ import org.vishia.reflect.ClassJc;
  * This class creates opens the {@link InterProcessComm} and creates a receiving thread. 
  * Any send requests are invoked from the environment. A send request usual contains
  * a reference to a {@link InspcAccessExecRxOrder_ifc}. 
- * Thats {@link InspcAccessExecRxOrder_ifc#execInspcRxOrder(Info, LogMessage, int)} is executed
- * if the response info block is received. With the order-number-concept see {@link InspcDataExchangeAccess.Info#getOrder()} 
+ * Thats {@link InspcAccessExecRxOrder_ifc#execInspcRxOrder(Reflitem, LogMessage, int)} is executed
+ * if the response info block is received. With the order-number-concept see {@link InspcDataExchangeAccess.Reflitem#getOrder()} 
  * the request and the response are associated together.
  *  
  * @author Hartmut Schorrig
@@ -31,14 +29,14 @@ import org.vishia.reflect.ClassJc;
 public class InspcAccessor implements Closeable
 {
 	
-  /**The versionm history and license of this class:
+  /**The version history and license of this class.
    * <ul>
    * <li>2012-04-08 Hartmut new: Support of GetValueByIdent
-   * <li>2012-04-05 Hartmut new: Use {@link LogMessage to test telegram trafic}
+   * <li>2012-04-05 Hartmut new: Use {@link LogMessage to test telegram traffic}
    * <li>2012-04-02 Hartmut new: {@link #sendAndPrepareCmdSetValueByPath(String, long, int, InspcAccessExecRxOrder_ifc)}.
    *   The concept is: provide the {@link InspcAccessExecRxOrder_ifc} with the send request.
    *   It should be implement for all requests in this form. But the awaiting of answer doesn't may the best way.
-   *   Problem evaluating the answer telg in the rx thread or in the tx thread. TODO.
+   *   Problem evaluating the answer telg in the rx thread or in the tx thread. TODO documentation.
    * <li>2011-06-19 Hartmut new; {@link #shouldSend()} and {@link #isFilledTxTelg()} able to call outside.
    *     It improves the handling with info blocks in a telegram.
    * <li>2011-05 Hartmut created
@@ -80,6 +78,7 @@ public class InspcAccessor implements Closeable
 
 	private final InspcAccessCheckerRxTelg checkerRxTelg = new InspcAccessCheckerRxTelg();
 	
+	/**A Reflitem set instance. */
 	private final InspcTelgInfoSet infoAccess;
 	
   /**Instance to evaluate received telegrams. It is possible that a derived instance is used! */
@@ -102,7 +101,7 @@ public class InspcAccessor implements Closeable
   
 	long timeSend, dtimeReceive, dtimeWeakup;
 	
-	private final InspcDataExchangeAccess.Datagram txAccess = new InspcDataExchangeAccess.Datagram();
+	private final InspcDataExchangeAccess.ReflDatagram txAccess = new InspcDataExchangeAccess.ReflDatagram();
 	
 	
 	/**Number of idents to get values per ident. It determines the length of an info block,
@@ -112,10 +111,10 @@ public class InspcAccessor implements Closeable
 	
 	private int ixIdent5GetValueByIdent;
 	
-	/**A info element to get values by ident It contains a {@link InspcDataExchangeAccess.Info} head
+	/**A info element to get values by ident It contains a {@link InspcDataExchangeAccess.Reflitem} head
 	 * and then 4-byte-idents for data. The same order of data are given in the array
 	 */
-	private final byte[] dataInfoDataGetValueByIdent = new byte[InspcDataExchangeAccess.Info.sizeofHead + 4 * zIdent4GetValueByIdent]; 
+	private final byte[] dataInfoDataGetValueByIdent = new byte[InspcDataExchangeAccess.Reflitem.sizeofHead + 4 * zIdent4GetValueByIdent]; 
 	
 	
 	//ByteBuffer acc4ValueByIdent = new ByteBuffer();
@@ -197,27 +196,6 @@ public class InspcAccessor implements Closeable
 	}
 	
 	
-  /**Checks whether the head of the datagram should be created and filled. Does that if necessary.
-   * Elsewhere if the datagram hasn't place for the new info, it will be sent and a new head
-   * will be created. 
-   * @param zBytesInfo
-   */
-  private void XXXcheckSendAndFillHead(int zBytesInfo)
-  { if(!bFillTelg){
-      txAccess.assignEmpty(txBuffer);
-      if(++nSeqNumber == 0){ nSeqNumber = 1; }
-      txAccess.setHeadRequest(nEntrant, nSeqNumber, nEncryption);
-      bFillTelg = true;
-    } else {
-      int lengthDatagram = txAccess.getLength();
-      if(lengthDatagram + zBytesInfo > txBuffer.length){
-        send();
-        assert(!bFillTelg);
-        txAccess.setHeadRequest(nEntrant, nSeqNumber, nEncryption);
-        bFillTelg = true;
-      }
-    }
-  }
   
   
   /**Checks whether the head of the datagram should be created and the telegram has place for the current data.
@@ -299,13 +277,13 @@ public class InspcAccessor implements Closeable
    */
   public int cmdGetValueByPath(String sPathInTarget)
   { int order;
-    if(checkAndFillHead(InspcTelgInfoSet.sizeofHead + sPathInTarget.length() + 3 )){
+    if(checkAndFillHead(InspcDataExchangeAccess.Reflitem.sizeofHead + sPathInTarget.length() + 3 )){
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
       infoAccess.setCmdGetValueByPath(sPathInTarget, order);
       if(logTelg !=null){ 
-        logTelg.sendMsg(identLogTelg, "send cmdGetValueByPath %s, order = %d", sPathInTarget, order); 
+        logTelg.sendMsg(identLogTelg, "send cmdGetValueByPath %s, order = %d", sPathInTarget, new Integer(order)); 
       }
     } else {
       //too much info blocks
@@ -331,10 +309,10 @@ public class InspcAccessor implements Closeable
     infoAccess.addChildString(sPathInTarget);
     if(restChars >0) { infoAccess.addChildInteger(restChars, 0); }
     final int zInfo = infoAccess.getLength();
-    infoAccess.setInfoHead(zInfo, InspcDataExchangeAccess.Info.kRegisterRepeat, order);
+    infoAccess.setInfoHead(zInfo, InspcDataExchangeAccess.Reflitem.kRegisterRepeat, order);
     //
     if(logTelg !=null){ 
-      logTelg.sendMsg(identLogTelg, "send registerByPath %s, order = %d", sPathInTarget, order); 
+      logTelg.sendMsg(identLogTelg, "send registerByPath %s, order = %d", sPathInTarget, new Integer(order)); 
     }
     return order;
   }
@@ -366,9 +344,9 @@ public class InspcAccessor implements Closeable
       int order = orderGenerator.getNewOrder();
       rxEval.setExpectedOrder(order, actionRx4ValueByIdent);
       txAccess.addChild(infoAccess);
-      int posInTelg = infoAccess.getPositionInBuffer() + InspcDataExchangeAccess.Info.sizeofHead;
+      int posInTelg = infoAccess.getPositionInBuffer() + InspcDataExchangeAccess.Reflitem.sizeofHead;
       System.arraycopy(dataInfoDataGetValueByIdent, 0, infoAccess.getData(), posInTelg, 4 * ixIdent5GetValueByIdent);
-      infoAccess.setInfoHead(lengthInfo + InspcDataExchangeAccess.Info.sizeofHead, InspcDataExchangeAccess.Info.kGetValueByIndex, order);
+      infoAccess.setInfoHead(lengthInfo + InspcDataExchangeAccess.Reflitem.sizeofHead, InspcDataExchangeAccess.Reflitem.kGetValueByIndex, order);
       ixIdent5GetValueByIdent = 0;
       accInfoDataGetValueByIdent.assignEmpty(dataInfoDataGetValueByIdent);
       sendAndAwaitAnswer();
@@ -376,7 +354,7 @@ public class InspcAccessor implements Closeable
     } else return false;
   }
   
-  private final void execRx4ValueByIdent(Info info, LogMessage log, int identLog){
+  final void execRx4ValueByIdent(InspcDataExchangeAccess.Reflitem info, LogMessage log, int identLog){
     //int lenInfo = info.getLength();
     int ixVal = (int)info.getChildInteger(4);
     while(info.sufficingBytesForNextChild(1)){  //at least one byte in info, 
@@ -403,21 +381,22 @@ public class InspcAccessor implements Closeable
   { int order;
     int zPath = sPathInTarget.length();
     int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
-    int zInfo = Info.sizeofHead + InspcDataExchangeAccess.SetValue.sizeofElement + zPath + restChars; 
+    int zInfo = InspcDataExchangeAccess.Reflitem.sizeofHead + InspcDataExchangeAccess.ReflSetValue.sizeofElement + zPath + restChars; 
     if(checkAndFillHead(zInfo )){
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
       if(logTelg !=null){ 
-        logTelg.sendMsg(identLogTelg, "send cmdSetValueByPath %s, order = %d, value=%8X, type=%d", sPathInTarget, order, value, typeofValue); 
+        logTelg.sendMsg(identLogTelg, "send cmdSetValueByPath %s, order = %d, value=%8X, type=%d", sPathInTarget
+            , new Integer(order), new Long(value), new Integer(typeofValue)); 
       }
       //infoAccess.setCmdSetValueByPath(sPathInTarget, value, typeofValue, order);
-      InspcDataExchangeAccess.SetValue accessSetValue = new InspcDataExchangeAccess.SetValue(); 
+      InspcDataExchangeAccess.ReflSetValue accessSetValue = new InspcDataExchangeAccess.ReflSetValue(); 
       infoAccess.addChild(accessSetValue);
       accessSetValue.setLong(value);
       infoAccess.addChildString(sPathInTarget);
       if(restChars >0) { infoAccess.addChildInteger(restChars, 0); }
       assert(infoAccess.getLength() == zInfo);  //check length after add children. 
-      infoAccess.setInfoHead(zInfo, InspcDataExchangeAccess.Info.kSetValueByPath, order);
+      infoAccess.setInfoHead(zInfo, InspcDataExchangeAccess.Reflitem.kSetValueByPath, order);
     } else {
       //too much info blocks
       order = 0;
@@ -464,7 +443,7 @@ public class InspcAccessor implements Closeable
    */
   public int cmdSetValueByPath(String sPathInTarget, float value)
   { int order;
-    if(checkAndFillHead(InspcTelgInfoSet.sizeofHead + 8 + sPathInTarget.length() + 3 )){
+    if(checkAndFillHead(InspcDataExchangeAccess.Reflitem.sizeofHead + 8 + sPathInTarget.length() + 3 )){
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
       infoAccess.setCmdSetValueByPath(sPathInTarget, value, order);
@@ -485,7 +464,7 @@ public class InspcAccessor implements Closeable
    */
   public int cmdSetValueByPath(String sPathInTarget, double value)
   { int order;
-    if(checkAndFillHead(InspcTelgInfoSet.sizeofHead + 8 + sPathInTarget.length() + 3 )){
+    if(checkAndFillHead(InspcDataExchangeAccess.Reflitem.sizeofHead + 8 + sPathInTarget.length() + 3 )){
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
       infoAccess.setCmdSetValueByPath(sPathInTarget, value, order);
@@ -503,13 +482,13 @@ public class InspcAccessor implements Closeable
    */
   public int cmdGetAddressByPath(String sPathInTarget)
   { int order;
-    if(checkAndFillHead(InspcTelgInfoSet.sizeofHead + sPathInTarget.length() + 3 )){
+    if(checkAndFillHead(InspcDataExchangeAccess.Reflitem.sizeofHead + sPathInTarget.length() + 3 )){
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
       infoAccess.setCmdGetAddressByPath(sPathInTarget, order);
       if(logTelg !=null){ 
-        logTelg.sendMsg(identLogTelg, "send cmdGetAddressByPath %s, order = %d", sPathInTarget, order); 
+        logTelg.sendMsg(identLogTelg, "send cmdGetAddressByPath %s, order = %d", sPathInTarget, new Integer(order)); 
       }
     } else {
       //too much info blocks
@@ -545,7 +524,7 @@ public class InspcAccessor implements Closeable
     timeSend = System.currentTimeMillis();
     int ok = ipc.send(txBuffer, lengthDatagram, targetAddr);
     if(logTelg !=null){ 
-      logTelg.sendMsg(identLogTelg +1, "send telg length= %s, ok = %d", lengthDatagram, ok); 
+      logTelg.sendMsg(identLogTelg +1, "send telg length= %s, ok = %d", new Integer(lengthDatagram), new Integer(ok)); 
     }
     bFillTelg = false;
 	  bIsSentTelg = true;
@@ -556,7 +535,7 @@ public class InspcAccessor implements Closeable
 	
 	
 	/**Sets a executer instance for the answer telegrams from the target.
-	 * The method {@link InspcAccessExecAnswerTelg_ifc#execInspcRxTelg(org.vishia.communication.InspcDataExchangeAccess.Datagram[], int)}
+	 * The method {@link InspcAccessExecAnswerTelg_ifc#execInspcRxTelg(org.vishia.communication.InspcDataExchangeAccess.ReflDatagram[], int)}
 	 * will be invoked if all answer telegrams are received.
 	 * If this method is set, the answer execution of the application is done in the receivers thread.
 	 * In that case the method {@link #awaitAnswer(int)} must not use.
@@ -569,7 +548,7 @@ public class InspcAccessor implements Closeable
 
   void sendAndAwaitAnswer()
   { send();
-    InspcDataExchangeAccess.Datagram[] answerTelgs = awaitAnswer(2000);
+    InspcDataExchangeAccess.ReflDatagram[] answerTelgs = awaitAnswer(2000);
     if(answerTelgs !=null){
       rxEval.evaluate(answerTelgs, null, logTelg, identLogTelg + 5); //executerAnswerInfo);  //executer on any info block.
     } else {
@@ -588,8 +567,8 @@ public class InspcAccessor implements Closeable
 	 * @param timeout for waiting.
 	 * @return null on timeout, the answer datagrams elsewhere.
 	 */
-	public InspcDataExchangeAccess.Datagram[]  awaitAnswer(int timeout)
-	{ InspcDataExchangeAccess.Datagram[] answerTelgs = checkerRxTelg.waitForAnswer(timeout); 
+	public InspcDataExchangeAccess.ReflDatagram[]  awaitAnswer(int timeout)
+	{ InspcDataExchangeAccess.ReflDatagram[] answerTelgs = checkerRxTelg.waitForAnswer(timeout); 
   	long time = System.currentTimeMillis();
     dtimeWeakup = time - timeSend;
     return answerTelgs;
@@ -639,7 +618,7 @@ public class InspcAccessor implements Closeable
         long time = System.currentTimeMillis();
         dtimeReceive = time - timeSend;
         if(logTelg !=null){ 
-          logTelg.sendMsg(identLogTelg+3, "recv telg after %d ms", dtimeReceive); 
+          logTelg.sendMsg(identLogTelg+3, "recv telg after %d ms", new Long(dtimeReceive)); 
         }
         checkerRxTelg.applyReceivedTelg(rxBuffer, result[0], logTelg, identLogTelg +4);
       } else {
@@ -655,7 +634,7 @@ public class InspcAccessor implements Closeable
   
   
   InspcAccessExecRxOrder_ifc actionRx4ValueByIdent = new InspcAccessExecRxOrder_ifc(){
-    @Override public void execInspcRxOrder(Info info, LogMessage log, int identLog)
+    @Override public void execInspcRxOrder(InspcDataExchangeAccess.Reflitem info, LogMessage log, int identLog)
     { execRx4ValueByIdent(info, log, identLog);
     }
   };
