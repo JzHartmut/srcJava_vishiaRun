@@ -2,11 +2,12 @@ package org.vishia.inspectorAccessor;
 
 import java.util.Map;
 
+import org.vishia.byteData.VariableAccessArray_ifc;
 import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.msgDispatch.LogMessage;
 
-public class InspcVariable implements VariableAccess_ifc
+public class InspcVariable implements VariableAccessArray_ifc
 {
   
   /**Version, history and license.
@@ -183,67 +184,67 @@ public class InspcVariable implements VariableAccess_ifc
 
   
   @Override
-  public double getDouble(int... ixArray)
+  public double getDouble()
   {
     // TODO Auto-generated method stub
     return 0;
   }
 
   @Override
-  public float getFloat(int... ixArray)
+  public float getFloat()
   {
     return valueF;
   }
 
   @Override
-  public int getInt(int... ixArray)
+  public int getInt()
   {
     return valueI;
   }
 
   @Override
-  public long getLong(int... ixArray)
+  public long getLong()
   {
     return valueI;
   }
 
   @Override
-  public String getString(int ...ixArray)
+  public String getString()
   {
     // TODO Auto-generated method stub
     return null;
   }
 
   @Override
-  public double setDouble(double value, int... ixArray)
+  public double setDouble(double value)
   {
     // TODO Auto-generated method stub
     return 0;
   }
 
   @Override
-  public float setFloat(float value, int... ixArray)
+  public float setFloat(float value)
   {
     // TODO Auto-generated method stub
     return 0;
   }
 
   @Override
-  public int setInt(int value, int... ixArray)
+  public int setInt(int value)
   {
     // TODO Auto-generated method stub
     return 0;
   }
 
   @Override
-  public long setLong(long value, int... ixArray)
+  public long setLong(long value)
   {
     // TODO Auto-generated method stub
     return 0;
   }
 
   @Override
-  public String setString(String value, int ...ixArray)
+  public String setString(String value)
   {
     // TODO Auto-generated method stub
     return null;
@@ -253,15 +254,99 @@ public class InspcVariable implements VariableAccess_ifc
   
   @Override public char getType(){ return cType; } 
   
-  @Override public int getDimension(int dimension){
-    return 0; //no dimension
-  }
-
 
   @Override public long getLastRefreshTime(){ return timeRefreshed; }
 
   @Override public void requestValue(long time){ this.timeRequested = time; }
   
   @Override public String toString(){ return " Variable(" + sPath + ") "; }
+
+
+  @Override
+  public int getDimension(int dimension)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override
+  public double getDouble(int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override
+  public float getFloat(int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override
+  public int getInt(int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override
+  public long getLong(int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override
+  public String getString(int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+
+  @Override
+  public double setDouble(double value, int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override
+  public float setFloat(float value, int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override
+  public int setInt(int value, int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override
+  public long setLong(long value, int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override
+  public String setString(String value, int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
 }

@@ -94,11 +94,12 @@ public final class ClassJc
    * 
    */
   public static final int REFLECTION_String =             0x10;
-  /**Don't use this type identification, because it is not defined whether an boolean variable is
-   * 1, 8, 16 or 32 bit. Instead use {@link #REFLECTION_int32} etc.
-   * @deprecated
+  
+  /**This type identification should not interpret for a byte or integer image in C language. 
+   * It is not defined whether an boolean variable is 1, 8, 16 or 32 bit.
+   * The boolean presentation is platform-depending. 
+   * Maybe its better to use {@link #REFLECTION_int32} etc.
    */
-  @Deprecated
   public static final int REFLECTION_boolean=             0x16;
   
   /**If this designation is used, the bit position and the number of bits are given

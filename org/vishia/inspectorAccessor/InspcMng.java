@@ -9,6 +9,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.vishia.bridgeC.MemSegmJc;
+import org.vishia.byteData.VariableAccessArray_ifc;
 import org.vishia.byteData.VariableAccessWithIdx;
 import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.byteData.VariableContainer_ifc;
@@ -155,7 +156,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   Runnable callbackOnRxData;
   
   /**This container holds all variables which are created. */
-  Map<String, VariableAccess_ifc> idxAllVars = new TreeMap<String, VariableAccess_ifc>();
+  Map<String, VariableAccessArray_ifc> idxAllVars = new TreeMap<String, VariableAccessArray_ifc>();
   
   /**This container holds that variables which are currently used for communication. */
   Map<String, InspcVariable> idxVarsInAccess = new TreeMap<String, InspcVariable>();
@@ -292,7 +293,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
 
   
-  @Override public VariableAccessWithIdx getVariable(final String sDataPathP)
+  @Override public VariableAccess_ifc getVariable(final String sDataPathP)
   { int posIndex = sDataPathP.lastIndexOf('.');
     final String sDataPathVariable;
     char cc;
@@ -322,7 +323,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       bit = 0;
       sDataPathVariable = sDataPathP;
     }
-    VariableAccess_ifc var = idxAllVars.get(sDataPathVariable);
+    VariableAccessArray_ifc var = idxAllVars.get(sDataPathVariable);
     if(var == null){
       if(sDataPathVariable.startsWith("java:")){
         FieldJc[] field = new FieldJc[0];
@@ -357,7 +358,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     bUserCalled = false;
     long timeCurr = System.currentTimeMillis();
     idxRequestedVarFromTarget.clear();  //clear it, only new requests are pending then.
-    for(Map.Entry<String,VariableAccess_ifc> entryVar: idxAllVars.entrySet()){
+    for(Map.Entry<String,VariableAccessArray_ifc> entryVar: idxAllVars.entrySet()){
       VariableAccess_ifc var = entryVar.getValue();
       if(var instanceof InspcVariable){
         InspcVariable varInspc = (InspcVariable)var;

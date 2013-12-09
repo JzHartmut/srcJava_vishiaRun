@@ -2,9 +2,10 @@ package org.vishia.reflect;
 
 import java.lang.reflect.Field;
 
+import org.vishia.byteData.VariableAccessArray_ifc;
 import org.vishia.byteData.VariableAccess_ifc;
 
-public class FieldJcVariableAccess implements VariableAccess_ifc
+public class FieldJcVariableAccess implements VariableAccessArray_ifc
 {
 
   /**Version, history and license.
@@ -130,6 +131,29 @@ public class FieldJcVariableAccess implements VariableAccess_ifc
     // TODO Auto-generated method stub
     return null;
   }
+
+
+  @Override public double getDouble() { return getDouble(0); }
+
+  @Override public float getFloat() { return getFloat(0); }
+
+  @Override public int getInt() { return getInt(0); }
+
+  @Override public long getLong() { return getLong(0); }
+
+  @Override public String getString() { return getString(0); }
+
+
+  @Override public double setDouble(double value) { return setDouble(value, 0); }
+
+  @Override public float setFloat(float value) { return setFloat(value, 0); }
+
+  @Override public int setInt(int value) { return setInt(value, 0); }
+
+  @Override public long setLong(long value) { return setLong(value, 0); }
+
+  @Override public String setString(String value) { return setString(value, 0); }
+
 
 
 }

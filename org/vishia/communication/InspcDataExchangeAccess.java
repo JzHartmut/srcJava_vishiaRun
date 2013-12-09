@@ -356,6 +356,8 @@ public class InspcDataExchangeAccess
 		public static final int kReference = 0xdf;
 		
 		
+		public static final int kSpecialValueStart = 0x7000, kSpecialValueLast = 0x7fff;
+		
 		public Reflitem(int sizeData){
       super(sizeofHead, sizeData);
     }
@@ -387,7 +389,7 @@ public class InspcDataExchangeAccess
 		  setInt16(2, cmd); 
 		  setInt32(kbyteOrder, order);
 		  int lengthInfo = length >= sizeofHead ? length : sizeofHead;
-		  setLengthElement(lengthInfo);
+		  setLengthElement(lengthInfo);  //adjust the length in the access.
 		}
 		
 		public final void setLength(int length)
@@ -497,11 +499,15 @@ public final static class ReflSetValue extends ByteDataAccess{
 	@Java4C.define public double getDouble(){ return getDouble(8); }
 
   /**Sets a byte value. */
-	@Java4C.define public void setByte(byte value)
+  @Java4C.define public void setBool(int value)
+  { _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_boolean);  _setLong(15, 1, value);} 
+  
+  /**Sets a byte value. */
+  @Java4C.define public void setByte(int value)
   { _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int8);  _setLong(15, 1, value);} 
   
   /**Sets a short value. */
-	@Java4C.define public void setShort(short value)
+	@Java4C.define public void setShort(int value)
   { _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int16);  _setLong(14, 2, value);} 
   
   /**Sets a int32 value. */
@@ -549,16 +555,46 @@ public final static class ReflSetValueData extends Reflitem{
 
   @Java4C.define public void setPosition(int position){ _setLong(12, 4, position); }
 
+  public void setBool(int value){ 
+    ReflSetValue setValue = new ReflSetValue();
+    setValue.assignAtIndex(16, this);
+    setValue.setBool((byte)value);
+  }
+  
+  public void setShort(int value){ 
+    ReflSetValue setValue = new ReflSetValue();
+    setValue.assignAtIndex(16, this);
+    setValue.setShort((short)value);
+  }
+  
+  public void setByte(int value){ 
+    ReflSetValue setValue = new ReflSetValue();
+    setValue.assignAtIndex(16, this);
+    setValue.setByte((byte)value);
+  }
+  
   public void setInt(int value){ 
     ReflSetValue setValue = new ReflSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setInt(value);
   }
   
-  public void setFloat(int value){ 
+  public void setFloat(float value){ 
     ReflSetValue setValue = new ReflSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setFloat(value);
+  }
+  
+  public void setDouble(double value){ 
+    ReflSetValue setValue = new ReflSetValue();
+    setValue.assignAtIndex(16, this);
+    setValue.setDouble(value);
+  }
+  
+  public void setLong(long value){ 
+    ReflSetValue setValue = new ReflSetValue();
+    setValue.assignAtIndex(16, this);
+    setValue.setLong(value);
   }
   
   @Java4C.define public void setHead(int order){
