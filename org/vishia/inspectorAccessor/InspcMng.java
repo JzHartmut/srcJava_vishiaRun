@@ -25,6 +25,7 @@ import org.vishia.reflect.FieldVariableAccess;
 import org.vishia.util.Assert;
 import org.vishia.util.CompleteConstructionAndStart;
 import org.vishia.util.StringFunctions;
+import org.vishia.util.ThreadRun;
 
 /**This class supports the communication via the inspector reflex access. 
  * It is a {@link VariableContainer_ifc}. It means any application can handle with variable. 
@@ -146,8 +147,14 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20120417;
+  public static final int version = 0x20131211;
 
+  
+  /**The request of values from the target is organized in a cyclic thread. The thread sends
+   * the request and await the answer.
+   */
+  private final ThreadRun threadReqFromTarget;
+  
   private final InspcPlugUser_ifc user;
 
   /**This method is called if variable are received.
@@ -159,7 +166,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   Map<String, VariableAccessArray_ifc> idxAllVars = new TreeMap<String, VariableAccessArray_ifc>();
   
   /**This container holds that variables which are currently used for communication. */
-  Map<String, InspcVariable> idxVarsInAccess = new TreeMap<String, InspcVariable>();
+  Map<String, InspcVariable> XXXidxVarsInAccess = new TreeMap<String, InspcVariable>();
   
   /**This index should be empty if all requested variables are received.
    * If a variable is requested, it is registered here. If the answer is received, it is deleted.
@@ -214,16 +221,16 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   };
   
   /**The thread which calls the {@link #callbackOnRxData} method to show all received data. */
-  Thread inspcThread = new Thread("InspcMng"){ @Override public void run() { runInspcThread(); } };
+  //Thread inspcThread = new Thread("InspcMng"){ @Override public void run() { runInspcThread(); } };
 
   
   
 
   /**True if the {@link #inspcThread} is running. If set to false, the thread ends. */
-  boolean bThreadRuns;
+  //boolean bThreadRuns;
   
   /**True if the {@link #inspcThread} is in wait for data. */
-  boolean bThreadWaits;
+  //boolean bThreadWaits;
   
   /**Set from {@link #variableIsReceived(InspcVariable)} if all variables are received.
    * Tested from {@link #inspcThread} whether all are received.
@@ -231,6 +238,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   boolean bAllReceived;
   
   public InspcMng(String sOwnIpcAddr, Map<String, String> indexTargetIpcAddr, boolean bUseGetValueByIndex, InspcPlugUser_ifc user){
+    this.threadReqFromTarget = new ThreadRun("InspcMng", step, 100);
     this.inspcAccessor = new InspcAccessor(new InspcAccessEvaluatorRxTelg());
     this.indexTargetIpcAddr = indexTargetIpcAddr;
     this.sOwnIpcAddr = sOwnIpcAddr;
@@ -246,7 +254,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   @Override public void completeConstruction(){}
   
   @Override public void startupThreads(){
-    inspcThread.start();
+    threadReqFromTarget.start();
   }
 
   
@@ -353,7 +361,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    * @returns true if at least one variable was requested, false if nothing is requested.
    * @see org.vishia.byteData.VariableContainer_ifc#refreshValues()
    */
-  private boolean procComm(){
+  protected boolean procComm(){
     boolean bRequest = false;
     bUserCalled = false;
     long timeCurr = System.currentTimeMillis();
@@ -362,6 +370,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       VariableAccess_ifc var = entryVar.getValue();
       if(var instanceof InspcVariable){
         InspcVariable varInspc = (InspcVariable)var;
+        if(varInspc.sPath.startsWith("#"))
+          Assert.stop();
         if(varInspc.timeRequested >= timeReceived){  //only requests communication if the variable was requested:
           bRequest = true;
           if(!varInspc.requestValueFromTarget(timeCurr)){
@@ -509,10 +519,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   /*package private*/ void variableIsReceived(InspcVariable var){
     idxRequestedVarFromTarget.remove(var.sPath);
     if(idxRequestedVarFromTarget.isEmpty()){ //all variables are received:
-      synchronized(this){
-        bAllReceived = true;
-        if(bThreadWaits){ notify(); }
-      }
+      threadReqFromTarget.forceStep(false);
     }
   }
 
@@ -527,36 +534,33 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     
   }
   
+  
+  
+  private final ThreadRun.Step step = new ThreadRun.Step(){
+    
+  
+    @Override public final boolean start(){
+      inspcAccessor.open(sOwnIpcAddr);
+      return false;
+    }
 
-  /**This routine is the thread routine of {@link #inspcThread} called in run one time.
-   * It runs in a loop till {@link #bThreadRuns} is set to false.
-   * <ul>
-   * <li>It waits some milliseconds, 
-   * <li>then requests values from target
-   * <li>the waits for receiving all values or for a maximal time.
-   * <li>then calls {@link #callbackOnRxData(Event)} to show the values.
-   * <li>then loops.
-   * </ul>
-   */
-  final void runInspcThread(){
-    bThreadRuns = true;
-    inspcAccessor.open(sOwnIpcAddr);
-
-    while(bThreadRuns){
-      //delay some milliseconds before requests new values.
-      synchronized(this){ try{ wait(100); } catch(InterruptedException exc){} }
-      //now requests.
+    
+    
+    /**This routine is the thread routine of {@link #inspcThread} called in run one time.
+     * It runs in a loop till {@link #bThreadRuns} is set to false.
+     * <ul>
+     * <li>It waits some milliseconds, 
+     * <li>then requests values from target
+     * <li>the waits for receiving all values or for a maximal time.
+     * <li>then calls {@link #callbackOnRxData(Event)} to show the values.
+     * <li>then loops.
+     * </ul>
+     */
+    @Override public final boolean step(int cycletime){
+      //bThreadRuns = true;
+  
       bAllReceived = false;
-      try{
-        if(procComm()){
-          synchronized(this){
-            if(!bAllReceived){ //NOTE: its possible that 
-              bThreadWaits = true;
-              try{ wait(100); } catch(InterruptedException exc){}
-              bThreadWaits = false;
-            }
-          }
-        }
+        procComm();
         if(!bAllReceived){
           stop();
         }
@@ -566,16 +570,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
           //the next requests for variables will be set.
           //It may be the same, it may be other.
         }
-      }catch(Exception exc){
-        System.err.println(Assert.exceptionInfo("InspcMng - unexpected Exception; ", exc, 0, 7));
-        exc.printStackTrace(System.err);
-      }
-    }
-  }
-  
+      return false; //!bAllReceived;
+    }//step
+  }; //step  
   
   @Override public void close() throws IOException
-  { bThreadRuns = false;
+  { //bThreadRuns = false;
+    threadReqFromTarget.close();
     inspcAccessor.close();
   }
   

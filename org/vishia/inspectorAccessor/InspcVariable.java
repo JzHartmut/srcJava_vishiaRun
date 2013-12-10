@@ -282,7 +282,7 @@ public class InspcVariable implements VariableAccessArray_ifc
   public float getFloat(int... ixArray)
   {
     // TODO Auto-generated method stub
-    return 0;
+    return valueF;
   }
 
 
