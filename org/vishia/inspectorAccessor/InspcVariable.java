@@ -15,7 +15,7 @@ public class InspcVariable implements VariableAccessArray_ifc
    * <li>2013-12-07 Hartmut chg: In {@link VariableRxAction}: Answer from target with info.cmd = {@link InspcDataExchangeAccess.Reflitem#kFailedPath} 
    *   disables this variable from data communication. TODO enable with user action if the target was changed (recompiled, restarted etc).
    * <li>2013-12-07 Hartmut chg: In {@link VariableRxAction}: Answer from target with variable type designation = {@link InspcDataExchangeAccess#kInvalidIndex}
-   *   The requester should remove that index. Then a new {@link InspcAccessor#cmdRegisterByPath(String, InspcAccessExecRxOrder_ifc)}
+   *   The requester should remove that index. Then a new {@link InspcTargetAccessor#cmdRegisterByPath(String, InspcAccessExecRxOrder_ifc)}
    *   is forced to get a valid index.
    * <li>2013-12-07 Hartmut chg: {@link #requestValueFromTarget(long)}: If the path starts with '#', it is not requested.       
    * <li>2013-01-10 Hartmut bugfix: If a variable can't be requested in {@link #requestValueFromTarget(long)} because
@@ -66,7 +66,7 @@ public class InspcVariable implements VariableAccessArray_ifc
      * It prepares the value presentation.
      * @see org.vishia.inspectorAccessor.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Reflitem)
      */
-    @Override public void execInspcRxOrder(InspcDataExchangeAccess.Reflitem info, LogMessage log, int identLog)
+    @Override public void execInspcRxOrder(InspcDataExchangeAccess.Reflitem info, long time, LogMessage log, int identLog)
     {
       //String sShow;
       //int order = info.getOrder();
@@ -95,13 +95,14 @@ public class InspcVariable implements VariableAccessArray_ifc
             valueI = (int)valueF;
           }
           if(log !=null){
-            log.sendMsg(identLog, "InspcVariable - receive; variable=%s, type=%c, val = %8X = %d = %f", sPath, cType, valueI, valueI, valueF);
+            log.sendMsg(identLog, "InspcVariable - receive; variable=%s, type=%c, val = %8X = %d = %f", sPathInTarget, cType, valueI, valueI, valueF);
           }
           varMng.variableIsReceived(InspcVariable.this);
+          timeRefreshed = time;
         } break;
         case InspcDataExchangeAccess.Reflitem.kFailedPath:{
-          System.err.println("InspcAccessEvaluatorRxTelg - failed path; " + sPath);
-          idTarget = -3;
+          System.err.println("InspcAccessEvaluatorRxTelg - failed path; " + sPathInTarget);
+          idTarget = kIdTargetDisabled;
         } break;
         
       }//switch
@@ -113,14 +114,23 @@ public class InspcVariable implements VariableAccessArray_ifc
   /*package private*/ final VariableRxAction rxAction = new VariableRxAction();
   
   /**The path of the variable in the target system. */
-  String sPath;
+  String sPathInTarget;
 
-  InspcAccessor targetAccessor;
+  final InspcTargetAccessor targetAccessor;
   
-  /**If not -1 then it is the identification of the variable in the target device.
+  /**Special designations as value of {@link #idTarget} 
+   */
+  protected final static int kIdTargetUndefined = -1, kIdTargetDisabled = -3; 
+  
+  /**Special designations as value of {@link #idTarget} 
+   */
+  protected final static int kIdTargetUsePerPath = -2; 
+  
+  /**If >=0 then it is the identification of the variable in the target device.
+   * if <0 then see {@link #kIdTargetDisabled} etc.
    * The the value can be gotten calling getValueByIdent().
    */
-  int idTarget = -1;
+  int idTarget = kIdTargetUndefined;
   
   /**Timestamp in milliseconds after 1970 when the variable was requested. 
    * A value may be gotten only if a new request is pending. */
@@ -142,40 +152,47 @@ public class InspcVariable implements VariableAccessArray_ifc
    * target device. It may be a String or a short static array too.
    * 
    * @param mng
-   * @param sPath The access path.
+   * @param sPathInTarget The access path.
    */
-  InspcVariable(InspcMng mng, String sPath){
+  InspcVariable(InspcMng mng, InspcTargetAccessor targetAccessor, String sDataPath){
     this.varMng = mng;
-    this.sPath = sPath;
+    this.targetAccessor = targetAccessor;
+    this.sPathInTarget = sDataPath;
   }
   
   
-  boolean requestValueFromTarget(long timeCurrent)  
+  /**Notes the request for this variable in the request telegram to the target.
+   * @param retryDisabledVariable true then retry a disabled variable, see {@link #kIdTargetDisabled}
+   * @return order if the datagram item is set. 0 if the datagram is full. -1 if there is nothing to send.
+   */
+  public boolean requestValueFromTarget(long timeCurrent, boolean retryDisabledVariable)  
   { //check whether the widget has an comm action already. 
     //First time a widgets gets its WidgetCommAction. Then for ever the action is kept.
     if(idTarget >= 1 && varMng.bUseGetValueByIndex){
-      targetAccessor.cmdGetValueByIdent(this.idTarget, this.rxAction);
-      return false;
-    } else if(idTarget ==-3){
-      idTarget = 0;
-      return false;  //do nothing, path not found.
-    } else if(idTarget ==-2 || !varMng.bUseGetValueByIndex){
+      return targetAccessor.cmdGetValueByIdent(this.idTarget, this.rxAction);
+    } else if(idTarget == kIdTargetDisabled){
+      if(retryDisabledVariable){
+        idTarget = kIdTargetUndefined;  //in the next step: register or get by path
+      }
+      return true;  //true because the variable is handled.
+    } else if(idTarget == kIdTargetUsePerPath || !varMng.bUseGetValueByIndex){
       //get by ident is not supported:
-      String sPathComm = this.sPath  + ".";
+      String sPathComm = this.sPathInTarget  + ".";
       if(sPathComm.charAt(0) != '#'){
         Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
-        idx.put(this.sPath, this);
-        return varMng.requestValueByPath(sPathComm, this.rxAction);
-      } else return false;
+        idx.put(this.sPathInTarget, this);
+        return targetAccessor.cmdGetValueByPath(sPathComm, this.rxAction) !=0;
+        //return varMng.requestValueByPath(sPathComm, this.rxAction);
+      } else return true;  //variable is handled.
     } else {
       //register the variable in the target system:
-      String sPathComm = this.sPath  + ".";
+      String sPathComm = this.sPathInTarget  + ".";
       if(sPathComm.charAt(0) != '#'){
         Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
-        idx.put(this.sPath, this);
-        targetAccessor = varMng.registerByPath(sPathComm, this.rxAction);
+        idx.put(this.sPathInTarget, this);
+        return  targetAccessor.cmdRegisterByPath(sPathComm, this.rxAction) !=0;
       }
-      return false;  //the value will be gotten in next request.
+      return true;   //true because the variable is handled.
     }
   }
   
@@ -259,7 +276,17 @@ public class InspcVariable implements VariableAccessArray_ifc
 
   @Override public void requestValue(long time){ this.timeRequested = time; }
   
-  @Override public String toString(){ return " Variable(" + sPath + ") "; }
+  @Override public boolean isRequestedValue(boolean retryFaultyVariables){
+    if(timeRequested == 0) return false;  //never requested
+    if(idTarget == kIdTargetDisabled && !retryFaultyVariables) return false;
+    long timeNew = timeRequested - timeRefreshed;
+    return timeNew >0;
+  }
+  
+
+  
+  
+  @Override public String toString(){ return " Variable(" + sPathInTarget + ") "; }
 
 
   @Override

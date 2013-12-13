@@ -15,7 +15,7 @@ import org.vishia.inspector.InspcTelgInfoSet;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.ClassJc;
 
-/**An instance of this class accesses any target device via InterProcessCommunication, usual Ethernet-Sockets.
+/**An instance of this class accesses one target device via InterProcessCommunication, usual Ethernet-Sockets.
  * This class creates opens the {@link InterProcessComm} and creates a receiving thread. 
  * Any send requests are invoked from the environment. A send request usual contains
  * a reference to a {@link InspcAccessExecRxOrder_ifc}. 
@@ -26,7 +26,7 @@ import org.vishia.reflect.ClassJc;
  * @author Hartmut Schorrig
  *
  */
-public class InspcAccessor implements Closeable
+public class InspcTargetAccessor 
 {
 	
   /**The version history and license of this class.
@@ -99,6 +99,12 @@ public class InspcAccessor implements Closeable
    */
   private boolean bIsSentTelg = false;
   
+  
+  /**Set to true if the answer is missing after timeout.
+   * Then a new send request should be done after a longer time only.
+   */
+  private boolean bNoAnswer = false;
+  
 	long timeSend, dtimeReceive, dtimeWeakup;
 	
 	private final InspcDataExchangeAccess.ReflDatagram txAccess = new InspcDataExchangeAccess.ReflDatagram();
@@ -131,57 +137,40 @@ public class InspcAccessor implements Closeable
 	 */
 	int nEntrant = -1;
 	
-	String sOwnIpAddr;
+	String XXXsTargetIpAddr;
 	
-	String sTargetIpAddr;
-	
-	Address_InterProcessComm targetAddr;
+	final Address_InterProcessComm targetAddr;
 	
 	int nSeqNumber = 0; 
 	
 	int nEncryption = 0;
 	
+  private final InspcCommPort commPort;	
 	
 	
-	private InterProcessComm ipc;
-	
-	
-	public InspcAccessor(InspcAccessEvaluatorRxTelg inspcRxEval)
-	{
+	public InspcTargetAccessor(InspcCommPort commPort, Address_InterProcessComm targetAddr, InspcAccessEvaluatorRxTelg inspcRxEval)
+	{ this.commPort = commPort;
+	  this.targetAddr = targetAddr;
 		this.rxEval = inspcRxEval;
 		txAccess.assignEmpty(txBuffer);
 		this.infoAccess = new InspcTelgInfoSet();
+    commPort.registerTargetAccessor(this);
 		
     //The factory should be loaded already. Then the instance is able to get. Loaded before!
 	}
 
 	
-	public boolean open(String sOwnIpAddrP)
-	{
-	  this.sOwnIpAddr = sOwnIpAddrP;
-    InterProcessCommFactory ipcFactory = InterProcessCommFactoryAccessor.getInstance();
-    ipc = ipcFactory.create (sOwnIpAddrP);
-    int ipcOk = ipc.open(null, true);
-    if(ipcOk >=0){  ipcOk = ipc.checkConnection(); }
-    if(ipcOk == 0){
-    }
-    if(ipcOk < 0){
-      System.out.println("Problem can't open socket: " + sOwnIpAddrP); 
-    } else {
-      receiveThread.start();   //start it after ipc is ok.
-    }
-  	return ipcOk == 0;
-	}
-	
-	
 	/**Sets the target address for the next telegram assembling and the next send()-invocation.
 	 * If a telegram is pending, it will be sent. A new telegram is prepared.
 	 * @param sTargetIpAddr
 	 */
+	@Deprecated
 	public void setTargetAddr(String sTargetIpAddr)
 	{ //TODO check and send, prepare new head.
-	  this.sTargetIpAddr = sTargetIpAddr;
-	  this.targetAddr = new Address_InterProcessComm_Socket(sTargetIpAddr);
+	  //this.sTargetIpAddr = sTargetIpAddr;
+	  //this.targetAddr = new Address_InterProcessComm_Socket(sTargetIpAddr);
+    //commPort.registerTargetAccessor(this);
+	  assert(false);
 	}
 	
 	
@@ -270,12 +259,18 @@ public class InspcAccessor implements Closeable
 	}
 	
 	
+	/**Returns true if one time an answer was missing after the timeout wait time. 
+	 * A new request should be sent after a longer time. But it should be sent because the target
+	 * may be reconnected. It is possible to send only after a manual command.
+	 */
+	public boolean isNotConnected(){ return bNoAnswer; }
+	
 	
   /**Adds the info block to send 'get value by path'
    * @param sPathInTarget
    * @return The order number. 0 if the cmd can't be created.
    */
-  public int cmdGetValueByPath(String sPathInTarget)
+  public int cmdGetValueByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
     if(checkAndFillHead(InspcDataExchangeAccess.Reflitem.sizeofHead + sPathInTarget.length() + 3 )){
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
@@ -285,6 +280,7 @@ public class InspcAccessor implements Closeable
       if(logTelg !=null){ 
         logTelg.sendMsg(identLogTelg, "send cmdGetValueByPath %s, order = %d", sPathInTarget, new Integer(order)); 
       }
+      rxEval.setExpectedOrder(order, actionOnRx);
     } else {
       //too much info blocks
       order = 0;
@@ -323,13 +319,15 @@ public class InspcAccessor implements Closeable
    * @param sPathInTarget
    * @return The order number. 0 if the cmd can't be created because the telegram is full.
    */
-  public void cmdGetValueByIdent(int ident, InspcAccessExecRxOrder_ifc actionOnRx)
+  public boolean cmdGetValueByIdent(int ident, InspcAccessExecRxOrder_ifc actionOnRx)
   { if(ixIdent5GetValueByIdent >= actionRx4GetValueByIdent.length){
-      txCmdGetValueByIdent();
+      return false;
+      //  txCmdGetValueByIdent();
     }
     actionRx4GetValueByIdent[ixIdent5GetValueByIdent] = actionOnRx;
     accInfoDataGetValueByIdent.addChildInteger(4, ident);
     ixIdent5GetValueByIdent +=1;
+    return true;
   }
   
   
@@ -354,14 +352,14 @@ public class InspcAccessor implements Closeable
     } else return false;
   }
   
-  final void execRx4ValueByIdent(InspcDataExchangeAccess.Reflitem info, LogMessage log, int identLog){
+  final void execRx4ValueByIdent(InspcDataExchangeAccess.Reflitem info, long time, LogMessage log, int identLog){
     //int lenInfo = info.getLength();
     int ixVal = (int)info.getChildInteger(4);
     while(info.sufficingBytesForNextChild(1)){  //at least one byte in info, 
       InspcAccessExecRxOrder_ifc action = actionRx4GetValueByIdent[ixVal];
       ixVal +=1;
       if(action !=null){
-        action.execInspcRxOrder(info, log, identLog);
+        action.execInspcRxOrder(info, time, log, identLog);
       }
     }
     //System.out.println("execRx4ValueByIdent");
@@ -418,6 +416,7 @@ public class InspcAccessor implements Closeable
    * @return true if a new telegram was created. It is an info only.
    * 
    */
+  @Deprecated
   public boolean sendAndPrepareCmdSetValueByPath(String sPathInTarget, long value, int typeofValue, InspcAccessExecRxOrder_ifc exec)
   { int order;
     boolean sent = false;
@@ -439,7 +438,7 @@ public class InspcAccessor implements Closeable
    * @param value The value as long-image, it may be a double, float, int etc.
    * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
    *                    + {@link ClassJc#REFLECTION_double} etc.
-   * @return The order number. 0 if the cmd can't be created.
+   * @return The order number. 0 if the cmd can't be created because the telgram is full.
    */
   public int cmdSetValueByPath(String sPathInTarget, float value)
   { int order;
@@ -522,7 +521,7 @@ public class InspcAccessor implements Closeable
     //send the telegram:
     checkerRxTelg.setAwait(nSeqNumber);
     timeSend = System.currentTimeMillis();
-    int ok = ipc.send(txBuffer, lengthDatagram, targetAddr);
+    int ok = commPort.send(this, txBuffer, lengthDatagram);
     if(logTelg !=null){ 
       logTelg.sendMsg(identLogTelg +1, "send telg length= %s, ok = %d", new Integer(lengthDatagram), new Integer(ok)); 
     }
@@ -532,6 +531,17 @@ public class InspcAccessor implements Closeable
 	  return nSeqNumber;
 	}
 	
+	
+	
+	void evaluateRxTelg(byte[] rxBuffer, int rxLength){
+    long time = System.currentTimeMillis();
+    dtimeReceive = time - timeSend;
+    if(logTelg !=null){ 
+      logTelg.sendMsg(identLogTelg+3, "recv telg after %d ms", new Long(dtimeReceive)); 
+    }
+    checkerRxTelg.applyReceivedTelg(rxBuffer, rxLength, logTelg, identLogTelg +4);
+
+	}
 	
 	
 	/**Sets a executer instance for the answer telegrams from the target.
@@ -550,13 +560,29 @@ public class InspcAccessor implements Closeable
   { send();
     InspcDataExchangeAccess.ReflDatagram[] answerTelgs = awaitAnswer(2000);
     if(answerTelgs !=null){
-      rxEval.evaluate(answerTelgs, null, logTelg, identLogTelg + 5); //executerAnswerInfo);  //executer on any info block.
+      long time = System.currentTimeMillis();
+      rxEval.evaluate(answerTelgs, null, time, logTelg, identLogTelg + 5); //executerAnswerInfo);  //executer on any info block.
     } else {
-      System.err.println("InspcAccessor - sendAndAwaitAnswer; no communication" );
+      bNoAnswer = true;
+      System.err.println("InspcAccessor - sendAndAwaitAnswer; no communication " + targetAddr.toString() );
     }
   }
 
-
+  
+  
+  public boolean hasAnwer(){
+    if(checkerRxTelg.hasAnwer()){
+      long time = System.currentTimeMillis();
+      //TODO
+      //rxEval.evaluate(answerTelgs, null, time, logTelg, identLogTelg + 5); //executerAnswerInfo);  //executer on any info block.
+      return true;
+    } else {
+      return false;
+      //bNoAnswer = true;
+      //System.err.println("InspcAccessor - sendAndAwaitAnswer; no communication " + targetAddr.toString() );
+    }
+    
+  }
   
 
 	
@@ -580,62 +606,10 @@ public class InspcAccessor implements Closeable
 	
 	
   
-  Runnable receiveRun = new Runnable()
-  { @Override public void run()
-    { receiveFromTarget();
-    }
-  };
-  
-  /**A receive thread should be used anyway if a socket receiving or other receiving is given.
-   * Because: Anytime any telegram can be received, the receiver buffer should be cleared,
-   * also if the telegram is unexpected.
-   */
-  Thread receiveThread = new Thread(receiveRun, "inspcRxThread");
-  
-  boolean bRun, bFinish, bWaitFinish;
-  
-  /**Closes the thread for receive
-   * @see java.io.Closeable#close()
-   */
-  @Override public void close() throws IOException
-  { if(bRun){ //on error bRun is false
-      bRun = false;
-      ipc.close();
-      synchronized(receiveRun){
-        while( !bFinish){ try{ receiveRun.wait(); } catch(InterruptedException exc){}}
-      }
-    }
-  }
-
-  
-  
-  void receiveFromTarget()
-  { bRun = true;
-    int[] result = new int[1];
-    while(bRun){
-      byte[] rxBuffer = ipc.receive(result, targetAddr);
-      if(result[0]>0){
-        long time = System.currentTimeMillis();
-        dtimeReceive = time - timeSend;
-        if(logTelg !=null){ 
-          logTelg.sendMsg(identLogTelg+3, "recv telg after %d ms", new Long(dtimeReceive)); 
-        }
-        checkerRxTelg.applyReceivedTelg(rxBuffer, result[0], logTelg, identLogTelg +4);
-      } else {
-        System.out.append("receive error");
-      }
-    }//while
-    
-    synchronized(receiveRun){ 
-      bFinish = true;     //NOTE set in synchronized state, because it should wait for
-      receiveRun.notify(); 
-    }
-  }
-  
   
   InspcAccessExecRxOrder_ifc actionRx4ValueByIdent = new InspcAccessExecRxOrder_ifc(){
-    @Override public void execInspcRxOrder(InspcDataExchangeAccess.Reflitem info, LogMessage log, int identLog)
-    { execRx4ValueByIdent(info, log, identLog);
+    @Override public void execInspcRxOrder(InspcDataExchangeAccess.Reflitem info, long time, LogMessage log, int identLog)
+    { execRx4ValueByIdent(info, time, log, identLog);
     }
   };
 	

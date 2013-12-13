@@ -97,10 +97,13 @@ public class FieldJcVariableAccess implements VariableAccessArray_ifc
   }
 
   @Override
-  public void requestValue(long timeRequested) {
-    // TODO Auto-generated method stub
-    
+  public void requestValue(long timeRequested) { }
+  
+  @Override public boolean isRequestedValue(boolean retryFaultyVariables){
+    return false;
   }
+  
+
 
   @Override
   public double setDouble(double value, int... ixArray) {

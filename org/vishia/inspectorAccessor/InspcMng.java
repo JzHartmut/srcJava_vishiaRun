@@ -3,6 +3,8 @@ package org.vishia.inspectorAccessor;
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -13,12 +15,14 @@ import org.vishia.byteData.VariableAccessArray_ifc;
 import org.vishia.byteData.VariableAccessWithIdx;
 import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.byteData.VariableContainer_ifc;
+import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessComm_SocketImpl;
 import org.vishia.event.Event;
 import org.vishia.event.EventConsumer;
 import org.vishia.inspector.SearchElement;
+import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.FieldJc;
 import org.vishia.reflect.FieldJcVariableAccess;
 import org.vishia.reflect.FieldVariableAccess;
@@ -30,7 +34,7 @@ import org.vishia.util.ThreadRun;
 /**This class supports the communication via the inspector reflex access. 
  * It is a {@link VariableContainer_ifc}. It means any application can handle with variable. 
  * If a variable is requested, a time stamp is written their (see {@link InspcVariable#timeRequested})
- * and therefore this variable is requested via its {@link InspcVariable#sPath} from the associated
+ * and therefore this variable is requested via its {@link InspcVariable#sPathInTarget} from the associated
  * target device.
  * <br><br>
  * This class supports free communication with Inspector reflex access outside the {@link VariableAccess_ifc}
@@ -38,7 +42,7 @@ import org.vishia.util.ThreadRun;
  * communication thread of this class.
  * <br><br>
  * This class starts an onw thread for the send requests to the target device. That thread opens the
- * inspector reflex access communication via {@link InspcAccessor#open(String)} which may use an
+ * inspector reflex access communication via {@link InspcTargetAccessor#open(String)} which may use an
  * {@link org.vishia.communication.InterProcessComm} instance.
  * <br><br>
  * The references to all known variables of the user are hold in an indexed list {@link #idxAllVars} sorted by name.
@@ -47,7 +51,7 @@ import org.vishia.util.ThreadRun;
  * to the manager calling {@link #getVariable(String)}. That routine build the correct instance for the variable access,
  * that is either {@link InspcVariable} or an {@link org.vishia.reflect.FieldJcVariableAccess} for java-internal variables.
  * The variable will be wrapped in an {@link org.vishia.byteData.VariableAccessWithIdx}. The variable knows the 
- * {@link InspcAccessor} and can get values from the target.
+ * {@link InspcTargetAccessor} and can get values from the target.
  * <br><br>
  * <b>Communication principle</b>:
  * The {@link #inspcThread} respectively the called method {@link #runInspcThread()} runs in a loop,
@@ -57,11 +61,11 @@ import org.vishia.util.ThreadRun;
  * In the {@link #runInspcThread()} all known variables from {@link #idxAllVars} are processed, see {@link #getVariable(String)}. 
  * But only if a value from a variable was requested in the last time, a new value is requested from a target device.
  * With that requests one send telegram is built. If the telegram is filled, it will be send.
- * Then the answer of the target device is awaiting, see {@link InspcAccessor#sendAndAwaitAnswer()}. 
+ * Then the answer of the target device is awaiting, see {@link InspcTargetAccessor#sendAndAwaitAnswer()}. 
  * In this time the loop is blocked till a timeout is occurred while waiting of the embedded device's answer.
  * Normally the embedded device or other target should answer in a few milliseconds.
  * <br><br>
- * The receiving of telegrams is executing in an extra receive Thread, see {@link InspcAccessor#receiveThread}.
+ * The receiving of telegrams is executing in an extra receive Thread, see {@link InspcTargetAccessor#receiveThread}.
  * The receive thread handles receiving from the one port of communication, which is opened with the 
  * {@link InterProcessComm} instance which usual is a {@link InterProcessComm_SocketImpl}. 
  * It is possible to send from more as this thread, or it is possible to receive some special telegrams which 
@@ -71,8 +75,8 @@ import org.vishia.util.ThreadRun;
  * This sequence numbers are TODO
  * 
  *  
- * The {@link InspcAccessor} supports the execution of any action in the received thread too,
- * but this class calls {@link InspcAccessor#awaitAnswer(int)} in its send thread to force notifying
+ * The {@link InspcTargetAccessor} supports the execution of any action in the received thread too,
+ * but this class calls {@link InspcTargetAccessor#awaitAnswer(int)} in its send thread to force notifying
  * of this class if the correct answer telegram is received.  
  * <br>
  * TODO it seems better to execute the answer in the receive thread, because some user requests can be executed
@@ -83,9 +87,9 @@ import org.vishia.util.ThreadRun;
  * Sending a next telegram to the same device without an answer should be taken only after a suitable
  * timeout. But another device can be requested in that time. 
  * <br>
- * But the receiving of telegrams is executing in an extra receive Thread, see {@link InspcAccessor#receiveThread}.
- * The {@link InspcAccessor} supports the execution of any action in the received thread too,
- * but this class calls {@link InspcAccessor#awaitAnswer(int)} in its send thread to force notifying
+ * But the receiving of telegrams is executing in an extra receive Thread, see {@link InspcTargetAccessor#receiveThread}.
+ * The {@link InspcTargetAccessor} supports the execution of any action in the received thread too,
+ * but this class calls {@link InspcTargetAccessor#awaitAnswer(int)} in its send thread to force notifying
  * of this class if the correct answer telegram is received.  
  * <br>
  * If the telegram is received, all variables are filled with the received values and the  
@@ -176,7 +180,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   Map<String, InspcVariable> idxRequestedVarFromTarget = new TreeMap<String, InspcVariable>();
   
   /**Instance for the inspector access to the target. */
-  public final InspcAccessor inspcAccessor;
+  //public final InspcTargetAccessor inspcAccessor;
   
   /**Own address string for the communication. */
   private final String sOwnIpcAddr;
@@ -187,7 +191,14 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    */
   private final Map<String, String> indexTargetIpcAddr;
 
+  
+  private final Map<String, InspcTargetAccessor> indexTargetAccessor;
+  
+  private final List<InspcTargetAccessor> listTargetAccessor;
+  
   private Map<String, String> indexFaultDevice;
+  
+  boolean retryDisabledVariable;
 
   long millisecTimeoutOrders = 5000;
   
@@ -206,7 +217,11 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   /**The time when all the receiving is finished or had its timeout.
    * 
    */
-  long timeReceived;
+  long XXXtimeReceived;
+  
+  protected final InspcCommPort commPort; 
+  
+
   
   /**The Event callback routine which is invoked if all 
    * 
@@ -239,8 +254,12 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   public InspcMng(String sOwnIpcAddr, Map<String, String> indexTargetIpcAddr, boolean bUseGetValueByIndex, InspcPlugUser_ifc user){
     this.threadReqFromTarget = new ThreadRun("InspcMng", step, 100);
-    this.inspcAccessor = new InspcAccessor(new InspcAccessEvaluatorRxTelg());
+    this.commPort = new InspcCommPort();  //maybe more as one
+    //maybe more as one
+    //this.inspcAccessor = new InspcTargetAccessor(commPort, new InspcAccessEvaluatorRxTelg());
     this.indexTargetIpcAddr = indexTargetIpcAddr;
+    this.indexTargetAccessor = new TreeMap<String, InspcTargetAccessor>();
+    this.listTargetAccessor = new LinkedList<InspcTargetAccessor>();
     this.sOwnIpcAddr = sOwnIpcAddr;
     this.bUseGetValueByIndex = bUseGetValueByIndex;
     this.user = user;
@@ -291,6 +310,14 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    */
   
   
+  
+  public void setLogForTargetComm(LogMessage log, int ident){
+    for(InspcTargetAccessor target: listTargetAccessor){
+      target.setLog(log, ident);
+    }
+  }
+  
+  
   /**Adds any program snippet which is executed while preparing the telegram for data request from target.
    * @param order the program snippet.
    */
@@ -303,7 +330,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   @Override public VariableAccess_ifc getVariable(final String sDataPathP)
   { int posIndex = sDataPathP.lastIndexOf('.');
-    final String sDataPathVariable;
+    final String sDataPathOfWidget;
     char cc;
     int mask, bit;
     if(posIndex > 0 && sDataPathP.length() > posIndex+1 && (cc = sDataPathP.charAt(posIndex +1)) >='0' && cc <='9'){
@@ -325,34 +352,43 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         bit = StringFunctions.parseIntRadix(sDataPathP, posIndex+1, 2, 10, null);
         mask = 1;
       }
-      sDataPathVariable = sDataPathP.substring(0, posIndex);
+      sDataPathOfWidget = sDataPathP.substring(0, posIndex);
     } else {
       mask = -1;
       bit = 0;
-      sDataPathVariable = sDataPathP;
+      sDataPathOfWidget = sDataPathP;
     }
-    VariableAccessArray_ifc var = idxAllVars.get(sDataPathVariable);
+    VariableAccessArray_ifc var = idxAllVars.get(sDataPathOfWidget);
     if(var == null){
-      if(sDataPathVariable.startsWith("java:")){
+      if(sDataPathOfWidget.startsWith("java:")){
         FieldJc[] field = new FieldJc[0];
         int[] ix = new int[0];
-        String sPathJava = sDataPathVariable.substring(5);
+        String sPathJava = sDataPathOfWidget.substring(5);
         MemSegmJc addr = SearchElement.searchObject(sPathJava, this, field, ix);
         var = new FieldJcVariableAccess(this, field[0]);
       } else {
-        var = new InspcVariable(this, sDataPathVariable);
+        String[] retPath = new String[1];
+        InspcTargetAccessor accessor = getTargetFromPath(sDataPathOfWidget, retPath);
+        if(accessor !=null){
+          var = new InspcVariable(this, accessor, retPath[0]);
+        } else {
+          System.err.println("InspcMng - Variable target unknown; " + sDataPathOfWidget); 
+        }
       }
       if(var == null){
+        Assert.stop();
         //TODO use dummy to prevent new requesting
+      } else {
+        idxAllVars.put(sDataPathOfWidget, var);
       }
-      idxAllVars.put(sDataPathVariable, var);
     }
-    return new VariableAccessWithIdx(var, null, bit, mask);
+    if(mask == -1){ return var; }
+    else { return new VariableAccessWithIdx(var, null, bit, mask); }
   }
  
   
   
-  /**This routine requests all variables from the target device, 
+  /**This routine requests all variables from its target devices, 
    * which were requested itself after last call of refresh.
    * The answer of the target-request will invoke 
    * {@link InspcVariable.VariableRxAction#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Info)}
@@ -368,31 +404,31 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     idxRequestedVarFromTarget.clear();  //clear it, only new requests are pending then.
     for(Map.Entry<String,VariableAccessArray_ifc> entryVar: idxAllVars.entrySet()){
       VariableAccess_ifc var = entryVar.getValue();
-      if(var instanceof InspcVariable){
+      if(   var.isRequestedValue(retryDisabledVariable)
+         && var instanceof InspcVariable){  //handle only variable from Inspector access
         InspcVariable varInspc = (InspcVariable)var;
-        if(varInspc.sPath.startsWith("#"))
+        
+        if(varInspc.sPathInTarget.startsWith("#"))
           Assert.stop();
-        if(varInspc.timeRequested >= timeReceived){  //only requests communication if the variable was requested:
-          bRequest = true;
-          if(!varInspc.requestValueFromTarget(timeCurr)){
-            //the value can't be requested. The Telegram is sent and the answer or a timeout is gotten.
-            //Start with the same request in the next telegram, yet.
-            boolean bOk = varInspc.requestValueFromTarget(timeCurr);
-            if(!bOk){
-              //System.out.println("InspcMng.procComm - nok; ");
-            }
-            //assert(bOk);
-          }
+      
+        bRequest = true;
+        if(!varInspc.requestValueFromTarget(timeCurr, retryDisabledVariable)){
+          //the value can't be requested because the Telegram is full.
+          varInspc.targetAccessor.sendAndAwaitAnswer();
+          //the telegram is yet free, request it now.
+          varInspc.requestValueFromTarget(timeCurr, retryDisabledVariable);
         }
+        
       }
     }
     Runnable userOrder;
     while( (userOrder = userOrders.poll()) !=null){
       userOrder.run(); //maybe add some more requests to the current telegram.
     }
-    if( !inspcAccessor.txCmdGetValueByIdent()  //calls sendAndAwaitAnswer internally 
-      && inspcAccessor.isFilledTxTelg()){       //only call if necessary
-        inspcAccessor.sendAndAwaitAnswer();     
+    for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
+      if( inspcAccessor.isFilledTxTelg()){       //only call if necessary
+          inspcAccessor.sendAndAwaitAnswer();     
+      }
     }
     
     if(user !=null){
@@ -402,9 +438,11 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     long time = System.currentTimeMillis();
     if(time >= timeLastRemoveOrders + millisecTimeoutOrders){
       timeLastRemoveOrders = time;
-      int removedOrders = inspcAccessor.rxEval.checkAndRemoveOldOrders(time - timeLastRemoveOrders);
-      if(removedOrders >0){
-        System.err.println("InspcMng - Communication problem, removed Orders; " + removedOrders);
+      for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
+        int removedOrders = inspcAccessor.rxEval.checkAndRemoveOldOrders(time - timeLastRemoveOrders);
+        if(removedOrders >0){
+          System.err.println("InspcMng - Communication problem, removed Orders; " + removedOrders);
+        }
       }
     }
 
@@ -423,7 +461,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    * @param sDataPath
    * @param commAction
    * @return true then the telegram has not space. The value is not requested. It should be repeated.
-   */
   boolean requestValueByPath(String sDataPath, InspcAccessExecRxOrder_ifc commAction){
     boolean bRepeattheRequest = false;
     int posSepDevice = sDataPath.indexOf(':');
@@ -460,14 +497,14 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     }    
     return bRepeattheRequest;
   }
+   */
   
 
   
   /**Prepares the info block to register a variable on the target device.
    * @param sDataPath The data path on target
    * @param actionOnRx receiving action, executing with the response info.
-   */
-  InspcAccessor registerByPath(String sDataPath, InspcAccessExecRxOrder_ifc actionOnRx){
+  InspcTargetAccessor registerByPath(String sDataPath, InspcAccessExecRxOrder_ifc actionOnRx){
     int posSepDevice = sDataPath.indexOf(':');
     if(posSepDevice >0){
       String sDevice = sDataPath.substring(0, posSepDevice);
@@ -494,8 +531,26 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     }    
     return inspcAccessor;
   }
+   */
   
 
+  
+  InspcTargetAccessor getTargetFromPath(String sDataPath, String[] retDataPath){
+    InspcTargetAccessor accessor;
+    int posSepDevice = sDataPath.indexOf(':');
+    if(posSepDevice >0){
+      String sDevice = sDataPath.substring(0, posSepDevice);
+      accessor = indexTargetAccessor.get(sDevice);
+      if(accessor == null){
+        errorDevice(sDevice);
+      } 
+      retDataPath[0] = sDataPath.substring(posSepDevice +1);
+      return accessor;
+    } else {
+      return null;
+    }
+
+  }
   
 
   
@@ -517,7 +572,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   
   /*package private*/ void variableIsReceived(InspcVariable var){
-    idxRequestedVarFromTarget.remove(var.sPath);
+    idxRequestedVarFromTarget.remove(var.sPathInTarget);
     if(idxRequestedVarFromTarget.isEmpty()){ //all variables are received:
       threadReqFromTarget.forceStep(false);
     }
@@ -534,13 +589,24 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     
   }
   
+
+  void openComm(){
+    commPort.open(sOwnIpcAddr);
+    for(Map.Entry<String, String> e : indexTargetIpcAddr.entrySet()){
+      Address_InterProcessComm addrTarget = commPort.createTargetAddr(e.getValue());
+      InspcTargetAccessor accessor = new InspcTargetAccessor(commPort, addrTarget, new InspcAccessEvaluatorRxTelg());
+      indexTargetAccessor.put(e.getKey(), accessor);
+      listTargetAccessor.add(accessor);
+    }
+  }
+  
   
   
   private final ThreadRun.Step step = new ThreadRun.Step(){
     
   
     @Override public final boolean start(){
-      inspcAccessor.open(sOwnIpcAddr);
+      openComm();
       return false;
     }
 
@@ -564,7 +630,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         if(!bAllReceived){
           stop();
         }
-        timeReceived = System.currentTimeMillis();  //all requests after this time calls new variables.
+        //timeReceived = System.currentTimeMillis();  //all requests after this time calls new variables.
         if(callbackOnRxData !=null){
           callbackOnRxData.run();         //show the received values.
           //the next requests for variables will be set.
@@ -577,7 +643,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   @Override public void close() throws IOException
   { //bThreadRuns = false;
     threadReqFromTarget.close();
-    inspcAccessor.close();
+    commPort.close();
   }
   
   void stop(){}

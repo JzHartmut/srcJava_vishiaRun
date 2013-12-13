@@ -1,5 +1,6 @@
 package org.vishia.inspectorAccessor;
 
+import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InspcDataExchangeAccess.Reflitem;
 import org.vishia.inspector.InspcTelgInfoSet;
@@ -8,7 +9,9 @@ import org.vishia.msgDispatch.LogMessage;
 public class TestAccessor
 {
 
-  InspcAccessor inspcAccessor = new InspcAccessor(new InspcAccessEvaluatorRxTelg());
+  InspcCommPort targetCommPort = new InspcCommPort();
+  
+  InspcTargetAccessor inspcAccessor;
   
   
   /**The main method is only for test.
@@ -32,20 +35,26 @@ public class TestAccessor
     String sIpTarget = "UDP:127.0.0.1:60080";
     
     String sPathInTarget = "workingThread.data.yCos.";
+    
+    Address_InterProcessComm addrTarget = targetCommPort.createTargetAddr(sIpTarget);
+    inspcAccessor = new InspcTargetAccessor(targetCommPort, addrTarget, new InspcAccessEvaluatorRxTelg());
+
     //String sPathInTarget2 = "_DSP_.data1.bitField.bits-bit11."; 
-    if(inspcAccessor.open(sIpOwn))
+    if(targetCommPort.open(sIpOwn))
     {
       inspcAccessor.setTargetAddr(sIpTarget); 
       while(true){
-        int order = inspcAccessor.cmdGetValueByPath(sPathInTarget);    
-        inspcAccessor.rxEval.setExpectedOrder(order, null);
+        int order = inspcAccessor.cmdGetValueByPath(sPathInTarget, testExec);    
+        //inspcAccessor.rxEval.setExpectedOrder(order, null);
         inspcAccessor.send();
         InspcDataExchangeAccess.ReflDatagram[] answer = inspcAccessor.awaitAnswer(1000);
         if(answer !=null){
-          String sError = inspcAccessor.rxEval.evaluate(answer, testExec, null, 0);
+          long time = System.currentTimeMillis();
+          String sError = inspcAccessor.rxEval.evaluate(answer, testExec, time, null, 0);
         }
         try{ Thread.sleep(300);} catch(InterruptedException exc){}
       }
+      //targetCommPort.close();
     }
     
 
@@ -57,7 +66,7 @@ public class TestAccessor
   InspcAccessExecRxOrder_ifc testExec = new InspcAccessExecRxOrder_ifc()
   {
 
-    @Override public void execInspcRxOrder(Reflitem info, LogMessage log, int identLog)
+    @Override public void execInspcRxOrder(Reflitem info, long time, LogMessage log, int identLog)
     {
       int order = info.getOrder();
       int cmd = info.getCmd();

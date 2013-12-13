@@ -103,7 +103,7 @@ public class InspcAccessEvaluatorRxTelg
    *        and that special routine is executed.
    * @return null if no error, if not null then it is an error description. 
    */
-  public String evaluate(InspcDataExchangeAccess.ReflDatagram[] telgHeads, InspcAccessExecRxOrder_ifc executer, LogMessage log, int identLog)
+  public String evaluate(InspcDataExchangeAccess.ReflDatagram[] telgHeads, InspcAccessExecRxOrder_ifc executer, long time, LogMessage log, int identLog)
   { String sError = null;
     int currentPos = InspcDataExchangeAccess.ReflDatagram.sizeofHead;
     for(InspcDataExchangeAccess.ReflDatagram telgHead: telgHeads){
@@ -118,7 +118,7 @@ public class InspcAccessEvaluatorRxTelg
                  + nrofBytesInfo + " / " + (nrofBytesTelg - currentPos);
         } else {
           if(executer !=null){
-            executer.execInspcRxOrder(infoAccess, log, identLog);
+            executer.execInspcRxOrder(infoAccess, time, log, identLog);
           } else {
             int cmd = infoAccess.getCmd();
             int order = infoAccess.getOrder();
@@ -127,7 +127,7 @@ public class InspcAccessEvaluatorRxTelg
               //remove timed order
               InspcAccessExecRxOrder_ifc orderExec = timedOrder.exec;
               if(orderExec !=null){
-                orderExec.execInspcRxOrder(infoAccess, log, identLog);
+                orderExec.execInspcRxOrder(infoAccess, time, log, identLog);
               } else {
                 stop();  //should not 
               }

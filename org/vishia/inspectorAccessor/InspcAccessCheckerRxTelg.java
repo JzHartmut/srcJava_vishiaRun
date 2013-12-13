@@ -15,6 +15,8 @@ public class InspcAccessCheckerRxTelg
    */
   boolean awaitTelg;
   
+  /**This aggregation is null if the answer telegram should not evaluated in the receiving thread.
+   * If is should evaluated in the receiving thread, this is the method to evaluate. */
   private InspcAccessExecAnswerTelg_ifc executerAnswer;
   
   /**True if wait is called already. */
@@ -42,6 +44,10 @@ public class InspcAccessCheckerRxTelg
   void setExecuterAnswer(InspcAccessExecAnswerTelg_ifc executerAnswer)
   { this.executerAnswer = executerAnswer;
   }
+  
+  
+  public boolean hasAnwer(){ return received; }
+  
   
   /**Set awaiting an answer with given sequence number. This method should be called before a telegram is sent.
    * If the answer telegram is received quickly after send, that informations should be present already.

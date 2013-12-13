@@ -27,7 +27,7 @@ public class InspcTelgInfoSet extends InspcDataExchangeAccess.Reflitem
    * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created.
-   * @deprecated see {@link org.vishia.inspectorAccessor.InspcAccessor#cmdSetValueByPath(String, double)}
+   * @deprecated see {@link org.vishia.inspectorAccessor.InspcTargetAccessor#cmdSetValueByPath(String, double)}
    */
   @Deprecated
   public void xxxsetCmdSetValueByPath(String path, long value, int typeofValue, int order)
