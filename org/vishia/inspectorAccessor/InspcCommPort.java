@@ -121,9 +121,11 @@ public class InspcCommPort implements Closeable
         InspcTargetAccessor targetAccessor = targetAccessors.get(keyTargetAccessor);
         if(targetAccessor !=null){
           targetAccessor.evaluateRxTelg(rxBuffer, result[0]);
+        } else {
+          System.out.append("InspcCommPort - receive from unknown target; "+ keyTargetAccessor);
         }
       } else {
-        System.out.append("receive error");
+        System.out.append("InspcCommPort - receive error");
       }
     }//while
     

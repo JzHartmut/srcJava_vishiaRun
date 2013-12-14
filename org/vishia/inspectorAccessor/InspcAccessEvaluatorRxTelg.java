@@ -103,10 +103,10 @@ public class InspcAccessEvaluatorRxTelg
    *        and that special routine is executed.
    * @return null if no error, if not null then it is an error description. 
    */
-  public String evaluate(InspcDataExchangeAccess.ReflDatagram[] telgHeads, InspcAccessExecRxOrder_ifc executer, long time, LogMessage log, int identLog)
+  public String evaluate(InspcDataExchangeAccess.ReflDatagram telgHead, InspcAccessExecRxOrder_ifc executer, long time, LogMessage log, int identLog)
   { String sError = null;
     int currentPos = InspcDataExchangeAccess.ReflDatagram.sizeofHead;
-    for(InspcDataExchangeAccess.ReflDatagram telgHead: telgHeads){
+    //for(InspcDataExchangeAccess.ReflDatagram telgHead: telgHeads){
       int nrofBytesTelgInHead = telgHead.getLengthDatagram();
       int nrofBytesTelg = telgHead.getLength();  //length from ByteDataAccess-management.
       //telgHead.assertNotExpandable();
@@ -141,7 +141,7 @@ public class InspcAccessEvaluatorRxTelg
           
         }
       }
-    }
+    //}
     return sError;
   }
   

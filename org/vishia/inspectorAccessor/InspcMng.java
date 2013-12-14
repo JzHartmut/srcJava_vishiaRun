@@ -253,7 +253,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   boolean bAllReceived;
   
   public InspcMng(String sOwnIpcAddr, Map<String, String> indexTargetIpcAddr, boolean bUseGetValueByIndex, InspcPlugUser_ifc user){
-    this.threadReqFromTarget = new ThreadRun("InspcMng", step, 100);
+    this.threadReqFromTarget = new ThreadRun("InspcMng", step, 333);
     this.commPort = new InspcCommPort();  //maybe more as one
     //maybe more as one
     //this.inspcAccessor = new InspcTargetAccessor(commPort, new InspcAccessEvaluatorRxTelg());
@@ -402,8 +402,12 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     bUserCalled = false;
     long timeCurr = System.currentTimeMillis();
     idxRequestedVarFromTarget.clear();  //clear it, only new requests are pending then.
+    //System.out.println("InspcMng.ProcComm - step;");
+    int nrofVarsReq = 0;
+    int nrofVarsAll = 0;
     for(Map.Entry<String,VariableAccessArray_ifc> entryVar: idxAllVars.entrySet()){
       VariableAccess_ifc var = entryVar.getValue();
+      nrofVarsAll +=1;
       if(   var.isRequestedValue(retryDisabledVariable)
          && var instanceof InspcVariable){  //handle only variable from Inspector access
         InspcVariable varInspc = (InspcVariable)var;
@@ -412,23 +416,21 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
           Assert.stop();
       
         bRequest = true;
-        if(!varInspc.requestValueFromTarget(timeCurr, retryDisabledVariable)){
-          //the value can't be requested because the Telegram is full.
-          varInspc.targetAccessor.sendAndAwaitAnswer();
-          //the telegram is yet free, request it now.
+        if(varInspc.targetAccessor.isReady(timeCurr)){
+          nrofVarsReq +=1;
           varInspc.requestValueFromTarget(timeCurr, retryDisabledVariable);
         }
-        
       }
     }
     Runnable userOrder;
     while( (userOrder = userOrders.poll()) !=null){
       userOrder.run(); //maybe add some more requests to the current telegram.
     }
+    if(nrofVarsReq >0){
+      System.out.println("InspcMng.procComm - variables requested; " + nrofVarsReq + "; all=" + nrofVarsAll);
+    }
     for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
-      if( inspcAccessor.isFilledTxTelg()){       //only call if necessary
-          inspcAccessor.sendAndAwaitAnswer();     
-      }
+      inspcAccessor.cmdFinit();     
     }
     
     if(user !=null){
@@ -624,6 +626,11 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
      */
     @Override public final boolean step(int cycletime){
       //bThreadRuns = true;
+      if(callbackOnRxData !=null){
+        callbackOnRxData.run();         //show the received values.
+        //the next requests for variables will be set.
+        //It may be the same, it may be other.
+      }
   
       bAllReceived = false;
         procComm();
@@ -631,11 +638,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
           stop();
         }
         //timeReceived = System.currentTimeMillis();  //all requests after this time calls new variables.
-        if(callbackOnRxData !=null){
-          callbackOnRxData.run();         //show the received values.
-          //the next requests for variables will be set.
-          //It may be the same, it may be other.
-        }
       return false; //!bAllReceived;
     }//step
   }; //step  

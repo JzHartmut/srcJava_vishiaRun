@@ -187,9 +187,10 @@ public class InspcDataExchangeAccess
       setInt8(kanswerNr, nr);
     }
 
-    /**Gets the number of the answer datagram. */
+    /**Gets the number of the answer datagram. 
+     * The last datagramm is mask with the bit */
     public final int getAnswerNr()
-    { return getInt8(kanswerNr);
+    { return getInt8(kanswerNr) & 0x7f;
     }
 
     /**Gets the information about the last answer datagram. */

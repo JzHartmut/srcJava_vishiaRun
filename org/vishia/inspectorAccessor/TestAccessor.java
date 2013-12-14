@@ -46,11 +46,11 @@ public class TestAccessor
       while(true){
         int order = inspcAccessor.cmdGetValueByPath(sPathInTarget, testExec);    
         //inspcAccessor.rxEval.setExpectedOrder(order, null);
-        inspcAccessor.send();
+        inspcAccessor.cmdFinit();
         InspcDataExchangeAccess.ReflDatagram[] answer = inspcAccessor.awaitAnswer(1000);
         if(answer !=null){
           long time = System.currentTimeMillis();
-          String sError = inspcAccessor.rxEval.evaluate(answer, testExec, time, null, 0);
+          String sError = inspcAccessor.rxEval.evaluate(answer[0], testExec, time, null, 0);
         }
         try{ Thread.sleep(300);} catch(InterruptedException exc){}
       }
