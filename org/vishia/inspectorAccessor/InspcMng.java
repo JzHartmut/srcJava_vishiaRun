@@ -419,7 +419,12 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         if(varInspc.targetAccessor.isReady(timeCurr)){
           nrofVarsReq +=1;
           varInspc.requestValueFromTarget(timeCurr, retryDisabledVariable);
+        } else {
+          //The variable is not able to get, remove the request.
+          //The request will be repeat if the variable is newly requested.
+          var.requestValue(0);
         }
+        
       }
     }
     Runnable userOrder;
@@ -427,7 +432,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       userOrder.run(); //maybe add some more requests to the current telegram.
     }
     if(nrofVarsReq >0){
-      System.out.println("InspcMng.procComm - variables requested; " + nrofVarsReq + "; all=" + nrofVarsAll);
+      //System.out.println("InspcMng.procComm - variables requested; " + nrofVarsReq + "; all=" + nrofVarsAll);
     }
     for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
       inspcAccessor.cmdFinit();     

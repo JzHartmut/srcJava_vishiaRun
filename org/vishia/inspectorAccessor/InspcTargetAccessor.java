@@ -180,6 +180,8 @@ public class InspcTargetAccessor
   /**If true then writes a log of all send and received telegrams. */
   LogMessage logTelg;
   
+  boolean bWriteDebugSystemOut;  //if(logTelg !=null && bWriteDebugSystemOut)
+  
   int identLogTelg;
   
 	private final InspcAccessGenerateOrder orderGenerator = new InspcAccessGenerateOrder();
@@ -372,7 +374,7 @@ public class InspcTargetAccessor
       if(++nSeqNumber == 0){ nSeqNumber = 1; }
       txAccess.setHeadRequest(nEntrant, nSeqNumber, nEncryption);
       bFillTelg = true;
-      System.out.println("InspcTargetAccessor.Test - Prepare head; " + ixTxFill + "; seq=" + nSeqNumber);
+      if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Prepare head; " + ixTxFill + "; seq=" + nSeqNumber);
       int nRestBytes = tx[ixTxFill].buffer.length - txAccess.getLengthHead();
       return true;
     }
@@ -400,7 +402,7 @@ public class InspcTargetAccessor
 	public boolean isReady(long time){ 
 	  if(!bTaskPending.get()) return true;
 	  else {
-	    if((time - timeReceive) > 3000){
+	    if((time - timeSend) > 3000){
 	      //forgot a pending request:
 	      bTaskPending.set(false);
 	      bRequestWhileTaskPending = false;
@@ -696,7 +698,7 @@ public class InspcTargetAccessor
     tx[ixTxFill].lastTelg = lastTelg;
     bFillTelg = false;
     state = 's';
-    System.out.println("InspcTargetAccessor.Test - complete but not send Datagram; " + lastTelg + "; " + ixTxFill + "; seqnr " + nSeqNumber);
+    if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - complete Datagram; " + lastTelg + "; " + ixTxFill + "; seqnr " + nSeqNumber);
     ixTxFill +=1;
   }
   
@@ -744,12 +746,12 @@ public class InspcTargetAccessor
         rxEval.evaluate(accessRxTelg, null, time, null, 0);
         if(accessRxTelg.lastAnswer()){
           //bSendPending = false;
-          System.out.println("InspcTargetAccessor.Test - Rcv last answer; " + rxSeqnr);
+          if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Rcv last answer; " + rxSeqnr);
           Arrays.fill(bitsAnswerNrRx, 0);
           boolean wasLastTxTelg = tx[ixTxSend].lastTelg;  //the ixTxSend is the index of send still.
           ixTxSend +=1;  //next send slot
           if(ixTxSend < ixTxFill){
-            System.out.println("InspcTargetAccessor.Test - Send next telg; seqnr=" + tx[ixTxSend].nSeq + "; ixTxSend= " + ixTxSend);
+            if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Send next telg; seqnr=" + tx[ixTxSend].nSeq + "; ixTxSend= " + ixTxSend);
             //Note: sendPending remain set. For this next telegram.
             send();
           } else if(wasLastTxTelg){  //last is reached.
@@ -760,20 +762,20 @@ public class InspcTargetAccessor
             ixTxFill = 0;   //if the last one was received, the tx-buffer is free for new requests. 
             nSeqNumberTxRx = 0;
             bHasAnswered = true;
-            System.out.println("InspcTargetAccessor.Test - All received; ");
+            if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - All received; ");
           }
         } else {
           //sendPending: It is not the last answer, remain true
-          System.out.println("InspcTargetAccessor.Test - Rcv answer; " + nAnswer + "; seqn=" + rxSeqnr);
+          if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Rcv answer; " + nAnswer + "; seqn=" + rxSeqnr);
         }
       } else {
         //sendPending: rx is not an anwer, ignored, remain true
-        System.out.println("InspcTargetAccessor - faulty seqnr; " + rxSeqnr + "; expected " + this.nSeqNumberTxRx);
+        if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor - faulty seqnr; " + rxSeqnr + "; expected " + this.nSeqNumberTxRx);
         //faulty seqnr
       }
     } else {
       //sendPending: is false, unexpected rx
-      System.out.println("InspcTargetAccessor - unexpected rx; ");
+      if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor - unexpected rx; ");
     }
   }
   
