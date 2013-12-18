@@ -166,6 +166,14 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    */
   Runnable callbackOnRxData;
   
+  
+  /**If true then writes a log of all send and received telegrams. */
+  LogMessage logTelg;
+  
+  boolean bWriteDebugSystemOut;  //if(logTelg !=null && bWriteDebugSystemOut)
+  
+  int identLogTelg;
+  
   /**This container holds all variables which are created. */
   Map<String, VariableAccessArray_ifc> idxAllVars = new TreeMap<String, VariableAccessArray_ifc>();
   
@@ -312,6 +320,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   
   public void setLogForTargetComm(LogMessage log, int ident){
+    this.logTelg = log;
+    this.identLogTelg = ident;
     for(InspcTargetAccessor target: listTargetAccessor){
       target.setLog(log, ident);
     }

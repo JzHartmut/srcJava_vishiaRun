@@ -420,7 +420,7 @@ public class InspcTargetAccessor
 	    } else {
 	      if(!bRequestWhileTaskPending){ //it is the first one
 	        bRequestWhileTaskPending = true;
-          System.err.println("InspcTargetAccessor.isReady - not ready for requests; " + toString());
+	        if(logTelg !=null) System.err.println("InspcTargetAccessor.isReady - not ready for requests; " + toString());
 	      }
 	      return false;
 	    }
