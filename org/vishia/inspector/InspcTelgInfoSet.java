@@ -11,6 +11,16 @@ import org.vishia.reflect.ClassJc;
  */
 public class InspcTelgInfoSet extends InspcDataExchangeAccess.Reflitem
 {
+  public void setCmdGetFields(String path, int order)
+  {
+    int zPath = path.length();
+    int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
+    addChildString(path);
+    if(restChars >0) { addChildInteger(restChars, 0); }
+    int zInfo = getLength();
+    this.setInfoHead(zInfo, InspcDataExchangeAccess.Reflitem.kGetFields, order);
+  }
+  
   public void setCmdGetValueByPath(String path, int order)
   {
     int zPath = path.length();

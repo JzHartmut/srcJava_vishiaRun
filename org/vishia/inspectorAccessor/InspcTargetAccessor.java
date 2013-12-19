@@ -432,6 +432,30 @@ public class InspcTargetAccessor
    * @param sPathInTarget
    * @return The order number. 0 if the cmd can't be created.
    */
+  public int cmdGetFields(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
+  { int order;
+    if(prepareTelg(InspcDataExchangeAccess.Reflitem.sizeofHead + sPathInTarget.length() + 3 )){
+      //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
+      txAccess.addChild(infoAccess);
+      order = orderGenerator.getNewOrder();
+      infoAccess.setCmdGetFields(sPathInTarget, order);
+      if(logTelg !=null){ 
+        logTelg.sendMsg(identLogTelg, "send cmdGetValueByPath %s, order = %d", sPathInTarget, new Integer(order)); 
+      }
+      rxEval.setExpectedOrder(order, actionOnRx);
+    } else {
+      //too much info blocks
+      order = 0;
+    }
+    return order;
+  }
+  
+  
+  
+  /**Adds the info block to send 'get value by path'
+   * @param sPathInTarget
+   * @return The order number. 0 if the cmd can't be created.
+   */
   public int cmdGetValueByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
     if(prepareTelg(InspcDataExchangeAccess.Reflitem.sizeofHead + sPathInTarget.length() + 3 )){

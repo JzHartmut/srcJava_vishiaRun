@@ -178,6 +178,12 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   /**This container holds all variables which are created. */
   Map<String, VariableAccess_ifc> idxAllVars = new TreeMap<String, VariableAccess_ifc>();
   
+  
+  /**This container holds all variables which are created. */
+  Map<String, InspcStruct> idxAllStruct = new TreeMap<String, InspcStruct>();
+  
+  
+  
   /**This container holds that variables which are currently used for communication. */
   Map<String, InspcVariable> XXXidxVarsInAccess = new TreeMap<String, InspcVariable>();
   
@@ -378,10 +384,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         MemSegmJc addr = SearchElement.searchObject(sPathJava, this, field, ix);
         var = new FieldJcVariableAccess(this, field[0]);
       } else {
-        String[] retPath = new String[1];
-        InspcTargetAccessor accessor = getTargetFromPath(sDataPathOfWidget, retPath);
-        if(accessor !=null){
-          var = new InspcVariable(this, accessor, retPath[0]);
+        PathStructAccessor path1 = getTargetFromPath(sDataPathOfWidget);
+        if(path1.accessor !=null){
+          var = new InspcVariable(this, path1.accessor, path1.itsStruct, path1.sPathInTarget, path1.sName);
         } else {
           System.err.println("InspcMng - Variable target unknown; " + sDataPathOfWidget); 
         }
@@ -419,23 +424,27 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     for(Map.Entry<String,VariableAccess_ifc> entryVar: idxAllVars.entrySet()){
       VariableAccess_ifc var = entryVar.getValue();
       nrofVarsAll +=1;
-      if(   var.isRequestedValue(retryDisabledVariable)
-         && var instanceof InspcVariable){  //handle only variable from Inspector access
+      if(var instanceof InspcVariable){
         InspcVariable varInspc = (InspcVariable)var;
-        
-        if(varInspc.sPathInTarget.startsWith("#"))
-          Assert.stop();
-      
-        bRequest = true;
-        if(varInspc.targetAccessor.isReady(timeCurr)){
-          nrofVarsReq +=1;
-          varInspc.requestValueFromTarget(timeCurr, retryDisabledVariable);
-        } else {
-          //The variable is not able to get, remove the request.
-          //The request will be repeat if the variable is newly requested.
-          var.requestValue(0);
+        if(   var.isRequestedValue(retryDisabledVariable) ){  //handle only variable from Inspector access
+          if(varInspc.sPathInTarget.startsWith("#"))
+            Assert.stop();
+          bRequest = true;
+          if(varInspc.targetAccessor.isReady(timeCurr)){
+            nrofVarsReq +=1;
+            varInspc.requestValueFromTarget(timeCurr, retryDisabledVariable);
+          } else {
+            //The variable is not able to get, remove the request.
+            //The request will be repeat if the variable is newly requested.
+            var.requestValue(0);
+          }
+          
         }
-        
+        InspcStruct struct = varInspc.itsStruct;
+        if(struct.isRequestFields()){
+          struct.fields.clear();
+          varInspc.targetAccessor.cmdGetFields(struct.path, struct.rxActionGetFields);
+        }
       }
     }
     Runnable userOrder;
@@ -553,17 +562,31 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
 
   
-  InspcTargetAccessor getTargetFromPath(String sDataPath, String[] retDataPath){
-    InspcTargetAccessor accessor;
+  /**Splits and replaces a given data path in a variable GUI field to the target accessor,
+   * It uses {@link #indexTargetAccessor} to get the target accessor instance. 
+   * @param sDataPath The user given data path
+   * @param retDataPath
+   * @return
+   */
+  PathStructAccessor getTargetFromPath(String sDataPath){
+    PathStructAccessor ret = new PathStructAccessor();
     int posSepDevice = sDataPath.indexOf(':');
     if(posSepDevice >0){
       String sDevice = sDataPath.substring(0, posSepDevice);
-      accessor = indexTargetAccessor.get(sDevice);
-      if(accessor == null){
+      ret.accessor = indexTargetAccessor.get(sDevice);
+      if(ret.accessor == null){
         errorDevice(sDevice);
-      } 
-      retDataPath[0] = sDataPath.substring(posSepDevice +1);
-      return accessor;
+      }
+      int posName = sDataPath.lastIndexOf('.');
+      String sStructPath = sDataPath.substring(posSepDevice +1, posName);
+      ret.itsStruct = idxAllStruct.get(sStructPath);
+      if(ret.itsStruct == null){
+        ret.itsStruct = new InspcStruct(sStructPath);
+        idxAllStruct.put(sStructPath, ret.itsStruct);
+      }
+      ret.sName = sDataPath.substring(posName +1);
+      ret.sPathInTarget = sDataPath.substring(posSepDevice +1);
+      return ret;
     } else {
       return null;
     }
@@ -665,5 +688,12 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   }
   
   void stop(){}
+  
+  static class PathStructAccessor{
+    InspcTargetAccessor accessor;
+    String sPathInTarget;
+    String sName;
+    InspcStruct itsStruct;
+  }
   
 }

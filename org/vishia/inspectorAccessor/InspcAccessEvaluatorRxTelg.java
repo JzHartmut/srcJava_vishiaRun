@@ -36,6 +36,8 @@ public class InspcAccessEvaluatorRxTelg
 
   final Map<Integer, OrderWithTime> ordersExpected = new TreeMap<Integer, OrderWithTime>();
   
+  OrderWithTime orderGetFields;
+  
   final Deque<OrderWithTime> listTimedOrders = new LinkedList<OrderWithTime>();
   
   /**Reused instance to evaluate any info blocks.
@@ -120,9 +122,17 @@ public class InspcAccessEvaluatorRxTelg
           if(executer !=null){
             executer.execInspcRxOrder(infoAccess, time, log, identLog);
           } else {
-            int cmd = infoAccess.getCmd();
             int order = infoAccess.getOrder();
+            int cmd = infoAccess.getCmd();
             OrderWithTime timedOrder = ordersExpected.remove(order);
+            if(cmd == InspcDataExchangeAccess.Reflitem.kAnswerFieldMethod){
+              //special case: The same order number is used for more items in the same sequence number.
+              if(timedOrder !=null){
+                orderGetFields = timedOrder;
+              } else if(orderGetFields !=null && orderGetFields.order == order) {
+                timedOrder = orderGetFields;
+              }
+            }
             if(timedOrder !=null){
               //remove timed order
               InspcAccessExecRxOrder_ifc orderExec = timedOrder.exec;

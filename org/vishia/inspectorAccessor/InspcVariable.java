@@ -18,6 +18,7 @@ public class InspcVariable implements VariableAccess_ifc
   
   /**Version, history and license.
    * <ul>
+   * <li>2013-12-07 Hartmut new: {@link #itsStruct} 
    * <li>2013-12-07 Hartmut chg: In {@link VariableRxAction}: Answer from target with info.cmd = {@link InspcDataExchangeAccess.Reflitem#kFailedPath} 
    *   disables this variable from data communication. TODO enable with user action if the target was changed (recompiled, restarted etc).
    * <li>2013-12-07 Hartmut chg: In {@link VariableRxAction}: Answer from target with variable type designation = {@link InspcDataExchangeAccess#kInvalidIndex}
@@ -57,9 +58,9 @@ public class InspcVariable implements VariableAccess_ifc
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20120422;
+  public static final int version = 20131224;
 
-
+  final InspcStruct itsStruct;
 
   final InspcMng varMng;
   
@@ -119,8 +120,8 @@ public class InspcVariable implements VariableAccess_ifc
   
   /*package private*/ final VariableRxAction rxAction = new VariableRxAction();
   
-  /**The path of the variable in the target system. */
-  String sPathInTarget;
+  /**The path and name of the variable in the target system. */
+  final String sPathInTarget, sName;
 
   final InspcTargetAccessor targetAccessor;
   
@@ -160,10 +161,13 @@ public class InspcVariable implements VariableAccess_ifc
    * @param mng
    * @param sPathInTarget The access path.
    */
-  InspcVariable(InspcMng mng, InspcTargetAccessor targetAccessor, String sDataPath){
+  InspcVariable(InspcMng mng, InspcTargetAccessor targetAccessor, InspcStruct itsStruct, String sDataPath, String sName){
     this.varMng = mng;
+    this.itsStruct = itsStruct;
     this.targetAccessor = targetAccessor;
     this.sPathInTarget = sDataPath;
+    this.sName = sName;
+    itsStruct.registerVariable(this);
   }
   
   
@@ -276,6 +280,10 @@ public class InspcVariable implements VariableAccess_ifc
   
   
   @Override public char getType(){ return cType; } 
+  
+  
+  
+  public InspcStruct struct() { return itsStruct; }
   
 
   @Override public long getLastRefreshTime(){ return timeRefreshed; }
