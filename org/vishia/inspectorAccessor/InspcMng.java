@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.vishia.bridgeC.MemSegmJc;
 import org.vishia.byteData.VariableAccessArray_ifc;
+import org.vishia.byteData.VariableAccessWithBitmask;
 import org.vishia.byteData.VariableAccessWithIdx;
 import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.byteData.VariableContainer_ifc;
@@ -175,7 +176,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   int identLogTelg;
   
   /**This container holds all variables which are created. */
-  Map<String, VariableAccessArray_ifc> idxAllVars = new TreeMap<String, VariableAccessArray_ifc>();
+  Map<String, VariableAccess_ifc> idxAllVars = new TreeMap<String, VariableAccess_ifc>();
   
   /**This container holds that variables which are currently used for communication. */
   Map<String, InspcVariable> XXXidxVarsInAccess = new TreeMap<String, InspcVariable>();
@@ -368,7 +369,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       bit = 0;
       sDataPathOfWidget = sDataPathP;
     }
-    VariableAccessArray_ifc var = idxAllVars.get(sDataPathOfWidget);
+    VariableAccess_ifc var = idxAllVars.get(sDataPathOfWidget);
     if(var == null){
       if(sDataPathOfWidget.startsWith("java:")){
         FieldJc[] field = new FieldJc[0];
@@ -393,7 +394,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       }
     }
     if(mask == -1){ return var; }
-    else { return new VariableAccessWithIdx(var, null, bit, mask); }
+    else { return new VariableAccessWithBitmask(var, bit, mask); }
   }
  
   
@@ -415,7 +416,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     //System.out.println("InspcMng.ProcComm - step;");
     int nrofVarsReq = 0;
     int nrofVarsAll = 0;
-    for(Map.Entry<String,VariableAccessArray_ifc> entryVar: idxAllVars.entrySet()){
+    for(Map.Entry<String,VariableAccess_ifc> entryVar: idxAllVars.entrySet()){
       VariableAccess_ifc var = entryVar.getValue();
       nrofVarsAll +=1;
       if(   var.isRequestedValue(retryDisabledVariable)

@@ -7,7 +7,13 @@ import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.msgDispatch.LogMessage;
 
-public class InspcVariable implements VariableAccessArray_ifc
+/**This class presents a variable, which is accessed by a {@link InspcTargetAccessor} to get or set its value.
+ * The value of the variable is presented with the {@link VariableAccessArray_ifc}. 
+ * 
+ * @author Hartmut Schorrig
+ *
+ */
+public class InspcVariable implements VariableAccess_ifc
 {
   
   /**Version, history and license.
@@ -288,92 +294,5 @@ public class InspcVariable implements VariableAccessArray_ifc
   
   @Override public String toString(){ return " Variable(" + sPathInTarget + ") "; }
 
-
-  @Override
-  public int getDimension(int dimension)
-  {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-
-  @Override
-  public double getDouble(int... ixArray)
-  {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-
-  @Override
-  public float getFloat(int... ixArray)
-  {
-    // TODO Auto-generated method stub
-    return valueF;
-  }
-
-
-  @Override
-  public int getInt(int... ixArray)
-  {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-
-  @Override
-  public long getLong(int... ixArray)
-  {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-
-  @Override
-  public String getString(int... ixArray)
-  {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-
-  @Override
-  public double setDouble(double value, int... ixArray)
-  {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-
-  @Override
-  public float setFloat(float value, int... ixArray)
-  {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-
-  @Override
-  public int setInt(int value, int... ixArray)
-  {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-
-  @Override
-  public long setLong(long value, int... ixArray)
-  {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-
-  @Override
-  public String setString(String value, int... ixArray)
-  {
-    // TODO Auto-generated method stub
-    return null;
-  }
 
 }
