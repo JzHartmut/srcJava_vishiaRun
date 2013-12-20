@@ -443,7 +443,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         InspcStruct struct = varInspc.itsStruct;
         if(struct.isRequestFields()){
           struct.fields.clear();
-          varInspc.targetAccessor.cmdGetFields(struct.path, struct.rxActionGetFields);
+          varInspc.targetAccessor.cmdGetFields(struct.path(), struct.rxActionGetFields);
         }
       }
     }

@@ -49,13 +49,33 @@ public class InspcStruct
    */
   public static final int version = 20131224;
 
-  final String path;
+  
+  public static class Field {
+    
+    public final String name;
+    
+    public final String type;
+    
+    InspcVariable var;
+    
+    Field(String name, String type){
+      this.name = name;
+      this.type = type;
+    }
+    
+    public void setVariable(InspcVariable var){ this.var = var; }
+    
+    public InspcVariable variable(){ return var; }
+  }
+  
+  
+  private final String path;
   
   /*package private*/ final VariableRxAction rxActionGetFields = new VariableRxAction();
   
 
   
-  List<String> fields = new ArrayList<String>();
+  List<Field> fields = new ArrayList<Field>();
   
   private boolean bRequFields;
   
@@ -67,6 +87,8 @@ public class InspcStruct
     this.path = path;
   }
 
+  public String path(){ return path; }
+  
   /**Invoked only in {@link InspcVariable#InspcVariable(InspcMng, InspcTargetAccessor, InspcStruct, String)}
    * for a new variable.
    * @param var
@@ -89,7 +111,7 @@ public class InspcStruct
     }
   }
   
-  public Iterable<String> fieldIter(){ return fields; }
+  public Iterable<Field> fieldIter(){ return fields; }
   
   
   void rxActionGetFields(InspcDataExchangeAccess.Reflitem info, long time){
@@ -104,7 +126,12 @@ public class InspcStruct
         int zString = info.getLenInfo() - 8;
         try{ 
           String sField = info.getChildString(zString); 
-          fields.add(sField);
+          int posSep = sField.indexOf(':');
+          int posTypeEnd = sField.indexOf("...");
+          String name = sField.substring(0, posSep);
+          String type = sField.substring(posSep+1, posTypeEnd > posSep ? posTypeEnd : sField.length());
+          Field field = new Field(name, type);
+          fields.add(field);
           bUpdated = true;
           //build all variables   
         } catch(UnsupportedEncodingException exc){
