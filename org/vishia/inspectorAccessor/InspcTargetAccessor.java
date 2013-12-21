@@ -767,27 +767,17 @@ public class InspcTargetAccessor
       int ixAnswer = nAnswer >> 4;
       if((bitsAnswerNrRx[ixAnswer] & bitAnswer) ==0){
         bitsAnswerNrRx[ixAnswer] |= bitAnswer;
+        //
         rxEval.evaluate(accessRxTelg, null, time, null, 0);
+        //
         if(accessRxTelg.lastAnswer()){
           //bSendPending = false;
           if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Rcv last answer; " + rxSeqnr);
           Arrays.fill(bitsAnswerNrRx, 0);
-          boolean wasLastTxTelg = tx[ixTxSend].lastTelg;  //the ixTxSend is the index of send still.
-          ixTxSend +=1;  //next send slot
-          if(ixTxSend < ixTxFill){
-            if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Send next telg; seqnr=" + tx[ixTxSend].nSeq + "; ixTxSend= " + ixTxSend);
-            //Note: sendPending remain set. For this next telegram.
-            send();
-          } else if(wasLastTxTelg){  //last is reached.
-            bTaskPending.set(false);  //Note, any other telg of this step can be follow.
-            bRequestWhileTaskPending = false;
-            state = 'R';
-            ixTxSend = 0;
-            ixTxFill = 0;   //if the last one was received, the tx-buffer is free for new requests. 
-            nSeqNumberTxRx = 0;
-            bHasAnswered = true;
-            if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - All received; ");
-          }
+          //
+          rxEval.lastTelg();
+          txNextAfterRcv();
+          //
         } else {
           //sendPending: It is not the last answer, remain true
           if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Rcv answer; " + nAnswer + "; seqn=" + rxSeqnr);
@@ -805,6 +795,27 @@ public class InspcTargetAccessor
   
   
 
+  
+  private void txNextAfterRcv(){
+    boolean wasLastTxTelg = tx[ixTxSend].lastTelg;  //the ixTxSend is the index of send still.
+    ixTxSend +=1;  //next send slot
+    if(ixTxSend < ixTxFill){
+      if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Send next telg; seqnr=" + tx[ixTxSend].nSeq + "; ixTxSend= " + ixTxSend);
+      //Note: sendPending remain set. For this next telegram.
+      send();
+    } else if(wasLastTxTelg){  //last is reached.
+      bTaskPending.set(false);  //Note, any other telg of this step can be follow.
+      bRequestWhileTaskPending = false;
+      state = 'R';
+      ixTxSend = 0;
+      ixTxFill = 0;   //if the last one was received, the tx-buffer is free for new requests. 
+      nSeqNumberTxRx = 0;
+      bHasAnswered = true;
+      if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - All received; ");
+    }  
+  }
+  
+  
 	
 	/**Waits for answer from the target.
 	 * This method can be called in any users thread. Typically it is the thread, which has send the telegram
@@ -834,6 +845,7 @@ public class InspcTargetAccessor
     @Override public void execInspcRxOrder(InspcDataExchangeAccess.Reflitem info, long time, LogMessage log, int identLog)
     { execRx4ValueByIdent(info, time, log, identLog);
     }
+    @Override public void finitTelg(int order){}  //empty
   };
 	
 	void stop(){}

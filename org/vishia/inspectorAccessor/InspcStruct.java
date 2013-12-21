@@ -15,7 +15,7 @@ import org.vishia.msgDispatch.LogMessage;
  * @author Hartmut Schorrig
  *
  */
-public class InspcStruct
+public final class InspcStruct
 {
   
   /**Version, history and license.
@@ -50,7 +50,7 @@ public class InspcStruct
   public static final int version = 20131224;
 
   
-  public static class Field {
+  public final static class Field {
     
     public final String name;
     
@@ -71,23 +71,39 @@ public class InspcStruct
   
   private final String path;
   
+  private final InspcTargetAccessor targetAccessor;
+  
+  private final InspcStruct parent;
+  
   /*package private*/ final VariableRxAction rxActionGetFields = new VariableRxAction();
   
 
   
   List<Field> fields = new ArrayList<Field>();
   
-  private boolean bRequFields;
+  boolean bRequFields;
   
   boolean bUpdated;
   
+  /**All variables which are associated to the fields of this struct. Not all fields have a variable on startup,
+   * only on access a variable will be created. That variable is member of the {@link InspcMng#idxAllVars} too. */
   Map<String, InspcVariable> vars = new TreeMap<String, InspcVariable>();
   
-  InspcStruct(String path){
+  
+  /**Callback for any request. */
+  Runnable callback;
+  
+  InspcStruct(String path, InspcTargetAccessor targetAccessor, InspcStruct parent){
     this.path = path;
+    this.targetAccessor = targetAccessor; 
+    this.parent = parent;
   }
 
   public String path(){ return path; }
+  
+  public InspcStruct parent(){ return parent; }
+  
+  public InspcTargetAccessor targetAccessor(){ return targetAccessor; }
   
   /**Invoked only in {@link InspcVariable#InspcVariable(InspcMng, InspcTargetAccessor, InspcStruct, String)}
    * for a new variable.
@@ -98,18 +114,12 @@ public class InspcStruct
   }
   
   
-  void requestFields(){ bRequFields = true; }
+  public void requestFields(Runnable callbackP){ bRequFields = true; this.callback = callbackP; }
   
   boolean isRequestFields(){ if(bRequFields) { bRequFields = false; return true;} else { return false; } }
   
   
-  public boolean isUpdated(){
-    if(bUpdated) return true;
-    else {
-      bRequFields = true;
-      return false;
-    }
-  }
+  public boolean isUpdated(){ return bUpdated; }
   
   public Iterable<Field> fieldIter(){ return fields; }
   
@@ -145,8 +155,12 @@ public class InspcStruct
       
     }//switch
     
+    
+    
   }
+
   
+  @Override public String toString(){ return path; }
   
   /**This class supplies the method to set the variable value from a received info block. 
    */
@@ -159,6 +173,14 @@ public class InspcStruct
      */
     @Override public void execInspcRxOrder(InspcDataExchangeAccess.Reflitem info, long time, LogMessage log, int identLog)
     { rxActionGetFields(info, time);
+    }
+    
+    @Override public void finitTelg(int order){
+      bRequFields = false;
+      if(callback !=null){
+        callback.run();
+        callback = null;
+      }
     }
   }
 

@@ -182,7 +182,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   /**This container holds all variables which are created. */
   Map<String, InspcStruct> idxAllStruct = new TreeMap<String, InspcStruct>();
   
-  
+  /**If not null then cmdGetFields should be invoked. */
+  InspcStruct requestedFields;
   
   /**This container holds that variables which are currently used for communication. */
   Map<String, InspcVariable> XXXidxVarsInAccess = new TreeMap<String, InspcVariable>();
@@ -343,6 +344,10 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     userOrders.add(order);
   }
   
+  
+  public void requestFields(InspcStruct struct){
+    requestedFields = struct;
+  }
 
   
   @Override public VariableAccess_ifc getVariable(final String sDataPathP)
@@ -421,6 +426,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     //System.out.println("InspcMng.ProcComm - step;");
     int nrofVarsReq = 0;
     int nrofVarsAll = 0;
+    if(requestedFields !=null){
+      requestedFields.fields.clear();
+      PathStructAccessor path1 = getTargetFromPath(requestedFields.path()); 
+      //InspcTargetAccessor targetAccessor = requestedFields.targetAccessor();
+      path1.accessor.cmdGetFields(path1.sPathInTarget, requestedFields.rxActionGetFields);
+      requestedFields = null;
+    }
     for(Map.Entry<String,VariableAccess_ifc> entryVar: idxAllVars.entrySet()){
       VariableAccess_ifc var = entryVar.getValue();
       nrofVarsAll +=1;
@@ -439,11 +451,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
             var.requestValue(0);
           }
           
-        }
-        InspcStruct struct = varInspc.itsStruct;
-        if(struct.isRequestFields()){
-          struct.fields.clear();
-          varInspc.targetAccessor.cmdGetFields(struct.path(), struct.rxActionGetFields);
         }
       }
     }
@@ -563,7 +570,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   
   /**Splits and replaces a given data path in a variable GUI field to the target accessor,
-   * It uses {@link #indexTargetAccessor} to get the target accessor instance. 
+   * It uses {@link #indexTargetAccessor} to get the target accessor instance.
+   * It creates or gets and references {@link InspcStruct} with all parents for this path.
+   *  
    * @param sDataPath The user given data path
    * @param retDataPath
    * @return
@@ -578,13 +587,18 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         errorDevice(sDevice);
       }
       int posName = sDataPath.lastIndexOf('.');
-      String sStructPath = sDataPath.substring(posSepDevice +1, posName);
-      ret.itsStruct = idxAllStruct.get(sStructPath);
-      if(ret.itsStruct == null){
-        ret.itsStruct = new InspcStruct(sStructPath);
-        idxAllStruct.put(sStructPath, ret.itsStruct);
+      if(posName >0){
+        String sStructPath = sDataPath.substring(/*posSepDevice +1*/ 0, posName);
+        ret.itsStruct = idxAllStruct.get(sStructPath);
+        if(ret.itsStruct == null){
+          InspcStruct parent = getOrCreateParentStruct(sStructPath, ret.accessor);
+          ret.itsStruct = new InspcStruct(sStructPath, ret.accessor, parent);
+          idxAllStruct.put(sStructPath, ret.itsStruct);
+        }
+        ret.sName = sDataPath.substring(posName +1);
+      } else {
+        ret.sName = sDataPath.substring(posSepDevice +1);
       }
-      ret.sName = sDataPath.substring(posName +1);
       ret.sPathInTarget = sDataPath.substring(posSepDevice +1);
       return ret;
     } else {
@@ -594,6 +608,27 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   }
   
 
+  
+  /**Gets or creates the parent for the given path. The parent is referenced in {@link #idxAllStruct}.
+   * @param sPathChild
+   * @return null if it is the root.
+   */
+  private InspcStruct getOrCreateParentStruct(String sPathChild, InspcTargetAccessor accessor){
+    int posLastDot = sPathChild.lastIndexOf('.');
+    if(posLastDot <0) return null;
+    else{
+      String sPath = sPathChild.substring(0, posLastDot);
+      InspcStruct ret = idxAllStruct.get(sPath);
+      if(ret == null){
+        InspcStruct parent = getOrCreateParentStruct(sPath, accessor);
+        ret = new InspcStruct(sPath, accessor, parent);
+        idxAllStruct.put(sPath, ret);
+      }
+      return ret;
+    }
+  }
+  
+  
   
   public String translateDeviceToAddrIp(String sDevice)
   {

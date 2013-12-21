@@ -114,6 +114,9 @@ public class InspcVariable implements VariableAccess_ifc
         
       }//switch
     }
+    
+    @Override public void finitTelg(int order){}  //empty
+
   }
 
   

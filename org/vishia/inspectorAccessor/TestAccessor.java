@@ -79,7 +79,9 @@ public class TestAccessor
         stop();
       }
     }
-    
+
+    @Override public void finitTelg(int order){}  //empty
+
   };
   
   

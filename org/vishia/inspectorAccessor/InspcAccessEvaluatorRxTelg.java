@@ -276,6 +276,13 @@ public class InspcAccessEvaluatorRxTelg
   }
   
   
+  void lastTelg(){
+    if(orderGetFields != null){
+      orderGetFields.exec.finitTelg(orderGetFields.order);
+    }
+  }
+  
+  
   void stop(){}
   
   

@@ -13,4 +13,10 @@ public interface InspcAccessExecRxOrder_ifc
 
   void execInspcRxOrder(InspcDataExchangeAccess.Reflitem info, long time, LogMessage log, int identLog);
   
+  /**It is called after evaluating the sequence of answer telegrams. 
+   * Especially if more as one answer item is expected, it determines the end of answers.
+   * @param order The order of request.
+   */
+  void finitTelg(int order);
+  
 }
