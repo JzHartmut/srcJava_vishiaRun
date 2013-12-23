@@ -50,22 +50,41 @@ public final class InspcStruct
   public static final int version = 20131224;
 
   
-  public final static class Field {
+  public final static class FieldOfStruct {
     
     public final String name;
     
     public final String type;
     
+    public final boolean hasSubstruct;
+    
+    private final InspcStruct substruct;
+    
     InspcVariable var;
     
-    Field(String name, String type){
+    FieldOfStruct(InspcStruct parent, String name, String type, boolean hasSubstruct){
       this.name = name;
       this.type = type;
+      this.hasSubstruct = hasSubstruct;
+      if(hasSubstruct){
+        String pathsub;
+        String pathParent = parent.path();
+        if(pathParent.endsWith(":")){
+          pathsub = pathParent + name; 
+        } else {
+          pathsub = pathParent + "." + name;
+        }
+        this.substruct = new InspcStruct(pathsub, parent.targetAccessor(), parent );
+      } else {
+        this.substruct = null;
+      }
     }
     
     public void setVariable(InspcVariable var){ this.var = var; }
     
     public InspcVariable variable(){ return var; }
+    
+    public InspcStruct substruct(){ return substruct; }
   }
   
   
@@ -79,7 +98,7 @@ public final class InspcStruct
   
 
   
-  List<Field> fields = new ArrayList<Field>();
+  List<FieldOfStruct> fields = new ArrayList<FieldOfStruct>();
   
   boolean bRequFields;
   
@@ -121,7 +140,7 @@ public final class InspcStruct
   
   public boolean isUpdated(){ return bUpdated; }
   
-  public Iterable<Field> fieldIter(){ return fields; }
+  public Iterable<FieldOfStruct> fieldIter(){ return fields; }
   
   
   void rxActionGetFields(InspcDataExchangeAccess.Reflitem info, long time){
@@ -140,7 +159,7 @@ public final class InspcStruct
           int posTypeEnd = sField.indexOf("...");
           String name = sField.substring(0, posSep);
           String type = sField.substring(posSep+1, posTypeEnd > posSep ? posTypeEnd : sField.length());
-          Field field = new Field(name, type);
+          FieldOfStruct field = new FieldOfStruct(this, name, type, posTypeEnd >0);
           fields.add(field);
           bUpdated = true;
           //build all variables   

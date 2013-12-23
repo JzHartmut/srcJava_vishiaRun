@@ -11,6 +11,7 @@ import java.util.TreeMap;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.ClassJc;
+import org.vishia.util.Assert;
 
 /**This class helps to evaluate any telegram.
  * @author Hartmut Schorrig
@@ -112,43 +113,47 @@ public class InspcAccessEvaluatorRxTelg
       int nrofBytesTelgInHead = telgHead.getLengthDatagram();
       int nrofBytesTelg = telgHead.getLength();  //length from ByteDataAccess-management.
       //telgHead.assertNotExpandable();
-      while(sError == null && currentPos + InspcDataExchangeAccess.Reflitem.sizeofHead <= nrofBytesTelg){
+      while(sError == null && currentPos + InspcDataExchangeAccess.Reflitem.sizeofHead <= nrofBytesTelgInHead){
         telgHead.addChild(infoAccess);
         int nrofBytesInfo = infoAccess.getLenInfo();
-        if(nrofBytesTelg < currentPos + nrofBytesInfo){
-          sError = "to less bytes in telg at " + currentPos + ": " 
-                 + nrofBytesInfo + " / " + (nrofBytesTelg - currentPos);
+        if(nrofBytesInfo <8){
+          Assert.stop();
         } else {
-          if(executer !=null){
-            executer.execInspcRxOrder(infoAccess, time, log, identLog);
+          if(nrofBytesTelg < currentPos + nrofBytesInfo){
+            sError = "to less bytes in telg at " + currentPos + ": " 
+                   + nrofBytesInfo + " / " + (nrofBytesTelg - currentPos);
           } else {
-            int order = infoAccess.getOrder();
-            int cmd = infoAccess.getCmd();
-            OrderWithTime timedOrder = ordersExpected.remove(order);
-            if(cmd == InspcDataExchangeAccess.Reflitem.kAnswerFieldMethod){
-              //special case: The same order number is used for more items in the same sequence number.
+            if(executer !=null){
+              executer.execInspcRxOrder(infoAccess, time, log, identLog);
+            } else {
+              int order = infoAccess.getOrder();
+              int cmd = infoAccess.getCmd();
+              OrderWithTime timedOrder = ordersExpected.remove(order);
+              if(cmd == InspcDataExchangeAccess.Reflitem.kAnswerFieldMethod){
+                //special case: The same order number is used for more items in the same sequence number.
+                if(timedOrder !=null){
+                  orderGetFields = timedOrder;
+                } else if(orderGetFields !=null && orderGetFields.order == order) {
+                  timedOrder = orderGetFields;
+                }
+              }
               if(timedOrder !=null){
-                orderGetFields = timedOrder;
-              } else if(orderGetFields !=null && orderGetFields.order == order) {
-                timedOrder = orderGetFields;
+                //remove timed order
+                InspcAccessExecRxOrder_ifc orderExec = timedOrder.exec;
+                if(orderExec !=null){
+                  orderExec.execInspcRxOrder(infoAccess, time, log, identLog);
+                } else {
+                  stop();  //should not 
+                }
               }
+              //
+              //search the order whether it is expected:
             }
-            if(timedOrder !=null){
-              //remove timed order
-              InspcAccessExecRxOrder_ifc orderExec = timedOrder.exec;
-              if(orderExec !=null){
-                orderExec.execInspcRxOrder(infoAccess, time, log, identLog);
-              } else {
-                stop();  //should not 
-              }
-            }
-            //
-            //search the order whether it is expected:
+            infoAccess.setLengthElement(nrofBytesInfo);
+            //telgHead.setLengthCurrentChildElement(nrofBytesInfo); //to add the next.
+            currentPos += nrofBytesInfo;  //the same as stored in telgHead-access
+            
           }
-          infoAccess.setLengthElement(nrofBytesInfo);
-          //telgHead.setLengthCurrentChildElement(nrofBytesInfo); //to add the next.
-          currentPos += nrofBytesInfo;  //the same as stored in telgHead-access
-          
         }
       }
     //}

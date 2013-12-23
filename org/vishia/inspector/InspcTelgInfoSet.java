@@ -60,6 +60,26 @@ public class InspcTelgInfoSet extends InspcDataExchangeAccess.Reflitem
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created.
    */
+  public void setCmdSetValueByPath(String path, int value, int order)
+  {
+    int zPath = path.length();
+    int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
+    InspcDataExchangeAccess.ReflSetValue accessSetValue = new InspcDataExchangeAccess.ReflSetValue(); 
+    addChild(accessSetValue);
+    accessSetValue.setInt(value);
+    addChildString(path);
+    if(restChars >0) { addChildInteger(restChars, 0); }
+    int zInfo = getLength();
+    this.setInfoHead(zInfo, InspcDataExchangeAccess.Reflitem.kSetValueByPath, order);
+  }
+  
+  /**Adds the info block to send 'get value by path'
+   * @param path
+   * @param value The value as long-image, it may be a double, float, int etc.
+   * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
+   *                    + {@link ClassJc#REFLECTION_double} etc.
+   * @return The order number. 0 if the cmd can't be created.
+   */
   public void setCmdSetValueByPath(String path, float value, int order)
   {
     int zPath = path.length();

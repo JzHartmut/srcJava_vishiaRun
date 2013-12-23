@@ -302,6 +302,14 @@ public class InspcDataExchangeAccess
 		
 		public final static int kSetValueByPath = 0x35;
 		
+		/**Sets a string value.
+		 * <pre>
+		 * < inspcitem> <@+2#?strlen> <@+strlen$?value> <@a4> <@strlen..SIZE$?path> <@a4>
+		 * </pre>
+		 * @since 2013-12-24
+		 */
+		public final static int kSetStringByPath = 0x36;
+		
     /**Request to get all messages.
     ,  Cmd:<pre>
     ,  +------head-----------+
@@ -501,31 +509,31 @@ public final static class ReflSetValue extends ByteDataAccess{
 
   /**Sets a byte value. */
   @Java4C.define public void setBool(int value)
-  { _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_boolean);  _setLong(15, 1, value);} 
+  { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_boolean);  _setLong(15, 1, value);} 
   
   /**Sets a byte value. */
   @Java4C.define public void setByte(int value)
-  { _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int8);  _setLong(15, 1, value);} 
+  { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int8);  _setLong(15, 1, value);} 
   
   /**Sets a short value. */
 	@Java4C.define public void setShort(int value)
-  { _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int16);  _setLong(14, 2, value);} 
+  { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int16);  _setLong(14, 2, value);} 
   
   /**Sets a int32 value. */
 	@Java4C.define public void setInt(int value)
-	{ _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int32); _setLong(12, 4, value);} 
+	{ clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int32); _setLong(12, 4, value);} 
   
   /**Sets a long value (int64). */
 	@Java4C.define public void setLong(long value)
-  { _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int64);  _setLong(8, 8, value);} 
-  
+  { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int64);  _setLong(8, 8, value);} 
+   
   /**Sets a float value. */
 	@Java4C.define public void setFloat(float value)
-  { _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_float);  setFloat(8, value);} 
+  { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_float);  setFloat(12, value);} 
   
   /**Sets a double value. */
 	@Java4C.define public void setDouble(double value)
-  { _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_double);  setDouble(8, value);} 
+  { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_double);  setDouble(8, value);} 
   
   @Java4C.define @Override protected void specifyEmptyDefaultData() { }
 

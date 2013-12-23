@@ -614,10 +614,14 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    * @return null if it is the root.
    */
   private InspcStruct getOrCreateParentStruct(String sPathChild, InspcTargetAccessor accessor){
-    int posLastDot = sPathChild.lastIndexOf('.');
-    if(posLastDot <0) return null;
-    else{
-      String sPath = sPathChild.substring(0, posLastDot);
+    if(sPathChild.endsWith(":")){
+      return null;
+    } else {
+      int posLastDot = sPathChild.lastIndexOf('.');
+      if(posLastDot <0) {
+        posLastDot = sPathChild.indexOf(':') +1;
+      }
+      final String sPath = sPathChild.substring(0, posLastDot);
       InspcStruct ret = idxAllStruct.get(sPath);
       if(ret == null){
         InspcStruct parent = getOrCreateParentStruct(sPath, accessor);
@@ -628,6 +632,44 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     }
   }
   
+  
+  
+  public InspcVariable getOrCreateVariable(InspcStruct struct, InspcStruct.FieldOfStruct field){
+    InspcVariable var = field.variable();
+    if(var == null){
+      String sPathVar = struct.path() + '.' + field.name;
+      var = (InspcVariable)getVariable(sPathVar);
+      if(var !=null){
+        field.setVariable(var);
+      }
+    }
+    return var; 
+  }
+  
+
+  
+  public void cmdSetValueOfField(InspcStruct struct, InspcStruct.FieldOfStruct field, String value){
+    InspcVariable var = getOrCreateVariable(struct, field);
+    if(var !=null){
+      switch(var.cType){
+        case 'D':
+        case 'F': {
+          double val = Double.parseDouble(value); 
+          var.targetAccessor.cmdSetValueByPath(var.sPathInTarget, val); 
+        } break;
+        case 'S':
+        case 'B':
+        case 'I': {
+          int val = Integer.parseInt(value); 
+          var.targetAccessor.cmdSetValueByPath(var.sPathInTarget, val); 
+        } break;
+        case 's': {  //empty yet
+          
+        } break;
+      }
+    }
+
+  }
   
   
   public String translateDeviceToAddrIp(String sDevice)
