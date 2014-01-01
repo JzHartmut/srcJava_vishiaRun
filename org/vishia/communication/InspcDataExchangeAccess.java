@@ -203,6 +203,9 @@ public class InspcDataExchangeAccess
 	
 	
 	/**This is the header of an information entry.
+	 * <pre>
+   * Inspcitem::= <@0+2#?SIZE> <@2+2#?cmd> <@4+4#?order> .
+   * </pre>
 	 * An information entry contains this header and may be some childs. 
 	 * The childs may be simple integer or String childs getting and setting
 	 * with the methodes to add
@@ -461,6 +464,9 @@ public class InspcDataExchangeAccess
 	//}
 	
 /**ReflItem which contains a value.
+ * <pre>
+ * InspcSetValue::= <@0+6#?pwd> <@7+1#?type> [<@8+4 empty> <@12+4#?long> | ...].
+ * </pre>
  * 
  */
 @Java4C.extendsOnlyMethods
@@ -549,8 +555,14 @@ public final static class ReflSetValue extends ByteDataAccess{
 
 
 
+/**An item to set values with an index.
+ * <pre>
+ * InspcSetValueData::= <@0+8 Inspcitem> <@8+4#?address> <@12+4#?position> <@16 ReflSetValue>
+ * </pre>
+ * uses @{@link Reflitem}, {@link ReflSetValue}
+ */
 @Java4C.extendsOnlyMethods
-public final static class ReflSetValueData extends Reflitem{
+public final static class ReflSetValueData extends Reflitem {
   
   public final static int sizeofElement = 32;
 
