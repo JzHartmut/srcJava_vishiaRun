@@ -22,9 +22,9 @@ import org.vishia.reflect.ClassJc;
  * and creates a receiving thread. 
  * Any send requests are invoked from the environment. A send request usual contains
  * a reference to a {@link InspcAccessExecRxOrder_ifc}. 
- * Thats {@link InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Reflitem, long, LogMessage, int)} 
+ * Thats {@link InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem, long, LogMessage, int)} 
  * is executed if the response item is received. With the order-number-concept 
- * see {@link InspcDataExchangeAccess.Reflitem#getOrder()} the request and the response are associated together.
+ * see {@link InspcDataExchangeAccess.Inspcitem#getOrder()} the request and the response are associated together.
  * <br><br>
  * The following sequence shows handling in one thread for cyclic communication. Env is one thread
  * which invokes this sequence diagram cyclically.
@@ -85,12 +85,12 @@ import org.vishia.reflect.ClassJc;
  * The target should response with the answer with the same sequence number to associate answer and request. 
  * The {@link #commPort} ({@link InspcCommPort}) gets the received telegram.
  * On comparison of the sender address in the datagram or on comparison of the entrant in the 
- * datagram's head {@link InspcDataExchangeAccess.ReflDatagram#getEntrant()}.
+ * datagram's head {@link InspcDataExchangeAccess.InspcDatagram#getEntrant()}.
  * The answer from target can consist of more as one datagram. Any correct answer telegram invokes 
  * {@link #evaluateRxTelg(byte[], int)}. 
- * The answer contains some {@link InspcDataExchangeAccess.Reflitem}. All of them has its order number. 
+ * The answer contains some {@link InspcDataExchangeAccess.Inspcitem}. All of them has its order number. 
  * With the order number the associated {@link InspcAccessExecRxOrder_ifc
- * #execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Reflitem, long, LogMessage, int)}
+ * #execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem, long, LogMessage, int)}
  * is invoked as callback in the users space. This is organized in the aggregated {@link #rxEval} instance.   
  * <br><br>
  * If the last answer datagram of a request is gotten, the next datagram  of this task will be sent to the target. The target
@@ -101,7 +101,7 @@ import org.vishia.reflect.ClassJc;
  * <br><br>
  * On receive the {@link #commPort} ({@link InspcCommPort}) gets the received telegram.
  * On comparison of the sender address in the datagram or on comparison of the entrant in the 
- * datagram's head {@link InspcDataExchangeAccess.ReflDatagram#getEntrant()}.
+ * datagram's head {@link InspcDataExchangeAccess.InspcDatagram#getEntrant()}.
  * <br><br>
  * <b>Requests in multithreading</b><br>
  * The routines {@link #cmdGetValueByPath(String, InspcAccessExecRxOrder_ifc)} etc. are not threadsafe.
@@ -115,7 +115,7 @@ import org.vishia.reflect.ClassJc;
  *   regarded on next cyclic call.
  * </ul>
  * In both cases the {@link InspcAccessExecRxOrder_ifc
- * #execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Reflitem, long, LogMessage, int)}
+ * #execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem, long, LogMessage, int)}
  * is invoked by the receiver's thread called back in the user's space. This routines can be used to notify
  * any waiting thread or any short action can be done in the callback, especially request of some more cmd...    
  * @author Hartmut Schorrig
@@ -203,7 +203,7 @@ public class InspcTargetAccessor
   public final InspcAccessEvaluatorRxTelg rxEval;
   
   
-  final InspcDataExchangeAccess.ReflDatagram accessRxTelg = new InspcDataExchangeAccess.ReflDatagram();
+  final InspcDataExchangeAccess.InspcDatagram accessRxTelg = new InspcDataExchangeAccess.InspcDatagram();
 
 
   char state = 'R';
@@ -244,7 +244,7 @@ public class InspcTargetAccessor
   
 	long timeSend, timeReceive, dtimeReceive, dtimeWeakup;
 	
-	private final InspcDataExchangeAccess.ReflDatagram txAccess = new InspcDataExchangeAccess.ReflDatagram();
+	private final InspcDataExchangeAccess.InspcDatagram txAccess = new InspcDataExchangeAccess.InspcDatagram();
 	
 	
 	/**Number of idents to get values per ident. It determines the length of an info block,
@@ -254,10 +254,10 @@ public class InspcTargetAccessor
 	
 	private int ixIdent5GetValueByIdent;
 	
-	/**A info element to get values by ident It contains a {@link InspcDataExchangeAccess.Reflitem} head
+	/**A info element to get values by ident It contains a {@link InspcDataExchangeAccess.Inspcitem} head
 	 * and then 4-byte-idents for data. The same order of data are given in the array
 	 */
-	private final byte[] dataInfoDataGetValueByIdent = new byte[InspcDataExchangeAccess.Reflitem.sizeofHead + 4 * zIdent4GetValueByIdent]; 
+	private final byte[] dataInfoDataGetValueByIdent = new byte[InspcDataExchangeAccess.Inspcitem.sizeofHead + 4 * zIdent4GetValueByIdent]; 
 	
 	
 	//ByteBuffer acc4ValueByIdent = new ByteBuffer();
@@ -434,7 +434,7 @@ public class InspcTargetAccessor
    */
   public int cmdGetFields(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
-    if(prepareTelg(InspcDataExchangeAccess.Reflitem.sizeofHead + sPathInTarget.length() + 3 )){
+    if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + sPathInTarget.length() + 3 )){
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
@@ -458,7 +458,7 @@ public class InspcTargetAccessor
    */
   public int cmdGetValueByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
-    if(prepareTelg(InspcDataExchangeAccess.Reflitem.sizeofHead + sPathInTarget.length() + 3 )){
+    if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + sPathInTarget.length() + 3 )){
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
@@ -491,7 +491,7 @@ public class InspcTargetAccessor
     infoAccess.addChildString(sPathInTarget);
     if(restChars >0) { infoAccess.addChildInteger(restChars, 0); }
     final int zInfo = infoAccess.getLength();
-    infoAccess.setInfoHead(zInfo, InspcDataExchangeAccess.Reflitem.kRegisterRepeat, order);
+    infoAccess.setInfoHead(zInfo, InspcDataExchangeAccess.Inspcitem.kRegisterRepeat, order);
     //
     if(logTelg !=null){ 
       logTelg.sendMsg(identLogTelg, "send registerByPath %s, order = %d", sPathInTarget, new Integer(order)); 
@@ -528,16 +528,16 @@ public class InspcTargetAccessor
       int order = orderGenerator.getNewOrder();
       rxEval.setExpectedOrder(order, actionRx4ValueByIdent);
       txAccess.addChild(infoAccess);
-      int posInTelg = infoAccess.getPositionInBuffer() + InspcDataExchangeAccess.Reflitem.sizeofHead;
+      int posInTelg = infoAccess.getPositionInBuffer() + InspcDataExchangeAccess.Inspcitem.sizeofHead;
       System.arraycopy(dataInfoDataGetValueByIdent, 0, infoAccess.getData(), posInTelg, 4 * ixIdent5GetValueByIdent);
-      infoAccess.setInfoHead(lengthInfo + InspcDataExchangeAccess.Reflitem.sizeofHead, InspcDataExchangeAccess.Reflitem.kGetValueByIndex, order);
+      infoAccess.setInfoHead(lengthInfo + InspcDataExchangeAccess.Inspcitem.sizeofHead, InspcDataExchangeAccess.Inspcitem.kGetValueByIndex, order);
       ixIdent5GetValueByIdent = 0;
       accInfoDataGetValueByIdent.assignEmpty(dataInfoDataGetValueByIdent);
       return true;
     } else return false;
   }
   
-  final void execRx4ValueByIdent(InspcDataExchangeAccess.Reflitem info, long time, LogMessage log, int identLog){
+  final void execRx4ValueByIdent(InspcDataExchangeAccess.Inspcitem info, long time, LogMessage log, int identLog){
     //int lenInfo = info.getLength();
     int ixVal = (int)info.getChildInteger(4);
     while(info.sufficingBytesForNextChild(1)){  //at least one byte in info, 
@@ -564,7 +564,7 @@ public class InspcTargetAccessor
   { int order;
     int zPath = sPathInTarget.length();
     int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
-    int zInfo = InspcDataExchangeAccess.Reflitem.sizeofHead + InspcDataExchangeAccess.ReflSetValue.sizeofElement + zPath + restChars; 
+    int zInfo = InspcDataExchangeAccess.Inspcitem.sizeofHead + InspcDataExchangeAccess.InspcSetValue.sizeofElement + zPath + restChars; 
     if(prepareTelg(zInfo )){
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
@@ -573,13 +573,13 @@ public class InspcTargetAccessor
             , new Integer(order), new Long(value), new Integer(typeofValue)); 
       }
       //infoAccess.setCmdSetValueByPath(sPathInTarget, value, typeofValue, order);
-      InspcDataExchangeAccess.ReflSetValue accessSetValue = new InspcDataExchangeAccess.ReflSetValue(); 
+      InspcDataExchangeAccess.InspcSetValue accessSetValue = new InspcDataExchangeAccess.InspcSetValue(); 
       infoAccess.addChild(accessSetValue);
       accessSetValue.setLong(value);
       infoAccess.addChildString(sPathInTarget);
       if(restChars >0) { infoAccess.addChildInteger(restChars, 0); }
       assert(infoAccess.getLength() == zInfo);  //check length after add children. 
-      infoAccess.setInfoHead(zInfo, InspcDataExchangeAccess.Reflitem.kSetValueByPath, order);
+      infoAccess.setInfoHead(zInfo, InspcDataExchangeAccess.Inspcitem.kSetValueByPath, order);
     } else {
       //too much info blocks
       order = 0;
@@ -627,7 +627,7 @@ public class InspcTargetAccessor
    */
   public int cmdSetValueByPath(String sPathInTarget, int value)
   { int order;
-    if(prepareTelg(InspcDataExchangeAccess.Reflitem.sizeofHead + 8 + sPathInTarget.length() + 3 )){
+    if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + 8 + sPathInTarget.length() + 3 )){
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
       infoAccess.setCmdSetValueByPath(sPathInTarget, value, order);
@@ -648,7 +648,7 @@ public class InspcTargetAccessor
    */
   public int cmdSetValueByPath(String sPathInTarget, float value)
   { int order;
-    if(prepareTelg(InspcDataExchangeAccess.Reflitem.sizeofHead + 8 + sPathInTarget.length() + 3 )){
+    if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + 8 + sPathInTarget.length() + 3 )){
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
       infoAccess.setCmdSetValueByPath(sPathInTarget, value, order);
@@ -669,7 +669,7 @@ public class InspcTargetAccessor
    */
   public int cmdSetValueByPath(String sPathInTarget, double value)
   { int order;
-    if(prepareTelg(InspcDataExchangeAccess.Reflitem.sizeofHead + 8 + sPathInTarget.length() + 3 )){
+    if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + 8 + sPathInTarget.length() + 3 )){
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
       infoAccess.setCmdSetValueByPath(sPathInTarget, value, order);
@@ -687,7 +687,7 @@ public class InspcTargetAccessor
    */
   public int cmdGetAddressByPath(String sPathInTarget)
   { int order;
-    if(prepareTelg(InspcDataExchangeAccess.Reflitem.sizeofHead + sPathInTarget.length() + 3 )){
+    if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + sPathInTarget.length() + 3 )){
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
@@ -845,7 +845,7 @@ public class InspcTargetAccessor
 	 * @param timeout for waiting.
 	 * @return null on timeout, the answer datagrams elsewhere.
 	 */
-	public InspcDataExchangeAccess.ReflDatagram[] awaitAnswer(int timeout)
+	public InspcDataExchangeAccess.InspcDatagram[] awaitAnswer(int timeout)
 	{ //InspcDataExchangeAccess.ReflDatagram[] answerTelgs = checkerRxTelg.waitForAnswer(timeout); 
   	long time = System.currentTimeMillis();
     dtimeWeakup = time - timeSend;
@@ -863,7 +863,7 @@ public class InspcTargetAccessor
   
   
   InspcAccessExecRxOrder_ifc actionRx4ValueByIdent = new InspcAccessExecRxOrder_ifc(){
-    @Override public void execInspcRxOrder(InspcDataExchangeAccess.Reflitem info, long time, LogMessage log, int identLog)
+    @Override public void execInspcRxOrder(InspcDataExchangeAccess.Inspcitem info, long time, LogMessage log, int identLog)
     { execRx4ValueByIdent(info, time, log, identLog);
     }
     @Override public void finitTelg(int order){}  //empty

@@ -9,5 +9,5 @@ import org.vishia.msgDispatch.LogMessage;
  */
 public interface InspcAccessExecAnswerTelg_ifc
 {
-  void execInspcRxTelg(InspcDataExchangeAccess.ReflDatagram[] telgs, LogMessage log, int identLog);
+  void execInspcRxTelg(InspcDataExchangeAccess.InspcDatagram[] telgs, LogMessage log, int identLog);
 }

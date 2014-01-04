@@ -2,7 +2,7 @@ package org.vishia.inspectorAccessor;
 
 import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
-import org.vishia.communication.InspcDataExchangeAccess.Reflitem;
+import org.vishia.communication.InspcDataExchangeAccess.Inspcitem;
 import org.vishia.inspector.InspcTelgInfoSet;
 import org.vishia.msgDispatch.LogMessage;
 
@@ -47,7 +47,7 @@ public class TestAccessor
         int order = inspcAccessor.cmdGetValueByPath(sPathInTarget, testExec);    
         //inspcAccessor.rxEval.setExpectedOrder(order, null);
         inspcAccessor.cmdFinit();
-        InspcDataExchangeAccess.ReflDatagram[] answer = inspcAccessor.awaitAnswer(1000);
+        InspcDataExchangeAccess.InspcDatagram[] answer = inspcAccessor.awaitAnswer(1000);
         if(answer !=null){
           long time = System.currentTimeMillis();
           String sError = inspcAccessor.rxEval.evaluate(answer[0], testExec, time, null, 0);
@@ -66,12 +66,12 @@ public class TestAccessor
   InspcAccessExecRxOrder_ifc testExec = new InspcAccessExecRxOrder_ifc()
   {
 
-    @Override public void execInspcRxOrder(Reflitem info, long time, LogMessage log, int identLog)
+    @Override public void execInspcRxOrder(Inspcitem info, long time, LogMessage log, int identLog)
     {
       int order = info.getOrder();
       int cmd = info.getCmd();
       try{
-        if(cmd == InspcDataExchangeAccess.Reflitem.kAnswerValue){
+        if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerValue){
           float value = InspcAccessEvaluatorRxTelg.valueFloatFromRxValue(info, InspcAccessEvaluatorRxTelg.getInspcTypeFromRxValue(info));
           System.out.println("" + value);
         }

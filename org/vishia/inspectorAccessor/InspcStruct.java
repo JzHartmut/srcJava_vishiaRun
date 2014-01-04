@@ -143,7 +143,7 @@ public final class InspcStruct
   public Iterable<FieldOfStruct> fieldIter(){ return fields; }
   
   
-  void rxActionGetFields(InspcDataExchangeAccess.Reflitem info, long time){
+  void rxActionGetFields(InspcDataExchangeAccess.Inspcitem info, long time){
     //String sShow;
     //int order = info.getOrder();
     int cmd = info.getCmd();
@@ -151,7 +151,7 @@ public final class InspcStruct
       
     //}
     switch(cmd){
-      case InspcDataExchangeAccess.Reflitem.kAnswerFieldMethod: {
+      case InspcDataExchangeAccess.Inspcitem.kAnswerFieldMethod: {
         int zString = info.getLenInfo() - 8;
         try{ 
           String sField = info.getChildString(zString); 
@@ -167,7 +167,7 @@ public final class InspcStruct
           System.err.println("InspcStruct - unexpected UnsupportedEncodingException while getFields;" +  path);
         }
       } break;
-      case InspcDataExchangeAccess.Reflitem.kFailedPath:{
+      case InspcDataExchangeAccess.Inspcitem.kFailedPath:{
         System.err.println("InspcAccessEvaluatorRxTelg - failed path; " + path);
         fields.clear();
       } break;
@@ -188,9 +188,9 @@ public final class InspcStruct
      /**This method is called for any info block in the received telegram from target,
      * if this implementing instance is stored on the order.
      * It prepares the value presentation.
-     * @see org.vishia.inspectorAccessor.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Reflitem)
+     * @see org.vishia.inspectorAccessor.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem)
      */
-    @Override public void execInspcRxOrder(InspcDataExchangeAccess.Reflitem info, long time, LogMessage log, int identLog)
+    @Override public void execInspcRxOrder(InspcDataExchangeAccess.Inspcitem info, long time, LogMessage log, int identLog)
     { rxActionGetFields(info, time);
     }
     

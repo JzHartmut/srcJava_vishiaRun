@@ -44,7 +44,7 @@ public class InspcAccessEvaluatorRxTelg
   /**Reused instance to evaluate any info blocks.
    * 
    */
-  InspcDataExchangeAccess.Reflitem infoAccess = new InspcDataExchangeAccess.Reflitem();
+  InspcDataExchangeAccess.Inspcitem infoAccess = new InspcDataExchangeAccess.Inspcitem();
   
   
   public InspcAccessEvaluatorRxTelg()
@@ -100,20 +100,20 @@ public class InspcAccessEvaluatorRxTelg
   
   /**Evaluates a received telegram.
    * @param telgHead The telegram
-   * @param executer if given, than the {@link InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Reflitem)}
+   * @param executer if given, than the {@link InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem)}
    *        -method is called for any info block.<br>
    *        If null, then the order is searched like given with {@link #setExpectedOrder(int, InspcAccessExecRxOrder_ifc)}
    *        and that special routine is executed.
    * @return null if no error, if not null then it is an error description. 
    */
-  public String evaluate(InspcDataExchangeAccess.ReflDatagram telgHead, InspcAccessExecRxOrder_ifc executer, long time, LogMessage log, int identLog)
+  public String evaluate(InspcDataExchangeAccess.InspcDatagram telgHead, InspcAccessExecRxOrder_ifc executer, long time, LogMessage log, int identLog)
   { String sError = null;
-    int currentPos = InspcDataExchangeAccess.ReflDatagram.sizeofHead;
+    int currentPos = InspcDataExchangeAccess.InspcDatagram.sizeofHead;
     //for(InspcDataExchangeAccess.ReflDatagram telgHead: telgHeads){
       int nrofBytesTelgInHead = telgHead.getLengthDatagram();
       int nrofBytesTelg = telgHead.getLength();  //length from ByteDataAccess-management.
       //telgHead.assertNotExpandable();
-      while(sError == null && currentPos + InspcDataExchangeAccess.Reflitem.sizeofHead <= nrofBytesTelgInHead){
+      while(sError == null && currentPos + InspcDataExchangeAccess.Inspcitem.sizeofHead <= nrofBytesTelgInHead){
         telgHead.addChild(infoAccess);
         int nrofBytesInfo = infoAccess.getLenInfo();
         if(nrofBytesInfo <8){
@@ -129,7 +129,7 @@ public class InspcAccessEvaluatorRxTelg
               int order = infoAccess.getOrder();
               int cmd = infoAccess.getCmd();
               OrderWithTime timedOrder = ordersExpected.remove(order);
-              if(cmd == InspcDataExchangeAccess.Reflitem.kAnswerFieldMethod){
+              if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerFieldMethod){
                 //special case: The same order number is used for more items in the same sequence number.
                 if(timedOrder !=null){
                   orderGetFields = timedOrder;
@@ -162,7 +162,7 @@ public class InspcAccessEvaluatorRxTelg
   
   
   
-  public static float valueFloatFromRxValue(InspcDataExchangeAccess.Reflitem info, int type)
+  public static float valueFloatFromRxValue(InspcDataExchangeAccess.Inspcitem info, int type)
   {
     float ret = 0;
     if(type >= InspcDataExchangeAccess.kScalarTypes){
@@ -197,7 +197,7 @@ public class InspcAccessEvaluatorRxTelg
   
   
 
-  public static int valueIntFromRxValue(InspcDataExchangeAccess.Reflitem info, int type)
+  public static int valueIntFromRxValue(InspcDataExchangeAccess.Inspcitem info, int type)
   {
     int ret = 0;
     if(type >= InspcDataExchangeAccess.kScalarTypes){
@@ -236,7 +236,7 @@ public class InspcAccessEvaluatorRxTelg
    * @param info
    * @return The known character Z, C, D, F, B, S, I, J for the scalar types, 'c' for character array (String)
    */
-  public static int getInspcTypeFromRxValue(InspcDataExchangeAccess.Reflitem info)
+  public static int getInspcTypeFromRxValue(InspcDataExchangeAccess.Inspcitem info)
   {
     char ret = 0;
     int type = (int)info.getChildInteger(1);

@@ -28,7 +28,7 @@ public final class ClassContent implements CmdConsumer_ifc
    *   If the index is invalid, the {@link InspcDataExchangeAccess#kInvalidIndex} is returned for this value.
    *   The requester should remove that index. It is implemented in {@link org.vishia.inspectorAccessor.InspcVariable}.
    * <li>2013-01-10 Hartmut bugfix: If the path fails in 
-   *   {@link #getSetValueByPath(org.vishia.communication.InspcDataExchangeAccess.Reflitem, org.vishia.communication.InspcDataExchangeAccess.ReflSetValue, org.vishia.communication.InspcDataExchangeAccess.ReflDatagram, String, int)},
+   *   {@link #getSetValueByPath(org.vishia.communication.InspcDataExchangeAccess.Inspcitem, org.vishia.communication.InspcDataExchangeAccess.InspcSetValue, org.vishia.communication.InspcDataExchangeAccess.InspcDatagram, String, int)},
    *   It should be returned a message anyway. If nothing is returned, the calling doesn't know that problem 
    *   and the whole telegram may not be sent. It would cause a timeout.
    * <li>2012-04-08 Hartmut new: Support of GetValueByIdent
@@ -91,7 +91,7 @@ public final class ClassContent implements CmdConsumer_ifc
   
   /**Access element for {@link ByteDataAccess} to the answer Item. 
    * It is reused whenever an info item is to be added. */
-  private final InspcDataExchangeAccess.Reflitem answerItem = new InspcDataExchangeAccess.Reflitem();
+  private final InspcDataExchangeAccess.Inspcitem answerItem = new InspcDataExchangeAccess.Inspcitem();
   
   /**Buffer to prepare a array information in the answer of a telegram. */
   private final StringBuilder uArray = new StringBuilder(64);
@@ -133,39 +133,39 @@ public final class ClassContent implements CmdConsumer_ifc
 	{ this.answerComm = answerComm;
 	}
 
-	@Override public int executeMonitorCmd(InspcDataExchangeAccess.Reflitem cmd, InspcDataExchangeAccess.ReflDatagram answer, int maxNrofAnswerBytes) 
+	@Override public int executeMonitorCmd(InspcDataExchangeAccess.Inspcitem cmd, InspcDataExchangeAccess.InspcDatagram answer, int maxNrofAnswerBytes) 
 	throws IllegalArgumentException, UnsupportedEncodingException 
 	{ /**Switch to the cmd execution. */
 		int nOrder = cmd.getOrder();
 		int nCmd = cmd.getCmd();
-		nrofAnswerBytes = InspcDataExchangeAccess.ReflDatagram.sizeofHead;
+		nrofAnswerBytes = InspcDataExchangeAccess.InspcDatagram.sizeofHead;
 		switch(nCmd){
-		case InspcDataExchangeAccess.Reflitem.kGetFields:
+		case InspcDataExchangeAccess.Inspcitem.kGetFields:
 			cmdGetFields(cmd, answer, maxNrofAnswerBytes);
 			break;
-		case InspcDataExchangeAccess.Reflitem.kGetValueByPath:
+		case InspcDataExchangeAccess.Inspcitem.kGetValueByPath:
 			cmdGetValueByPath(cmd, answer, maxNrofAnswerBytes);
 			break;
-		case InspcDataExchangeAccess.Reflitem.kSetValueByPath:
+		case InspcDataExchangeAccess.Inspcitem.kSetValueByPath:
 			cmdSetValueByPath(cmd, answer, maxNrofAnswerBytes);
 			break;
-		case InspcDataExchangeAccess.Reflitem.kGetAddressByPath:
+		case InspcDataExchangeAccess.Inspcitem.kGetAddressByPath:
       cmdGetAddressByPath(cmd, answer, maxNrofAnswerBytes);
       break;
-    case InspcDataExchangeAccess.Reflitem.kRegisterRepeat:
+    case InspcDataExchangeAccess.Inspcitem.kRegisterRepeat:
       cmdRegisterRepeat(cmd, answer, maxNrofAnswerBytes);
       break;
-    case InspcDataExchangeAccess.Reflitem.kGetValueByIndex:
+    case InspcDataExchangeAccess.Inspcitem.kGetValueByIndex:
       cmdGetValueByIndex(cmd, answer, maxNrofAnswerBytes);
       break;
     default:
     { /**Unknown command - answer is: kFailedCommand.
        * think over another variant: return 0 to use delegation pattern ...
        */
-    	nrofAnswerBytes += InspcDataExchangeAccess.Reflitem.sizeofHead;
+    	nrofAnswerBytes += InspcDataExchangeAccess.Inspcitem.sizeofHead;
       answer.addChild(answerItem);
-      answerItem.setInfoHead(InspcDataExchangeAccess.Reflitem.sizeofHead
-      	, InspcDataExchangeAccess.Reflitem.kFailedCommand, nOrder);
+      answerItem.setInfoHead(InspcDataExchangeAccess.Inspcitem.sizeofHead
+      	, InspcDataExchangeAccess.Inspcitem.kFailedCommand, nOrder);
     }   
 		}//switch
 		return 0; //nrofAnswerBytes;
@@ -173,7 +173,7 @@ public final class ClassContent implements CmdConsumer_ifc
 	
 	
 	
-	private final int cmdGetFields(InspcDataExchangeAccess.Reflitem cmd, InspcDataExchangeAccess.ReflDatagram answer, int maxNrofAnswerBytes) 
+	private final int cmdGetFields(InspcDataExchangeAccess.Inspcitem cmd, InspcDataExchangeAccess.InspcDatagram answer, int maxNrofAnswerBytes) 
 	{
 	  //this.maxNrofAnswerBytes = maxNrofAnswerBytes;
 	  //this.answerP = answer;
@@ -184,7 +184,7 @@ public final class ClassContent implements CmdConsumer_ifc
     //ObjectJc* obj = null; 
     ClassJc clazz;
     
-    nrofAnswerBytes = InspcDataExchangeAccess.ReflDatagram.sizeofHead; 
+    nrofAnswerBytes = InspcDataExchangeAccess.InspcDatagram.sizeofHead; 
     boolean bQuestCollectionSize;
     int idxCollectionQuest;
     int nCmd;
@@ -286,8 +286,8 @@ public final class ClassContent implements CmdConsumer_ifc
           /**@java2c=nonPersistent,toStringNonPersist. */
           String sAnswer = uAnswer.toString();
           answerItem.addChildString(sAnswer);  //Note: first add the string, then set the head because the setInfoHead adjusts the length of head child.
-          answerItem.setInfoHead(lengthAnswer4 + InspcDataExchangeAccess.Reflitem.sizeofHead
-          	, InspcDataExchangeAccess.Reflitem.kAnswerFieldMethod, nOrderNr);
+          answerItem.setInfoHead(lengthAnswer4 + InspcDataExchangeAccess.Inspcitem.sizeofHead
+          	, InspcDataExchangeAccess.Inspcitem.kAnswerFieldMethod, nOrderNr);
           //  
 	      } else if(clazz != null) {
           //not a question to collection size, but real clazz found:
@@ -324,7 +324,7 @@ public final class ClassContent implements CmdConsumer_ifc
 	
 	
 	
- 	private final void evaluateFieldGetFields(InspcDataExchangeAccess.ReflDatagram answer, FieldJc field, int orderNr, int maxNrofAnswerBytes)
+ 	private final void evaluateFieldGetFields(InspcDataExchangeAccess.InspcDatagram answer, FieldJc field, int orderNr, int maxNrofAnswerBytes)
  	{
  		//FieldJc field = new FieldJc(fieldP);   //regard container types
  		String name = field.getName();
@@ -337,7 +337,7 @@ public final class ClassContent implements CmdConsumer_ifc
  	
  	
  	
- 	private final void evaluateFieldGetFields(InspcDataExchangeAccess.ReflDatagram answer, 
+ 	private final void evaluateFieldGetFields(InspcDataExchangeAccess.InspcDatagram answer, 
  	  String name, ClassJc typeField, int modifiers
  		,int  staticArraySize, int orderNr, int maxNrofAnswerBytes
  	)
@@ -366,7 +366,7 @@ public final class ClassContent implements CmdConsumer_ifc
 			int lengthArray = uArray.length();
 	    int lengthValue = uValue.length();
 	    /**calculate the length of the answer before writing. */
-	    int lengthAnswer = InspcDataExchangeAccess.Reflitem.sizeofHead + lengthName + 1 + lengthType 
+	    int lengthAnswer = InspcDataExchangeAccess.Inspcitem.sizeofHead + lengthName + 1 + lengthType 
 	                     + lengthArray + lengthValue + (hasSubstructure ? 3:0);
 	    int lengthAnswer4 = (lengthAnswer+3)/4 *4;  //aufgerundet durch 4 teilbar.
 	    if((nrofAnswerBytes + lengthAnswer4) > maxNrofAnswerBytes){
@@ -374,7 +374,7 @@ public final class ClassContent implements CmdConsumer_ifc
 	    	 * @java2c=dynamic-call. */
 	    	@Java4C.DynamicCall final AnswerComm_ifc answerCommMtbl = answerComm;  //concession to Java2C_ build Mtbl-reference
 	    	answerCommMtbl.txAnswer(nrofAnswerBytes, false); 
-	    	nrofAnswerBytes = InspcDataExchangeAccess.ReflDatagram.sizeofHead; 
+	    	nrofAnswerBytes = InspcDataExchangeAccess.InspcDatagram.sizeofHead; 
 	      answer.removeChildren();
 	      answer.incrAnswerNr();
 	    }
@@ -392,7 +392,7 @@ public final class ClassContent implements CmdConsumer_ifc
           //answerPos +=1;
         	uAnswer.append("...");
         }
-        assert(uAnswer.length() + InspcDataExchangeAccess.Reflitem.sizeofHead == lengthAnswer);  //should be the same.
+        assert(uAnswer.length() + InspcDataExchangeAccess.Inspcitem.sizeofHead == lengthAnswer);  //should be the same.
         if(lengthAnswer4 > lengthAnswer) 
         { uAnswer.append("\0\0\0".substring(0,lengthAnswer4 - lengthAnswer)); //fill rest with 0
         }
@@ -402,7 +402,7 @@ public final class ClassContent implements CmdConsumer_ifc
         String sAnswerAdd = uAnswer.toString();
 	    	answerItem.addChildString(sAnswerAdd);
         //Prepare the answer item for this field:
-        answerItem.setInfoHead(lengthAnswer4, InspcDataExchangeAccess.Reflitem.kAnswerFieldMethod, orderNr);
+        answerItem.setInfoHead(lengthAnswer4, InspcDataExchangeAccess.Inspcitem.kAnswerFieldMethod, orderNr);
         nrofAnswerBytes += lengthAnswer4;
       }
 		}
@@ -412,27 +412,27 @@ public final class ClassContent implements CmdConsumer_ifc
  	
  	
  	
-	private final int cmdGetValueByPath(InspcDataExchangeAccess.Reflitem cmd
-		, InspcDataExchangeAccess.ReflDatagram answer, int maxNrofAnswerBytes) 
+	private final int cmdGetValueByPath(InspcDataExchangeAccess.Inspcitem cmd
+		, InspcDataExchangeAccess.InspcDatagram answer, int maxNrofAnswerBytes) 
 	throws IllegalArgumentException, UnsupportedEncodingException 
 	{
 		int nrofBytesCmd = cmd.getLenInfo();
 		/**@java2c=nonPersistent.  */
-		String sVariablePath = cmd.getChildString(nrofBytesCmd - InspcDataExchangeAccess.Reflitem.sizeofHead);
+		String sVariablePath = cmd.getChildString(nrofBytesCmd - InspcDataExchangeAccess.Inspcitem.sizeofHead);
 		getSetValueByPath(cmd, null, answer, sVariablePath, maxNrofAnswerBytes);
 		return 0;
 	}
 	
-	private final int cmdSetValueByPath(InspcDataExchangeAccess.Reflitem cmd
-		, InspcDataExchangeAccess.ReflDatagram answer, int maxNrofAnswerBytes) 
+	private final int cmdSetValueByPath(InspcDataExchangeAccess.Inspcitem cmd
+		, InspcDataExchangeAccess.InspcDatagram answer, int maxNrofAnswerBytes) 
 	throws IllegalArgumentException, UnsupportedEncodingException 
 	{
 		int nrofBytesCmd = cmd.getLenInfo();
 		/**@java2c=stackInstance. */
-		InspcDataExchangeAccess.ReflSetValue setValue = new InspcDataExchangeAccess.ReflSetValue();
+		InspcDataExchangeAccess.InspcSetValue setValue = new InspcDataExchangeAccess.InspcSetValue();
 		cmd.addChild(setValue);
-		int nrofBytesPath = nrofBytesCmd - InspcDataExchangeAccess.Reflitem.sizeofHead 
-		                                 - InspcDataExchangeAccess.ReflSetValue.sizeofElement;
+		int nrofBytesPath = nrofBytesCmd - InspcDataExchangeAccess.Inspcitem.sizeofHead 
+		                                 - InspcDataExchangeAccess.InspcSetValue.sizeofElement;
 		/**@java2c=nonPersistent.  */
 		String sVariablePath = cmd.getChildString(nrofBytesPath);
 		getSetValueByPath(cmd, setValue, answer, sVariablePath, maxNrofAnswerBytes);
@@ -442,9 +442,9 @@ public final class ClassContent implements CmdConsumer_ifc
 
 	
 	private final int getSetValueByPath(
-		InspcDataExchangeAccess.Reflitem cmd
-		, InspcDataExchangeAccess.ReflSetValue accSetValue
-		, InspcDataExchangeAccess.ReflDatagram answer
+		InspcDataExchangeAccess.Inspcitem cmd
+		, InspcDataExchangeAccess.InspcSetValue accSetValue
+		, InspcDataExchangeAccess.InspcDatagram answer
 		, String sVariablePath
 		, int maxNrofAnswerBytes) 
 	throws IllegalArgumentException, UnsupportedEncodingException 
@@ -471,13 +471,13 @@ public final class ClassContent implements CmdConsumer_ifc
         answer.addChild(answerItem);
         getSetValue(theField, idx, theObject, accSetValue, maxNrofAnswerBytes);
         int nBytesItem = answerItem.getLength();
-        answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Reflitem.kAnswerValue, nOrderNr);
+        answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Inspcitem.kAnswerValue, nOrderNr);
       } else {
         //Info failed value to return. Note: If nothing is returned, the calling doesn't know that problem 
         //and the whole telegram may not be sent. It would cause a timeout. Bugfix on 2013-01-10
         answer.addChild(answerItem);
         int nBytesItem = answerItem.getLength();
-        answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Reflitem.kFailedPath, nOrderNr);
+        answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Inspcitem.kFailedPath, nOrderNr);
       }
     }catch(Exception exc){
     	/**Unexpected ...*/
@@ -502,7 +502,7 @@ public final class ClassContent implements CmdConsumer_ifc
 	 * @throws IllegalAccessException
 	 */
 	private boolean getSetValue(final FieldJc theField, int idx, final MemSegmJc theObject
-	   , InspcDataExchangeAccess.ReflSetValue accSetValue
+	   , InspcDataExchangeAccess.InspcSetValue accSetValue
 	   , int maxNrofAnswerBytes
 	) throws IllegalArgumentException, IllegalAccessException
 	{
@@ -694,7 +694,7 @@ public final class ClassContent implements CmdConsumer_ifc
       }
       bOk = restLen >= zValue +1;
       if(bOk){
-        int zInfo = zValue+1+InspcDataExchangeAccess.Reflitem.sizeofHead;
+        int zInfo = zValue+1+InspcDataExchangeAccess.Inspcitem.sizeofHead;
         nType = zValue;
         answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
         answerItem.addChildString(sValue);  //Set the character String after them.
@@ -711,12 +711,12 @@ public final class ClassContent implements CmdConsumer_ifc
 	
 	
 	
-	private final int cmdGetAddressByPath(InspcDataExchangeAccess.Reflitem cmd
-		, InspcDataExchangeAccess.ReflDatagram answer, int maxNrofAnswerBytes) 
+	private final int cmdGetAddressByPath(InspcDataExchangeAccess.Inspcitem cmd
+		, InspcDataExchangeAccess.InspcDatagram answer, int maxNrofAnswerBytes) 
 	throws IllegalArgumentException, UnsupportedEncodingException 
 	{
 		int nrofBytesCmd = cmd.getLenInfo();
-		int nrofBytesPath = nrofBytesCmd - InspcDataExchangeAccess.Reflitem.sizeofHead;
+		int nrofBytesPath = nrofBytesCmd - InspcDataExchangeAccess.Inspcitem.sizeofHead;
 		/**@java2c=nonPersistent.  */
 		String sVariablePath = cmd.getChildString(nrofBytesPath);
 		int nOrderNr =cmd.getOrder();
@@ -738,7 +738,7 @@ public final class ClassContent implements CmdConsumer_ifc
       theField = theFieldP[0];
       idx = idxP[0];
       answer.addChild(answerItem);
-      answerItem.setInfoHead(0, InspcDataExchangeAccess.Reflitem.kAnswerValue, nOrderNr);
+      answerItem.setInfoHead(0, InspcDataExchangeAccess.Inspcitem.kAnswerValue, nOrderNr);
     	if(theObject.obj() != null && theField !=null)
       { 
         int addr = theField.getMemoryIdent(theObject, idxP[0]);
@@ -746,7 +746,7 @@ public final class ClassContent implements CmdConsumer_ifc
     		answerItem.addChildInteger(4, addr); 
     		
       } else {
-      	answerItem.setCmd(InspcDataExchangeAccess.Reflitem.kFailedValue);
+      	answerItem.setCmd(InspcDataExchangeAccess.Inspcitem.kFailedValue);
       }
       answerItem.setLength(answerItem.getLength());  //the length of the answerItems in byte.
       
@@ -761,12 +761,12 @@ public final class ClassContent implements CmdConsumer_ifc
 	
 
 	
-	int cmdRegisterRepeat(InspcDataExchangeAccess.Reflitem cmd
-    , InspcDataExchangeAccess.ReflDatagram answer, int maxNrofAnswerBytes) 
+	int cmdRegisterRepeat(InspcDataExchangeAccess.Inspcitem cmd
+    , InspcDataExchangeAccess.InspcDatagram answer, int maxNrofAnswerBytes) 
   throws IllegalArgumentException, UnsupportedEncodingException 
 	{
     int nrofBytesCmd = cmd.getLenInfo();
-    int nrofBytesPath = nrofBytesCmd - InspcDataExchangeAccess.Reflitem.sizeofHead;
+    int nrofBytesPath = nrofBytesCmd - InspcDataExchangeAccess.Inspcitem.sizeofHead;
     /**@java2c=nonPersistent.  */
     String sVariablePath = cmd.getChildString(nrofBytesPath);
     int nOrderNr =cmd.getOrder();
@@ -788,7 +788,7 @@ public final class ClassContent implements CmdConsumer_ifc
       theField = theFieldP[0];
       idx = idxP[0];
       answer.addChild(answerItem);
-      answerItem.setInfoHead(0, InspcDataExchangeAccess.Reflitem.kAnswerRegisterRepeat, nOrderNr);
+      answerItem.setInfoHead(0, InspcDataExchangeAccess.Inspcitem.kAnswerRegisterRepeat, nOrderNr);
       if(theObject.obj() != null && theField !=null)
       { 
         ClassJc type = theField.getType();
@@ -831,7 +831,7 @@ public final class ClassContent implements CmdConsumer_ifc
         getSetValue(theField, idx, theObject, null, maxNrofAnswerBytes);
         answerItem.setLength(answerItem.getLength());  //the length of the answerItems in byte.
       } else { 
-        answerItem.setCmd(InspcDataExchangeAccess.Reflitem.kFailedPath);
+        answerItem.setCmd(InspcDataExchangeAccess.Inspcitem.kFailedPath);
       }
       answerItem.setLength(answerItem.getLength());  //the length of the answerItems in byte.
       
@@ -846,11 +846,11 @@ public final class ClassContent implements CmdConsumer_ifc
 
 
 	
-	int cmdGetValueByIndex(InspcDataExchangeAccess.Reflitem cmd
-    , InspcDataExchangeAccess.ReflDatagram answer, int maxNrofAnswerBytes) 
+	int cmdGetValueByIndex(InspcDataExchangeAccess.Inspcitem cmd
+    , InspcDataExchangeAccess.InspcDatagram answer, int maxNrofAnswerBytes) 
   throws IllegalArgumentException, UnsupportedEncodingException
   {
-    int nrofVariable = (cmd.getLenInfo() - InspcDataExchangeAccess.Reflitem.sizeofHead) / 4; 
+    int nrofVariable = (cmd.getLenInfo() - InspcDataExchangeAccess.Inspcitem.sizeofHead) / 4; 
     //cyclTime_MinMaxTime_Fwc(timeValueRepeat);
     try
     { int idxOutput = 0;
@@ -874,7 +874,7 @@ public final class ClassContent implements CmdConsumer_ifc
         }
       }//while
       int nBytesItem = answerItem.getLength();
-      answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Reflitem.kAnswerValueByIndex, nOrderNr);
+      answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Inspcitem.kAnswerValueByIndex, nOrderNr);
     } catch(IllegalAccessException exc){
       System.err.println("ClassContent - cmdGetValueByIndex; Unexpected IllegalAccessException");
     }

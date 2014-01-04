@@ -19,7 +19,7 @@ public class InspcVariable implements VariableAccess_ifc
   /**Version, history and license.
    * <ul>
    * <li>2013-12-07 Hartmut new: {@link #itsStruct} 
-   * <li>2013-12-07 Hartmut chg: In {@link VariableRxAction}: Answer from target with info.cmd = {@link InspcDataExchangeAccess.Reflitem#kFailedPath} 
+   * <li>2013-12-07 Hartmut chg: In {@link VariableRxAction}: Answer from target with info.cmd = {@link InspcDataExchangeAccess.Inspcitem#kFailedPath} 
    *   disables this variable from data communication. TODO enable with user action if the target was changed (recompiled, restarted etc).
    * <li>2013-12-07 Hartmut chg: In {@link VariableRxAction}: Answer from target with variable type designation = {@link InspcDataExchangeAccess#kInvalidIndex}
    *   The requester should remove that index. Then a new {@link InspcTargetAccessor#cmdRegisterByPath(String, InspcAccessExecRxOrder_ifc)}
@@ -71,9 +71,9 @@ public class InspcVariable implements VariableAccess_ifc
      /**This method is called for any info block in the received telegram from target,
      * if this implementing instance is stored on the order.
      * It prepares the value presentation.
-     * @see org.vishia.inspectorAccessor.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Reflitem)
+     * @see org.vishia.inspectorAccessor.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem)
      */
-    @Override public void execInspcRxOrder(InspcDataExchangeAccess.Reflitem info, long time, LogMessage log, int identLog)
+    @Override public void execInspcRxOrder(InspcDataExchangeAccess.Inspcitem info, long time, LogMessage log, int identLog)
     {
       //String sShow;
       //int order = info.getOrder();
@@ -82,13 +82,13 @@ public class InspcVariable implements VariableAccess_ifc
         
       //}
       switch(cmd){
-        case InspcDataExchangeAccess.Reflitem.kAnswerRegisterRepeat: {
+        case InspcDataExchangeAccess.Inspcitem.kAnswerRegisterRepeat: {
           int ident = (int)info.getChildInteger(4);
           InspcVariable.this.idTarget = ident;
         } //no break, use next case too!
         //$FALL-THROUGH$
-        case InspcDataExchangeAccess.Reflitem.kAnswerValueByIndex:  //same handling, though only one of some values are gotten.
-        case InspcDataExchangeAccess.Reflitem.kAnswerValue: {
+        case InspcDataExchangeAccess.Inspcitem.kAnswerValueByIndex:  //same handling, though only one of some values are gotten.
+        case InspcDataExchangeAccess.Inspcitem.kAnswerValue: {
           int typeInspc = InspcAccessEvaluatorRxTelg.getInspcTypeFromRxValue(info);
           InspcVariable.this.cType = InspcAccessEvaluatorRxTelg.getTypeFromInspcType(typeInspc);
           if(typeInspc == InspcDataExchangeAccess.kTypeNoValue || typeInspc == InspcDataExchangeAccess.kInvalidIndex){
@@ -107,7 +107,7 @@ public class InspcVariable implements VariableAccess_ifc
           varMng.variableIsReceived(InspcVariable.this);
           timeRefreshed = time;
         } break;
-        case InspcDataExchangeAccess.Reflitem.kFailedPath:{
+        case InspcDataExchangeAccess.Inspcitem.kFailedPath:{
           System.err.println("InspcAccessEvaluatorRxTelg - failed path; " + sPathInTarget);
           idTarget = kIdTargetDisabled;
         } break;

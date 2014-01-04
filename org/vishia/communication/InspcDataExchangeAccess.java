@@ -37,22 +37,22 @@ public class InspcDataExchangeAccess
 	
   /**Version, history and license.
    * <ul>
-   * <li>2013-12-08 Hartmut chg: Rename Datagram to {@link ReflDatagram} and Info to {@link Reflitem}, better to associate.
-   * <li>2013-12-08 Hartmut new: {@link ReflSetValueData} 
+   * <li>2013-12-08 Hartmut chg: Rename Datagram to {@link InspcDatagram} and Info to {@link Inspcitem}, better to associate.
+   * <li>2013-12-08 Hartmut new: {@link InspcSetValueData} 
    * <li>2013-12-07 Hartmut chg:
    *   <ul>
-   *   <li>{@link ReflDatagram#setHeadRequest(int, int, int)} with answerNr = 0 and {@link ReflDatagram#setHeadAnswer(int, int, int)}
+   *   <li>{@link InspcDatagram#setHeadRequest(int, int, int)} with answerNr = 0 and {@link InspcDatagram#setHeadAnswer(int, int, int)}
    *     with previous behavior, answerNr = 1 initial. A request telegram sends the answerNr = 0 up to now.
-   *   <li>Some {@link ReflDatagram#knrofBytes} etc. now private. Any application uses the access methods.
-   *   <li>new {@link ReflDatagram#getAnswerNr()} and {@link ReflDatagram#lastAnswer()}  
-   *   <li>new {@link Reflitem#kSetvaluedata}, {@link Reflitem#kAnswervaluedata} as a new kind of request.
+   *   <li>Some {@link InspcDatagram#knrofBytes} etc. now private. Any application uses the access methods.
+   *   <li>new {@link InspcDatagram#getAnswerNr()} and {@link InspcDatagram#lastAnswer()}  
+   *   <li>new {@link Inspcitem#kSetvaluedata}, {@link Inspcitem#kAnswervaluedata} as a new kind of request.
    *   <li>new {@link #kInvalidIndex} to distinguish an index error from a value error.
    *   </ul> 
-   * <li>2012-04-09 Hartmut new: Some enhancements, especially {@link Reflitem#kGetValueByIndex} 
-   *   The {@link Reflitem#setInfoHead(int, int, int)} and {@link Reflitem#setLength(int)} now adjusts the
+   * <li>2012-04-09 Hartmut new: Some enhancements, especially {@link Inspcitem#kGetValueByIndex} 
+   *   The {@link Inspcitem#setInfoHead(int, int, int)} and {@link Inspcitem#setLength(int)} now adjusts the
    *   length of the element and parent in the {@link ByteDataAccess} data with the same.
    *   Set this information at end of filling variable data in an Info item, then all is correct.
-   * <li>2011-06-21 Hartmut new {@link ReflSetValue} completed with set-methods. 
+   * <li>2011-06-21 Hartmut new {@link InspcSetValue} completed with set-methods. 
    *     Note: Because this class is used in Java2C for C-Programming, the short methods should be designated
    *     to use macros while translation Java2C.
    * <li>2011-01-01 Hartmut Translated to Java
@@ -89,7 +89,7 @@ public class InspcDataExchangeAccess
 	/**Preparing the header of a datagram.
 	 * 
 	 */
-	public final static class ReflDatagram extends ByteDataAccess
+	public final static class InspcDatagram extends ByteDataAccess
 	{
 		private static final int knrofBytes = 0;
 		private static final int knEntrant = 2;  //2
@@ -100,13 +100,13 @@ public class InspcDataExchangeAccess
 		private static final int kspare14 =14;      //12
     public static final int sizeofHead = 16;
 
-		public ReflDatagram(byte[] buffer)
+		public InspcDatagram(byte[] buffer)
 		{ this();
 			assignEmpty(buffer);
 			setBigEndian(true);
 		}
 		
-		public ReflDatagram()
+		public InspcDatagram()
 		{ super();
 			setBigEndian(true);
 		}
@@ -212,7 +212,7 @@ public class InspcDataExchangeAccess
 	 * {@link ByteDataAccess#addChildInteger(int, long)} or {@link ByteDataAccess#addChildString(String)}. 
 	 * and the methods to get
 	 * {@link ByteDataAccess#getChildInteger(int)} or {@link ByteDataAccess#getChildString(int)}.
-	 * The childs may be described by a named-here class, forex {@link ReflSetValue}
+	 * The childs may be described by a named-here class, forex {@link InspcSetValue}
 	 * <br><br>
 	 * The structure of an information entry may be described with XML, where the XML is only
 	 * a medium to show the structures, for example:
@@ -222,7 +222,7 @@ public class InspcDataExchangeAccess
 	 * In this case 8 Bytes are added after the head. The length stored in the head is 16. 
 	 * The <StringValue...> consists of a length byte, following by ASCII-character.
 	 */
-	public static class Reflitem extends ByteDataAccess
+	public static class Inspcitem extends ByteDataAccess
 	{
       private final static int kbyteOrder = 4;
 	  public final static int sizeofHead = 8;
@@ -370,11 +370,11 @@ public class InspcDataExchangeAccess
 		
 		public static final int kSpecialValueStart = 0x7000, kSpecialValueLast = 0x7fff;
 		
-		public Reflitem(int sizeData){
+		public Inspcitem(int sizeData){
       super(sizeofHead, sizeData);
     }
     
-		public Reflitem(){
+		public Inspcitem(){
       super(sizeofHead, -1);
     }
     
@@ -470,13 +470,13 @@ public class InspcDataExchangeAccess
  * 
  */
 @Java4C.extendsOnlyMethods
-public final static class ReflSetValue extends ByteDataAccess{
+public final static class InspcSetValue extends ByteDataAccess{
 	
 	public final static int sizeofElement = 16;
 
 	private final static int kType = 7;
 	
-	public ReflSetValue(){
+	public InspcSetValue(){
 	  super(0, sizeofElement);
 		setBigEndian(true);
 	}
@@ -534,8 +534,12 @@ public final static class ReflSetValue extends ByteDataAccess{
   { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int64);  _setLong(8, 8, value);} 
    
   /**Sets a float value. */
-	@Java4C.define public void setFloat(float value)
+  @Java4C.define public void setFloat(float value)
   { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_float);  setFloat(12, value);} 
+  
+  /**Sets a float value given by a int image. */
+  @Java4C.define public void setFloatIntImage(int value)
+  { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_float);  _setLong(12, 4, value);} 
   
   /**Sets a double value. */
 	@Java4C.define public void setDouble(double value)
@@ -559,67 +563,72 @@ public final static class ReflSetValue extends ByteDataAccess{
  * <pre>
  * InspcSetValueData::= <@0+8 Inspcitem> <@8+4#?address> <@12+4#?position> <@16 ReflSetValue>
  * </pre>
- * uses @{@link Reflitem}, {@link ReflSetValue}
+ * uses @{@link Inspcitem}, {@link InspcSetValue}
  */
 @Java4C.extendsOnlyMethods
-public final static class ReflSetValueData extends Reflitem {
+public final static class InspcSetValueData extends Inspcitem {
   
   public final static int sizeofElement = 32;
 
-  public ReflSetValueData(){
+  public InspcSetValueData(){
     super(sizeofElement);
     setBigEndian(true);
-    
   }
 
   @Java4C.define public void setAddress(int address){ _setLong(8, 4, address); }
 
   @Java4C.define public void setPosition(int position){ _setLong(12, 4, position); }
 
-  public void setBool(int value){ 
-    ReflSetValue setValue = new ReflSetValue();
+  @Java4C.define public void setBool(int value){ 
+    @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setBool((byte)value);
   }
   
-  public void setShort(int value){ 
-    ReflSetValue setValue = new ReflSetValue();
+  @Java4C.define public void setShort(int value){ 
+    @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setShort((short)value);
   }
   
-  public void setByte(int value){ 
-    ReflSetValue setValue = new ReflSetValue();
+  @Java4C.define public void setByte(int value){ 
+    @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setByte((byte)value);
   }
   
-  public void setInt(int value){ 
-    ReflSetValue setValue = new ReflSetValue();
+  @Java4C.define public void setInt(int value){ 
+    @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setInt(value);
   }
   
-  public void setFloat(float value){ 
-    ReflSetValue setValue = new ReflSetValue();
+  @Java4C.define public void setFloat(float value){ 
+    @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setFloat(value);
   }
   
-  public void setDouble(double value){ 
-    ReflSetValue setValue = new ReflSetValue();
+  @Java4C.define public void setFloatIntImage(int value){ 
+    @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
+    setValue.assignAtIndex(16, this);
+    setValue.setFloatIntImage(value);
+  }
+  
+  @Java4C.define public void setDouble(double value){ 
+    @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setDouble(value);
   }
   
-  public void setLong(long value){ 
-    ReflSetValue setValue = new ReflSetValue();
+  @Java4C.define public void setLong(long value){ 
+    @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setLong(value);
   }
   
   @Java4C.define public void setHead(int order){
-    super.setInfoHead(sizeofElement, InspcDataExchangeAccess.Reflitem.kSetvaluedata, order);
+    super.setInfoHead(sizeofElement, InspcDataExchangeAccess.Inspcitem.kSetvaluedata, order);
   }
 
 }

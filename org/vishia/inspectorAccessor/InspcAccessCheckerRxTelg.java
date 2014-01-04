@@ -27,14 +27,14 @@ public class InspcAccessCheckerRxTelg
   /**True if a awaited telegram was received. */
   private boolean received;
   
-  final InspcDataExchangeAccess.ReflDatagram rxTelg = new InspcDataExchangeAccess.ReflDatagram();
+  final InspcDataExchangeAccess.InspcDatagram rxTelg = new InspcDataExchangeAccess.InspcDatagram();
 
   /**Accumulator for all answer telegrams. Usual it is only 1 telegram. But up to the max number may be received.
    * The communication supports only 1 send telegram, but with more as one info blocks.
    * The answer telegram can contain 1 or more info blocks. The answers may be longer as the requests.
    * Therefore more as one answer telegrams can be received.
    */
-  private InspcDataExchangeAccess.ReflDatagram[] answerTelgs; 
+  private InspcDataExchangeAccess.InspcDatagram[] answerTelgs; 
   
 
   public InspcAccessCheckerRxTelg()
@@ -68,7 +68,7 @@ public class InspcAccessCheckerRxTelg
    * @param timeout
    * @return null if timeout, elsewhere the answer telegram with given head and content.
    */
-  InspcDataExchangeAccess.ReflDatagram[] waitForAnswer(int timeout)
+  InspcDataExchangeAccess.InspcDatagram[] waitForAnswer(int timeout)
   { boolean bAnswer;
     synchronized(this){
       if(received){  //received already before this method is called:
@@ -80,7 +80,7 @@ public class InspcAccessCheckerRxTelg
       }
     }
     if(bAnswer){
-      InspcDataExchangeAccess.ReflDatagram[] answers = new InspcDataExchangeAccess.ReflDatagram[1];
+      InspcDataExchangeAccess.InspcDatagram[] answers = new InspcDataExchangeAccess.InspcDatagram[1];
       answers[0] = answerTelgs[0];
       return answers;
     } else {
@@ -101,7 +101,7 @@ public class InspcAccessCheckerRxTelg
       int rxSeqnr = rxTelg.getSeqnr();
       if(rxSeqnr == awaitSeqNumber){
         //TODO check if the answer should consist of more as one telg
-        answerTelgs = new InspcDataExchangeAccess.ReflDatagram[1];
+        answerTelgs = new InspcDataExchangeAccess.InspcDatagram[1];
         answerTelgs[0] = rxTelg;
         if(executerAnswer !=null){
           if(bWaiting){
