@@ -390,7 +390,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         var = new FieldJcVariableAccess(this, field[0]);
       } else {
         PathStructAccessor path1 = getTargetFromPath(sDataPathOfWidget);
-        if(path1.accessor !=null){
+        if(path1 !=null && path1.accessor !=null){
           var = new InspcVariable(this, path1.accessor, path1.itsStruct, path1.sPathInTarget, path1.sName);
         } else {
           System.err.println("InspcMng - Variable target unknown; " + sDataPathOfWidget); 
