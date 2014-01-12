@@ -327,6 +327,10 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   
   
+  /**Enables or disables the logging of communication activity.
+   * @param log null then log is off. Any log output.
+   * @param ident base identification for the messages.
+   */
   public void setLogForTargetComm(LogMessage log, int ident){
     this.logTelg = log;
     this.identLogTelg = ident;
@@ -448,7 +452,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
           } else {
             //The variable is not able to get, remove the request.
             //The request will be repeat if the variable is newly requested.
-            var.requestValue(0);
+            var.requestValue(0, null);
           }
           
         }
@@ -577,30 +581,36 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    * @param retDataPath
    * @return
    */
-  PathStructAccessor getTargetFromPath(String sDataPath){
-    PathStructAccessor ret = new PathStructAccessor();
+  public PathStructAccessor getTargetFromPath(String sDataPath){
+    final InspcTargetAccessor accessor;
+    final String sPathInTarget;
+    final String sName;
+    InspcStruct itsStruct;
+    
     int posSepDevice = sDataPath.indexOf(':');
     if(posSepDevice >0){
       String sDevice = sDataPath.substring(0, posSepDevice);
-      ret.accessor = indexTargetAccessor.get(sDevice);
-      if(ret.accessor == null){
+      accessor = indexTargetAccessor.get(sDevice);
+      if(accessor == null){
         errorDevice(sDevice);
       }
       int posName = sDataPath.lastIndexOf('.');
       if(posName >0){
         String sStructPath = sDataPath.substring(/*posSepDevice +1*/ 0, posName);
-        ret.itsStruct = idxAllStruct.get(sStructPath);
-        if(ret.itsStruct == null){
-          InspcStruct parent = getOrCreateParentStruct(sStructPath, ret.accessor);
-          ret.itsStruct = new InspcStruct(sStructPath, ret.accessor, parent);
-          idxAllStruct.put(sStructPath, ret.itsStruct);
+        itsStruct = idxAllStruct.get(sStructPath);
+        if(itsStruct == null){
+          InspcStruct parent = getOrCreateParentStruct(sStructPath, accessor);
+          itsStruct = new InspcStruct(sStructPath, accessor, parent);
+          idxAllStruct.put(sStructPath, itsStruct);
         }
-        ret.sName = sDataPath.substring(posName +1);
+        sName = sDataPath.substring(posName +1);
       } else {
-        ret.sName = sDataPath.substring(posSepDevice +1);
+        sName = sDataPath.substring(posSepDevice +1);
+        itsStruct = null;
       }
-      ret.sPathInTarget = sDataPath.substring(posSepDevice +1);
-      return ret;
+      sPathInTarget = sDataPath.substring(posSepDevice +1);
+      return new PathStructAccessor(accessor, sPathInTarget, sName, itsStruct);
+      
     } else {
       return null;
     }
@@ -766,11 +776,19 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   void stop(){}
   
-  static class PathStructAccessor{
-    InspcTargetAccessor accessor;
-    String sPathInTarget;
-    String sName;
-    InspcStruct itsStruct;
+  public static class PathStructAccessor{
+    public final InspcTargetAccessor accessor;
+    public final String sPathInTarget;
+    public final String sName;
+    public final InspcStruct itsStruct;
+    
+    public PathStructAccessor(InspcTargetAccessor accessor, String sPathInTarget, String sName, InspcStruct itsStruct)
+    { this.accessor = accessor;
+      this.sPathInTarget = sPathInTarget;
+      this.sName = sName;
+      this.itsStruct = itsStruct;
+    }
+    
   }
   
 }

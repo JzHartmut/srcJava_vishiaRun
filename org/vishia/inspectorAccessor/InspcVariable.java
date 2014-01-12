@@ -2,6 +2,8 @@ package org.vishia.inspectorAccessor;
 
 import java.util.Map;
 
+import org.vishia.bridgeC.ConcurrentLinkedQueue;
+import org.vishia.bridgeC.IllegalArgumentExceptionJc;
 import org.vishia.byteData.VariableAccessArray_ifc;
 import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.communication.InspcDataExchangeAccess;
@@ -106,6 +108,10 @@ public class InspcVariable implements VariableAccess_ifc
           }
           varMng.variableIsReceived(InspcVariable.this);
           timeRefreshed = time;
+          Runnable runReceived;
+          while((runReceived = runOnRecv.poll())!=null){
+            runReceived.run();
+          }
         } break;
         case InspcDataExchangeAccess.Inspcitem.kFailedPath:{
           System.err.println("InspcAccessEvaluatorRxTelg - failed path; " + sPathInTarget);
@@ -147,6 +153,8 @@ public class InspcVariable implements VariableAccess_ifc
   long timeRequested;
   
   long timeRefreshed;
+  
+  private final ConcurrentLinkedQueue<Runnable> runOnRecv = new ConcurrentLinkedQueue<Runnable>();
   
   /**The value from the target device. */
   float valueF;
@@ -292,6 +300,22 @@ public class InspcVariable implements VariableAccess_ifc
   @Override public long getLastRefreshTime(){ return timeRefreshed; }
 
   @Override public void requestValue(long time){ this.timeRequested = time; }
+  
+  @Override public void requestValue(long time, Runnable run)
+  {
+    this.timeRequested = time;
+    if(run !=null){
+      int catastrophicCount = 10;
+      while(this.runOnRecv.remove(run)){  //prevent multiple add 
+        if(--catastrophicCount <0){ throw new IllegalArgumentExceptionJc("InspcVariable - requestValue catastrophicalCount", run.hashCode()); }
+      }
+      boolean offerOk = this.runOnRecv.offer(run);
+      if(!offerOk){ throw new IllegalArgumentExceptionJc("InspcVariable - requestValue run cannot be added", run.hashCode()); }
+    }
+  }
+  
+
+  
   
   @Override public boolean isRequestedValue(boolean retryFaultyVariables){
     if(timeRequested == 0) return false;  //never requested

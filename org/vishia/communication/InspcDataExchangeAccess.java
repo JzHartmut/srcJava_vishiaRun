@@ -484,73 +484,73 @@ public final static class InspcSetValue extends ByteDataAccess{
 	/**Gets a password for access control.
 	 * @return The password.
 	 */
-	@Java4C.define public long getPwd(){ return _getLong(0, 6); }
+	@Java4C.inline public long getPwd(){ return _getLong(0, 6); }
 	
 	
-	@Java4C.define public void setPwd(int pwd){ _setLong(0, 6, pwd); }
+	@Java4C.inline public void setPwd(int pwd){ _setLong(0, 6, pwd); }
 	
-	@Java4C.define public byte getType(){ return (byte) _getLong(7, 1); }
+	@Java4C.inline public byte getType(){ return (byte) _getLong(7, 1); }
 
-	@Java4C.define public byte getByte(){ return (byte)_getLong(15, -1);} 
+	@Java4C.inline public byte getByte(){ return (byte)_getLong(15, -1);} 
 	
-	@Java4C.define public short getShort(){ return (short)_getLong(14, -2);} 
+	@Java4C.inline public short getShort(){ return (short)_getLong(14, -2);} 
 	
 	/**A long value is provided in the bytes 8..15 in Big endian.
 	 * If only a int value will be used, it were found in the bit 12..15.
 	 * @return The int value.
 	 */
-	@Java4C.define public int getInt(){ return (int)_getLong(12, -4); }
+	@Java4C.inline public int getInt(){ return (int)_getLong(12, -4); }
 	
 	/**A long value is provided in the bytes 8..15 in Big endian.
 	 * @return The long value.
 	 */
-	@Java4C.define public long getLong(){ return _getLong(8, -8); }
+	@Java4C.inline public long getLong(){ return _getLong(8, -8); }
 	
 	/**A float value is provided in the bytes 8..11 in Big endian.
 	 * @return The float value.
 	 */
-	@Java4C.define public float getFloat(){ return getFloat(8); }
+	@Java4C.inline public float getFloat(){ return getFloat(8); }
 	
-	@Java4C.define public double getDouble(){ return getDouble(8); }
+	@Java4C.inline public double getDouble(){ return getDouble(8); }
 
   /**Sets a byte value. */
-  @Java4C.define public void setBool(int value)
+  @Java4C.inline public void setBool(int value)
   { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_boolean);  _setLong(15, 1, value);} 
   
   /**Sets a byte value. */
-  @Java4C.define public void setByte(int value)
+  @Java4C.inline public void setByte(int value)
   { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int8);  _setLong(15, 1, value);} 
   
   /**Sets a short value. */
-	@Java4C.define public void setShort(int value)
+	@Java4C.inline public void setShort(int value)
   { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int16);  _setLong(14, 2, value);} 
   
   /**Sets a int32 value. */
-	@Java4C.define public void setInt(int value)
+	@Java4C.inline public void setInt(int value)
 	{ clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int32); _setLong(12, 4, value);} 
   
   /**Sets a long value (int64). */
-	@Java4C.define public void setLong(long value)
+	@Java4C.inline public void setLong(long value)
   { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int64);  _setLong(8, 8, value);} 
    
   /**Sets a float value. */
-  @Java4C.define public void setFloat(float value)
+  @Java4C.inline public void setFloat(float value)
   { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_float);  setFloat(12, value);} 
   
   /**Sets a float value given by a int image. */
-  @Java4C.define public void setFloatIntImage(int value)
+  @Java4C.inline public void setFloatIntImage(int value)
   { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_float);  _setLong(12, 4, value);} 
   
   /**Sets a double value. */
-	@Java4C.define public void setDouble(double value)
+	@Java4C.inline public void setDouble(double value)
   { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_double);  setDouble(8, value);} 
   
-  @Java4C.define @Override protected void specifyEmptyDefaultData() { }
+  @Java4C.inline @Override protected void specifyEmptyDefaultData() { }
 
-  @Java4C.define @Override protected int specifyLengthElement() throws IllegalArgumentException
+  @Java4C.inline @Override protected int specifyLengthElement() throws IllegalArgumentException
 	{ return sizeofElement; }
 
-  @Java4C.define @Override public int specifyLengthElementHead()
+  @Java4C.inline @Override public int specifyLengthElementHead()
 	{ return sizeofElement; }
 	
 	
@@ -575,59 +575,59 @@ public final static class InspcSetValueData extends Inspcitem {
     setBigEndian(true);
   }
 
-  @Java4C.define public void setAddress(int address){ _setLong(8, 4, address); }
+  @Java4C.inline public void setAddress(int address){ _setLong(8, 4, address); }
 
-  @Java4C.define public void setPosition(int position){ _setLong(12, 4, position); }
+  @Java4C.inline public void setPosition(int position){ _setLong(12, 4, position); }
 
-  @Java4C.define public void setBool(int value){ 
+  @Java4C.inline public void setBool(int value){ 
     @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setBool((byte)value);
   }
   
-  @Java4C.define public void setShort(int value){ 
+  @Java4C.inline public void setShort(int value){ 
     @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setShort((short)value);
   }
   
-  @Java4C.define public void setByte(int value){ 
+  @Java4C.inline public void setByte(int value){ 
     @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setByte((byte)value);
   }
   
-  @Java4C.define public void setInt(int value){ 
+  @Java4C.inline public void setInt(int value){ 
     @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setInt(value);
   }
   
-  @Java4C.define public void setFloat(float value){ 
+  @Java4C.inline public void setFloat(float value){ 
     @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setFloat(value);
   }
   
-  @Java4C.define public void setFloatIntImage(int value){ 
+  @Java4C.inline public void setFloatIntImage(int value){ 
     @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setFloatIntImage(value);
   }
   
-  @Java4C.define public void setDouble(double value){ 
+  @Java4C.inline public void setDouble(double value){ 
     @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setDouble(value);
   }
   
-  @Java4C.define public void setLong(long value){ 
+  @Java4C.inline public void setLong(long value){ 
     @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
     setValue.assignAtIndex(16, this);
     setValue.setLong(value);
   }
   
-  @Java4C.define public void setHead(int order){
+  @Java4C.inline public void setHead(int order){
     super.setInfoHead(sizeofElement, InspcDataExchangeAccess.Inspcitem.kSetvaluedata, order);
   }
 

@@ -775,7 +775,7 @@ public class InspcTargetAccessor
     timeReceive = System.currentTimeMillis();
     dtimeReceive = timeReceive - timeSend;
     if(logTelg !=null){ 
-      logTelg.sendMsg(identLogTelg+3, "recv telg after %d ms", new Long(dtimeReceive)); 
+      logTelg.sendMsg(identLogTelg+4, "recv telg after %d ms", new Long(dtimeReceive)); 
     }
     long time = System.currentTimeMillis();
     accessRxTelg.assignData(rxBuffer, rxLength);
@@ -789,28 +789,41 @@ public class InspcTargetAccessor
       if((bitsAnswerNrRx[ixAnswer] & bitAnswer) ==0){
         bitsAnswerNrRx[ixAnswer] |= bitAnswer;
         //
-        rxEval.evaluate(accessRxTelg, null, time, null, 0);
+        rxEval.evaluate(accessRxTelg, null, time, logTelg, identLogTelg +5);
         //
         if(accessRxTelg.lastAnswer()){
           //bSendPending = false;
           if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Rcv last answer; " + rxSeqnr);
+          if(logTelg !=null){ 
+            logTelg.sendMsg(identLogTelg+4, "recv ok last telg seqn=%d nAnswer=%d after %d ms", new Integer(rxSeqnr), new Integer(nAnswer), new Long(dtimeReceive)); 
+          }
           Arrays.fill(bitsAnswerNrRx, 0);
-          //
+          // 
           rxEval.lastTelg();
           txNextAfterRcv();
           //
         } else {
           //sendPending: It is not the last answer, remain true
           if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Rcv answer; " + nAnswer + "; seqn=" + rxSeqnr);
+          if(logTelg !=null){ 
+            logTelg.sendMsg(identLogTelg+4, "recv ok not last telg seqn=%d nAnswer=%d after %d ms", new Integer(rxSeqnr), new Integer(nAnswer), new Long(dtimeReceive)); 
+          }
         }
       } else {
         //sendPending: rx is not an anwer, ignored, remain true
-        if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor - faulty seqnr; " + rxSeqnr + "; expected " + this.nSeqNumberTxRx);
+        if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor - faulty answernr; " + rxSeqnr + "; expected " + this.nSeqNumberTxRx);
         //faulty seqnr
+        if(logTelg !=null){ 
+          logTelg.sendMsg(identLogTelg+4, "recv repeated telg seqn=%d nAnswer=%d after %d ms", new Integer(rxSeqnr), new Integer(nAnswer), new Long(dtimeReceive)); 
+        }
       }
     } else {
       //sendPending: is false, unexpected rx
       if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor - unexpected rx; ");
+      if(logTelg !=null){ 
+        logTelg.sendMsg(identLogTelg+4, "recv failed seqn=%d after %d ms", new Integer(rxSeqnr), new Long(dtimeReceive)); 
+      }
+
     }
   }
   

@@ -46,5 +46,10 @@ public interface UserInspcPlug_ifc // extends GralPlugUser2Gral_ifc
    * @param target A String[1] to return the target part. 
    * @return The path with dissolved prefix and dissolved target from path or prefix.
    */
-  String replacePathPrefix(String path, String[] target); 
+  String XXXreplacePathPrefix(String path, String[] target); 
+  
+  
+  InspcMng.PathStructAccessor getTargetFromPath(String sDataPath);
+
+  
 }

@@ -46,12 +46,14 @@ import java.util.TimeZone;
 import org.vishia.bridgeC.ConcurrentLinkedQueue;
 import org.vishia.bridgeC.OS_TimeStamp;
 import org.vishia.bridgeC.Va_list;
+import org.vishia.util.Java4C;
 
 public class LogMessageFile implements LogMessage
 {
 
   /**Version, history and license.
    * <ul>
+   * <li>2013-03-24 Hartmut check size 
    * <li>2013-03-24 Hartmut bugfix: If a message text contains '%' formatting character but the variable arguments
    *   are empty, it should not call format(). In this case the text should keep its '%' characters.
    * <li>2012-04-05 Hartmut chg: If only a simple file name is given, it is closed and re-opened with append.
@@ -190,9 +192,9 @@ public class LogMessageFile implements LogMessage
   /**List of messages to process if the file is able to open.
    * @java2c=noGC.
    */
-  final ConcurrentLinkedQueue<MsgDispatcherCore.Entry> parkedOrders;
+  final ConcurrentLinkedQueue<MsgDispatcherCore.Entry> parkedOrders = new ConcurrentLinkedQueue<MsgDispatcherCore.Entry>(false);
 
-  /**Common poop of entries to save messages.
+  /**Common pool of entries to save messages.
    * @java2c=noGC.
    */
   final ConcurrentLinkedQueue<MsgDispatcherCore.Entry> freeEntries;
@@ -249,10 +251,10 @@ public class LogMessageFile implements LogMessage
   	String sTimestampInFilename;
     this.freeEntries = freeEntriesP;
     if(freeEntriesP != null)
-    { parkedOrders = new ConcurrentLinkedQueue<MsgDispatcherCore.Entry>(freeEntriesP); 
+    { parkedOrders.shareNodePool(freeEntriesP); 
     }
     else
-    { parkedOrders = null;
+    { //parkedOrders = null;
     }
     final int pos2TimestampInFilename;
     if(nrofSecondsToFlush > 0)
@@ -472,19 +474,17 @@ public class LogMessageFile implements LogMessage
     }
     if(file.isOpen())
     { 
-      if(parkedOrders != null)
-      { MsgDispatcherCore.Entry parkedEntry;
-        do
-        { parkedEntry = parkedOrders.poll();
-          if(parkedEntry != null)
-          { /**There are parked outputs, now output it. */
-            writeInFile(parkedEntry.ident, parkedEntry.timestamp, parkedEntry.text, parkedEntry.values.get_va_list());
-            parkedEntry.values.clean();
-            parkedEntry.ident = 0;  
-            freeEntries.offer(parkedEntry);
-          }
-        }while(parkedEntry != null);
-      }
+      MsgDispatcherCore.Entry parkedEntry;
+      do
+      { parkedEntry = parkedOrders.poll();
+        if(parkedEntry != null)
+        { /**There are parked outputs, now output it. */
+          writeInFile(parkedEntry.ident, parkedEntry.timestamp, parkedEntry.text, parkedEntry.values.get_va_list());
+          parkedEntry.values.clean();
+          parkedEntry.ident = 0;  
+          freeEntries.offer(parkedEntry);
+        }
+      }while(parkedEntry != null);
       /**Output the current message. */      
       writeInFile(identNumber, creationTime, text, args);
       sent = true;
@@ -573,22 +573,24 @@ public class LogMessageFile implements LogMessage
   void writeInFile(int identNumber, final OS_TimeStamp creationTime, String text, final Va_list args)
   {
     /**@java2c=stackInstance, fixStringBuffer. */
+    //@Java4C.
     final StringBuilder bufferFormat = new StringBuilder(1000);
-    final CharSequence formattedText;
+    @Java4C.StringJc
+    final CharSequence formattedText;  //In C a StringJc
     if(args.size() >0){
       /**@java2c=stackInstance. */
       final Formatter formatter = new Formatter(bufferFormat, localization);
       try{ formatter.format(text, args.get());
   		} catch(IllegalFormatConversionException exc){
-  			bufferFormat.append("error in text format: " + text);
+  			bufferFormat.append("error in text format: ").append(text);
   		} catch(IllegalFormatPrecisionException exc){
-        bufferFormat.append("error-precision in text format: " + text);
+        bufferFormat.append("error-precision in text format: ").append(text);
   		} catch(MissingFormatArgumentException exc){
-        bufferFormat.append("error-argument in text format: " + text);
+        bufferFormat.append("error-argument in text format: ").append(text);
       } catch(Exception exc){
-  		  bufferFormat.append("error-unknown in text format: " + text);
+  		  bufferFormat.append("error-unknown in text format: ").append(text);
   	  }
-      formattedText = bufferFormat;
+      formattedText = bufferFormat;  //XX
     } else {
       formattedText = text;   //without args, don't try to format! The text may contain format characters.    
     }
