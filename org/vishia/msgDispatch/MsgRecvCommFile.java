@@ -6,13 +6,34 @@ import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.util.FileSystem;
 
-public class MsgRecvComm implements InterProcessComm
+
+
+/**This class receives messages via a simple file transfer.
+ * The file contains some message items in binary format. A file with changed timestamp
+ * is recognized as a new message packet. The source should open, write and close the files with messages
+ * in an lower time cycle than this class reads the file.
+ * <br>
+ * It is able to use for an connection which can transfer files but not free ethernet telegrams.
+ * The class implements the InterProcessComm interface because it is used as any form of InterProcessComm
+ * independent of its implementation via file transfer.
+ * 
+ * @author Hartmut Schorrig
+ *
+ */
+public class MsgRecvCommFile implements InterProcessComm
 {
 
-  //File fileMsgBin = new File("V:\\work\\SES\\SES_Gui\\Target\\Z\\msg.bin");
-  File fileMsgBin = new File("Q:/msg.bin");
+  /**The only one file which is checked. */
+  private final File fileMsgBin;
   
   long lastTimestamp = 0;
+  
+  
+  
+  public MsgRecvCommFile(String file){
+    fileMsgBin = new File(file);
+  }
+  
   
   @Override
   public int abortReceive() {

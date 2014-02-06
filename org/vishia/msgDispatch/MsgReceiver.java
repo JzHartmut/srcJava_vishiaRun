@@ -5,8 +5,10 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.vishia.bridgeC.OS_TimeStamp;
+import org.vishia.communication.InterProcessComm;
 import org.vishia.mainCmd.Report;
 import org.vishia.msgDispatch.LogMessage;
+import org.vishia.util.Assert;
 
 /**This class receives the messages from the target device, dispatch it per ident and writes it 
  * in the actual list and in some files.
@@ -70,7 +72,7 @@ public class MsgReceiver
   
   List<MsgItem> msgOfDay = new LinkedList<MsgItem>();
   
-  MsgRecvComm comm = new MsgRecvComm();
+  final InterProcessComm comm;
   
   /**The instance for dispatching the messages. */
   private final LogMessage msgDispatcher;
@@ -88,9 +90,10 @@ public class MsgReceiver
 
   
   
-  public MsgReceiver(Report console, LogMessage msgDispatcher, MsgConfig msgConfig)
+  public MsgReceiver(Report console, LogMessage msgDispatcher, MsgConfig msgConfig, InterProcessComm comm)
   { this.console = console;
     this.msgConfig = msgConfig;
+    this.comm = comm;
     comm.open(null, false);
     recvData = new MsgItems_h.MsgItems();
     recvDataBuffer = new byte[MsgItems_h.MsgItems.kIdxAfterLast];
@@ -208,11 +211,12 @@ public class MsgReceiver
           console.writeError("msgReceiver: to less bytes: " + nrofBytesReceived[0]);
         } else {
           int nrofMsg = recvData.get_nrofMsg();
+          Assert.stop();
           try{
             for(int ii = 0; ii < nrofMsg; ii++){
-              msgItem.assignAtIndex(MsgItems_h.MsgItems.kIdxmsgItems
-                  + ii * MsgItems_h.MsgItem.kIdxAfterLast                 
-                  , recvData);
+              int posFile = MsgItems_h.MsgItems.kIdxmsgItems
+              + ii * MsgItems_h.MsgItem.kIdxAfterLast;
+              msgItem.assignAtIndex(posFile, MsgItems_h.MsgItem.kIdxAfterLast, recvData);
               int timestamp = msgItem.get_timestamp();  //UDT
               short timeMillisec = msgItem.get_timeMillisec();
               short mode_typeVal = msgItem.get_mode_typeVal();
@@ -242,7 +246,10 @@ public class MsgReceiver
               bListToBottom = true;              
               
             }
-          } catch(IllegalArgumentException exc){ throw new RuntimeException("unexpected"); }
+          } catch(IllegalArgumentException exc){ 
+            CharSequence text = Assert.exceptionInfo("", exc, 0, 10);
+            throw new RuntimeException("MsgReceiver - unexpected;" + text); 
+          }
         }
       }
     }
