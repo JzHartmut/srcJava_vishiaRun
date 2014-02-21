@@ -733,9 +733,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   private final ThreadRun.Step step = new ThreadRun.Step(){
     
   
-    @Override public final boolean start(){
+    @Override public final int start(int cycletime){
       openComm();
-      return false;
+      return -1;
     }
 
     
@@ -750,7 +750,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
      * <li>then loops.
      * </ul>
      */
-    @Override public final boolean step(int cycletime){
+    @Override public final int step(int cycletime, int cycletimelast, int calctimelast){
       //bThreadRuns = true;
       if(callbackOnRxData !=null){
         callbackOnRxData.run();         //show the received values.
@@ -764,7 +764,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
           stop();
         }
         //timeReceived = System.currentTimeMillis();  //all requests after this time calls new variables.
-      return false; //!bAllReceived;
+      return -1; //!bAllReceived;
     }//step
   }; //step  
   

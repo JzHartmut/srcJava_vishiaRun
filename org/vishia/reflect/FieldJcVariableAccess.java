@@ -78,6 +78,8 @@ public class FieldJcVariableAccess implements VariableAccessArray_ifc
     return 0;
   }
 
+  @Override public void setRefreshed(long time){ }
+  
   @Override
   public long getLastRefreshTime() {
     // TODO Auto-generated method stub

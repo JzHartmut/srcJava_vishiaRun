@@ -296,6 +296,8 @@ public class InspcVariable implements VariableAccess_ifc
   
   public InspcStruct struct() { return itsStruct; }
   
+  
+  @Override public void setRefreshed(long time){ timeRefreshed = time; }
 
   @Override public long getLastRefreshTime(){ return timeRefreshed; }
 
