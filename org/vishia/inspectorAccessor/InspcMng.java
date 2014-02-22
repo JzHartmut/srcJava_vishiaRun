@@ -750,7 +750,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
      * <li>then loops.
      * </ul>
      */
-    @Override public final int step(int cycletime, int cycletimelast, int calctimelast){
+    @Override public final int step(int cycletime, int cycletimelast, int calctimelast, long timesecondsAbs){
       //bThreadRuns = true;
       if(callbackOnRxData !=null){
         callbackOnRxData.run();         //show the received values.

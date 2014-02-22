@@ -261,8 +261,8 @@ public class MsgItems_h
       {
       
         //NOTE: use super.data etc to prevent false using of a local element data. super is ByteDataAccess.    
-        //NOTE: use super.data etc to prevent false using of a local element data. super is ByteDataAccess.    
-        msgItems.assignData(super.data, super.idxEnd, super.idxBegin + kIdxmsgItems);  //embedded structure
+        int length = super.idxEnd - kIdxmsgItems;
+        msgItems.assignData(super.data, length, super.idxBegin + kIdxmsgItems);  //embedded structure
         msgItems.setBigEndian(super.bBigEndian);
       }
 
