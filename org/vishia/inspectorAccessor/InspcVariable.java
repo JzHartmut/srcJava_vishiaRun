@@ -321,7 +321,8 @@ public class InspcVariable implements VariableAccess_ifc
   
   @Override public boolean isRequestedValue(boolean retryFaultyVariables){
     if(timeRequested == 0) return false;  //never requested
-    if(idTarget == kIdTargetDisabled && !retryFaultyVariables) return false;
+    if(idTarget == kIdTargetDisabled && !retryFaultyVariables) 
+      return false;
     long timeNew = timeRequested - timeRefreshed;
     return timeNew >0;
   }

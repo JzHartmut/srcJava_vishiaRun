@@ -223,7 +223,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   String sIpTarget;
   
-  final boolean bUseGetValueByIndex;
+  boolean bUseGetValueByIndex;
 
   boolean bUserCalled;
 
@@ -288,11 +288,16 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   @Override public void completeConstruction(){}
   
+  /* (non-Javadoc)
+   * @see org.vishia.util.CompleteConstructionAndStart#startupThreads()
+   */
   @Override public void startupThreads(){
     threadReqFromTarget.start();
   }
 
+  public void setmodeRetryDisabledVariables(boolean retry){ retryDisabledVariable = retry; }
   
+  public void setmodeGetValueByIndex(boolean byIndex){ bUseGetValueByIndex = byIndex; }
   
   
   @Override public void setCallbackOnReceivedData(Runnable callback){
