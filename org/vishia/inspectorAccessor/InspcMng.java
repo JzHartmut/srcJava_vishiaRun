@@ -121,7 +121,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    *   now has only one interface concept to access values, independent of their communication concept.
    *   This class supports the communication via the inspector reflex access. 
    * <li>2012-03-31 next versions from older org.vishia.guiInspc.InspcGuiComm:  
-   * <li>2011-06-30 Hartmut new: {@link #sendAndPrepareCmdSetValueByPath(String, long, int, InspcAccessExecRxOrder_ifc)}:
+   * <li>2011-06-30 Hartmut new: nolink: sendAndPrepareCmdSetValueByPath(String, long, int, InspcAccessExecRxOrder_ifc)
+   *   2014-04 new #send
    *     It is the first method which organizes that info blocks can be created one after another
    *     without regarding the telegram length. It simplifies the usage.
    * <li>2011-06-30 Hartmut improved: {@link WidgetCommAction#execInspcRxOrder(Info)} for formatted output   
@@ -687,13 +688,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         case 'D':
         case 'F': {
           double val = Double.parseDouble(value); 
-          var.targetAccessor.cmdSetValueByPath(var.sPathInTarget, val); 
+          var.targetAccessor.cmdSetValueByPath(var.sPathInTarget, val, null); 
         } break;
         case 'S':
         case 'B':
         case 'I': {
           int val = Integer.parseInt(value); 
-          var.targetAccessor.cmdSetValueByPath(var.sPathInTarget, val); 
+          var.targetAccessor.cmdSetValueByPath(var.sPathInTarget, val, null); 
         } break;
         case 's': {  //empty yet
           
@@ -859,10 +860,12 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
 
   @Override
-  public int cmdSetValueByPath(String sPathInTarget, long value, int typeofValue)
-  {
-    // TODO Auto-generated method stub
-    return 0;
+  public void cmdSetValueByPath(String sPathInTargetArg, long value, int typeofValue, InspcAccessExecRxOrder_ifc actionOnRx)
+  { String pathRepl = replacerAlias.replaceDataPathPrefix(sPathInTargetArg);
+    String sPathInTarget = pathRepl !=null ? pathRepl : sPathInTargetArg;    //with or without replacement.
+    PathStructAccessor path1 = getTargetFromPath(sPathInTarget); 
+    if(path1 == null) throw new IllegalArgumentException("InspcMng.cmdSetValueByPath - failed path;" + sPathInTarget);
+    path1.accessor.cmdSetValueByPath(path1.sPathInTarget, value, typeofValue, actionOnRx);
   }
 
 
@@ -875,18 +878,20 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
 
   @Override
-  public int cmdSetValueByPath(String sPathInTarget, float value)
-  {
-    // TODO Auto-generated method stub
-    return 0;
+  public void cmdSetValueByPath(String sPathInTargetArg, float value, InspcAccessExecRxOrder_ifc actionOnRx)
+  { String pathRepl = replacerAlias.replaceDataPathPrefix(sPathInTargetArg);
+    String sPathInTarget = pathRepl !=null ? pathRepl : sPathInTargetArg;    //with or without replacement.
+    PathStructAccessor path1 = getTargetFromPath(sPathInTarget); 
+    path1.accessor.cmdSetValueByPath(path1.sPathInTarget, value, actionOnRx);
   }
 
 
   @Override
-  public int cmdSetValueByPath(String sPathInTarget, double value)
-  {
-    // TODO Auto-generated method stub
-    return 0;
+  public void cmdSetValueByPath(String sPathInTargetArg, double value, InspcAccessExecRxOrder_ifc actionOnRx)
+  { String pathRepl = replacerAlias.replaceDataPathPrefix(sPathInTargetArg);
+    String sPathInTarget = pathRepl !=null ? pathRepl : sPathInTargetArg;    //with or without replacement.
+    PathStructAccessor path1 = getTargetFromPath(sPathInTarget); 
+    path1.accessor.cmdSetValueByPath(path1.sPathInTarget, value, actionOnRx);
   }
   
 }

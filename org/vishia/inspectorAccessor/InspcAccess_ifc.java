@@ -69,7 +69,7 @@ public interface InspcAccess_ifc
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created.
    */
-  public int cmdSetValueByPath(String sPathInTarget, long value, int typeofValue);
+  public void cmdSetValueByPath(String sPathInTarget, long value, int typeofValue, InspcAccessExecRxOrder_ifc actionOnRx);
   
   /**Adds the info block to send 'get value by path'
    * @param sPathInTarget
@@ -88,7 +88,7 @@ public interface InspcAccess_ifc
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created because the telgram is full.
    */
-  public int cmdSetValueByPath(String sPathInTarget, float value);
+  public void cmdSetValueByPath(String sPathInTarget, float value, InspcAccessExecRxOrder_ifc actionOnRx);
   
   
   /**Adds the info block to send 'get value by path'
@@ -98,7 +98,7 @@ public interface InspcAccess_ifc
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created.
    */
-  public int cmdSetValueByPath(String sPathInTarget, double value);
+  public void cmdSetValueByPath(String sPathInTarget, double value, InspcAccessExecRxOrder_ifc actionOnRx);
   
   
   /**Adds the info block to send 'get value by path'

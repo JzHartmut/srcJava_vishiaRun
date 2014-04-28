@@ -620,7 +620,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created.
    */
-  public int cmdSetValueByPath(String sPathInTarget, long value, int typeofValue)
+  @Override public void cmdSetValueByPath(String sPathInTarget, long value, int typeofValue, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
     int zPath = sPathInTarget.length();
     int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
@@ -640,11 +640,14 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       if(restChars >0) { infoAccess.addChildInteger(restChars, 0); }
       assert(infoAccess.getLength() == zInfo);  //check length after add children. 
       infoAccess.setInfoHead(zInfo, InspcDataExchangeAccess.Inspcitem.kSetValueByPath, order);
+      setExpectedOrder(order, actionOnRx);
+      if(logTelg !=null){ 
+        logTelg.sendMsg(identLogTelg, "send cmdSetValueByPath %s, order = %d, value=%08X, type=%d", sPathInTarget, new Integer(order), new Long(value), new Integer(typeofValue)); 
+      }
     } else {
       //too much info blocks
       order = 0;
     }
-    return order;
   }
   
   
@@ -666,7 +669,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   { int order;
     boolean sent = false;
     do {
-      order = cmdSetValueByPath(sPathInTarget, value, typeofValue);    
+      order = 0; cmdSetValueByPath(sPathInTarget, value, typeofValue, exec);    
       if(order !=0){ //save the order to the action. It is taken on receive.
         this.setExpectedOrder(order, exec);
       } else {
@@ -706,17 +709,17 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created because the telgram is full.
    */
-  public int cmdSetValueByPath(String sPathInTarget, float value)
+  public void cmdSetValueByPath(String sPathInTarget, float value, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
     if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + 8 + sPathInTarget.length() + 3 )){
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
       infoAccess.setCmdSetValueByPath(sPathInTarget, value, order);
-    } else {
-      //too much info blocks
-      order = 0;
-    }
-    return order;
+      setExpectedOrder(order, actionOnRx);
+      if(logTelg !=null){ 
+        logTelg.sendMsg(identLogTelg, "send cmdSetValueByPath %s, order = %d, value=%f", sPathInTarget, new Integer(order), new Float(value)); 
+      }
+    }   
   }
   
   
@@ -727,17 +730,17 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created.
    */
-  public int cmdSetValueByPath(String sPathInTarget, double value)
+  public void cmdSetValueByPath(String sPathInTarget, double value, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
     if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + 8 + sPathInTarget.length() + 3 )){
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
       infoAccess.setCmdSetValueByPath(sPathInTarget, value, order);
-    } else {
-      //too much info blocks
-      order = 0;
+      setExpectedOrder(order, actionOnRx);
+      if(logTelg !=null){ 
+        logTelg.sendMsg(identLogTelg, "send cmdSetValueByPath %s, order = %d, value=%f", sPathInTarget, new Integer(order), new Double(value)); 
+      }
     }
-    return order;
   }
   
   
