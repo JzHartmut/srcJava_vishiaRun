@@ -29,6 +29,7 @@ import org.vishia.reflect.FieldJcVariableAccess;
 import org.vishia.reflect.FieldVariableAccess;
 import org.vishia.util.Assert;
 import org.vishia.util.CompleteConstructionAndStart;
+import org.vishia.util.ReplaceAlias_ifc;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.ThreadRun;
 
@@ -42,7 +43,7 @@ import org.vishia.util.ThreadRun;
  * thinking too. Especially via {@link #addUserOrder(Runnable)} some code snippets can be placed in the
  * communication thread of this class.
  * <br><br>
- * This class starts an onw thread for the send requests to the target device. That thread opens the
+ * This class starts an own thread for the send requests to the target device. That thread opens the
  * inspector reflex access communication via {@link InspcTargetAccessor#open(String)} which may use an
  * {@link org.vishia.communication.InterProcessComm} instance.
  * <br><br>
@@ -97,7 +98,7 @@ import org.vishia.util.ThreadRun;
  * @author Hartmut Schorrig
  *
  */
-public class InspcMng implements CompleteConstructionAndStart, VariableContainer_ifc, Closeable
+public class InspcMng implements CompleteConstructionAndStart, VariableContainer_ifc, Closeable, InspcAccess_ifc
 {
 
   /**Version, history and license.
@@ -162,6 +163,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   private final InspcPlugUser_ifc user;
 
+  ReplaceAlias_ifc replacerAlias;
+  
   /**This method is called if variable are received.
    * 
    */
@@ -288,6 +291,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   @Override public void completeConstruction(){}
   
+  
+  public void complete_ReplaceAlias_ifc(ReplaceAlias_ifc replacerAliasArg){ this.replacerAlias = replacerAliasArg; }
+  
   /* (non-Javadoc)
    * @see org.vishia.util.CompleteConstructionAndStart#startupThreads()
    */
@@ -346,6 +352,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   
   /**Adds any program snippet which is executed while preparing the telegram for data request from target.
+   * After execution the order will be removed.
    * @param order the program snippet.
    */
   public void addUserOrder(Runnable order)
@@ -418,10 +425,10 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
  
   
   
-  /**This routine requests all variables from its target devices, 
-   * which were requested itself after last call of refresh.
+  /**This routine requests all values from its target devices, 
+   * for the variables which were requested itself after last call of refresh.
    * The answer of the target-request will invoke 
-   * {@link InspcVariable.VariableRxAction#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Info)}
+   * {@link InspcVariable.VariableRxAction#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem, long, LogMessage, int)}
    * with the info block of the telegram for each variable.
    * If all variables are received, the callback routine 
    * @returns true if at least one variable was requested, false if nothing is requested.
@@ -431,6 +438,16 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     boolean bRequest = false;
     bUserCalled = false;
     long timeCurr = System.currentTimeMillis();
+    boolean bPendingOrders = false;
+    for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
+      int removedOrPendingOrders = inspcAccessor.checkAndRemoveOldOrders(timeCurr - 5000);
+      if(removedOrPendingOrders >0){
+        System.err.println("InspcMng - Communication problem, removed Orders; " + removedOrPendingOrders);
+      }
+      if(removedOrPendingOrders !=0){
+        bPendingOrders = true;
+      }
+    }
     idxRequestedVarFromTarget.clear();  //clear it, only new requests are pending then.
     //System.out.println("InspcMng.ProcComm - step;");
     int nrofVarsReq = 0;
@@ -451,7 +468,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
           if(varInspc.sPathInTarget.startsWith("#"))
             Assert.stop();
           bRequest = true;
-          if(varInspc.targetAccessor.isReady(timeCurr)){
+          if(varInspc.targetAccessor.isOrSetReady(timeCurr-5000)){ //check whether the device is ready.
             nrofVarsReq +=1;
             varInspc.requestValueFromTarget(timeCurr, retryDisabledVariable);
           } else {
@@ -482,7 +499,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     if(time >= timeLastRemoveOrders + millisecTimeoutOrders){
       timeLastRemoveOrders = time;
       for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
-        int removedOrders = inspcAccessor.rxEval.checkAndRemoveOldOrders(time - timeLastRemoveOrders);
+        int removedOrders = inspcAccessor.checkAndRemoveOldOrders(time - timeLastRemoveOrders);
         if(removedOrders >0){
           System.err.println("InspcMng - Communication problem, removed Orders; " + removedOrders);
         }
@@ -531,7 +548,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       int order = inspcAccessor.cmdGetValueByPath(sDataPath);    
       if(order !=0){
         //save the order to the action. It is taken on receive.
-        inspcAccessor.rxEval.setExpectedOrder(order, commAction);
+        inspcAccessor.setExpectedOrder(order, commAction);
         bRepeattheRequest = true;
       } else {
         inspcAccessor.sendAndAwaitAnswer();  //calls execInspcRxOrder as callback.
@@ -727,7 +744,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     commPort.open(sOwnIpcAddr);
     for(Map.Entry<String, String> e : indexTargetIpcAddr.entrySet()){
       Address_InterProcessComm addrTarget = commPort.createTargetAddr(e.getValue());
-      InspcTargetAccessor accessor = new InspcTargetAccessor(commPort, addrTarget, new InspcAccessEvaluatorRxTelg());
+      InspcTargetAccessor accessor = new InspcTargetAccessor(commPort, addrTarget);
       indexTargetAccessor.put(e.getKey(), accessor);
       listTargetAccessor.add(accessor);
     }
@@ -794,6 +811,82 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       this.itsStruct = itsStruct;
     }
     
+  }
+
+  @Override
+  public int cmdGetFields(String sPathInTarget,
+      InspcAccessExecRxOrder_ifc actionOnRx)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override
+  public boolean cmdGetValueByIdent(int ident,
+      InspcAccessExecRxOrder_ifc actionOnRx)
+  {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+
+  @Override
+  public int cmdGetValueByPath(String sPathInTarget,
+      InspcAccessExecRxOrder_ifc actionOnRx)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override
+  public int cmdRegisterByPath(String sPathInTarget,
+      InspcAccessExecRxOrder_ifc actionOnRx)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override
+  public void cmdGetAddressByPath(String sPathInTargetArg, InspcAccessExecRxOrder_ifc actionOnRx)
+  { String pathRepl = replacerAlias.replaceDataPathPrefix(sPathInTargetArg);
+    String sPathInTarget = pathRepl !=null ? pathRepl : sPathInTargetArg;    //with or without replacement.
+    PathStructAccessor path1 = getTargetFromPath(sPathInTarget); 
+    path1.accessor.cmdGetAddressByPath(path1.sPathInTarget, actionOnRx);
+  }
+
+
+  @Override
+  public int cmdSetValueByPath(String sPathInTarget, long value, int typeofValue)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override
+  public int cmdSetValueByPath(String sPathInTarget, int value)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override
+  public int cmdSetValueByPath(String sPathInTarget, float value)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override
+  public int cmdSetValueByPath(String sPathInTarget, double value)
+  {
+    // TODO Auto-generated method stub
+    return 0;
   }
   
 }

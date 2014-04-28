@@ -11,7 +11,11 @@ import org.vishia.communication.InterProcessCommFactory;
 import org.vishia.communication.InterProcessCommFactoryAccessor;
 
 /**This class is one communication port for a target communication.
- * A communication port is associated with one instance of {@link InterProcessComm}.
+ * <ul>
+ * <li>A communication port is associated with one instance of {@link InterProcessComm}.
+ * <li>A communication port can handle more as one devices. It associates a Map of {@link #targetAccessors}.
+ * <li>A communication port contains the {@link #receiveThread} and the {@link #receiveRun} routine.
+ * </ul>
  * @author Hartmut Schorrig
  *
  */

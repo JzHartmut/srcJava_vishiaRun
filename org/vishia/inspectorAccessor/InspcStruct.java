@@ -183,7 +183,7 @@ public final class InspcStruct
   
   /**This class supplies the method to set the variable value from a received info block. 
    */
-  class VariableRxAction implements InspcAccessExecRxOrder_ifc
+  class VariableRxAction implements InspcAccessExecRxOrder_ifc, Runnable
   {
      /**This method is called for any info block in the received telegram from target,
      * if this implementing instance is stored on the order.
@@ -194,13 +194,16 @@ public final class InspcStruct
     { rxActionGetFields(info, time);
     }
     
-    @Override public void finitTelg(int order){
+    @Override public Runnable callbackOnAnswer(){ return this; }
+    
+    @Override public void run(){   
       bRequFields = false;
       if(callback !=null){
         callback.run();
         callback = null;
       }
     }
+    
   }
 
   

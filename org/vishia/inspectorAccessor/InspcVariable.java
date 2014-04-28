@@ -91,16 +91,16 @@ public class InspcVariable implements VariableAccess_ifc
         //$FALL-THROUGH$
         case InspcDataExchangeAccess.Inspcitem.kAnswerValueByIndex:  //same handling, though only one of some values are gotten.
         case InspcDataExchangeAccess.Inspcitem.kAnswerValue: {
-          int typeInspc = InspcAccessEvaluatorRxTelg.getInspcTypeFromRxValue(info);
-          InspcVariable.this.cType = InspcAccessEvaluatorRxTelg.getTypeFromInspcType(typeInspc);
+          int typeInspc = InspcTargetAccessor.getInspcTypeFromRxValue(info);
+          InspcVariable.this.cType = InspcTargetAccessor.getTypeFromInspcType(typeInspc);
           if(typeInspc == InspcDataExchangeAccess.kTypeNoValue || typeInspc == InspcDataExchangeAccess.kInvalidIndex){
             idTarget = 0;  //try again.
           }
           else if("BSI".indexOf(cType) >=0){
-            valueI = InspcAccessEvaluatorRxTelg.valueIntFromRxValue(info, typeInspc);
+            valueI = InspcTargetAccessor.valueIntFromRxValue(info, typeInspc);
             valueF = valueI;
           } else { 
-            valueF = InspcAccessEvaluatorRxTelg.valueFloatFromRxValue(info, typeInspc);
+            valueF = InspcTargetAccessor.valueFloatFromRxValue(info, typeInspc);
             valueI = (int)valueF;
           }
           if(log !=null){
@@ -121,7 +121,7 @@ public class InspcVariable implements VariableAccess_ifc
       }//switch
     }
     
-    @Override public void finitTelg(int order){}  //empty
+    @Override public Runnable callbackOnAnswer(){return null; }  //empty
 
   }
 

@@ -2,6 +2,13 @@ package org.vishia.inspectorAccessor;
 
 
 import java.util.Arrays;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -16,6 +23,7 @@ import org.vishia.communication.InterProcessComm;
 import org.vishia.inspector.InspcTelgInfoSet;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.ClassJc;
+import org.vishia.util.Debugutil;
 
 /**An instance of this class accesses one target device via InterProcessCommunication, usual Ethernet-Sockets.
  * This class gets an opened {@link InterProcessComm} from its {@link InspcCommPort} aggregate 
@@ -121,12 +129,12 @@ import org.vishia.reflect.ClassJc;
  * @author Hartmut Schorrig
  *
  */
-public class InspcTargetAccessor 
+public class InspcTargetAccessor implements InspcAccess_ifc
 {
 	
   /**The version history and license of this class.
    * <ul>
-   * <li>2012-04-08 Hartmut chg: Now change of time regime. The request thread writes only data 
+   * <li>2014-01-08 Hartmut chg: Now change of time regime. The request thread writes only data 
    *   and invokes the first send. All other communication is done in the receive thread. 
    *   The goal is: The target system should gotten only one telegram at one time, all telegrams one after another.
    * <li>2012-04-08 Hartmut new: Support of GetValueByIdent
@@ -176,7 +184,22 @@ public class InspcTargetAccessor
     boolean lastTelg;
   }
   
+  private static class OrderWithTime
+  {
+    final int order;
+    final long time;
+    final InspcAccessExecRxOrder_ifc exec;
+    
+    public OrderWithTime(int order, long time, InspcAccessExecRxOrder_ifc exec)
+    { this.order = order;
+      this.time = time;
+      this.exec = exec;
+    }
+    
+  }
   
+
+
   /**If true then writes a log of all send and received telegrams. */
   LogMessage logTelg;
   
@@ -199,9 +222,24 @@ public class InspcTargetAccessor
 	/**A Reflitem set instance. */
 	private final InspcTelgInfoSet infoAccess;
 	
-  /**Instance to evaluate received telegrams. It is possible that a derived instance is used! */
-  public final InspcAccessEvaluatorRxTelg rxEval;
+  /**Map of all orders which are send as request.
+   * 
+   */
+  final Map<Integer, OrderWithTime> ordersExpected = new TreeMap<Integer, OrderWithTime>();
   
+  //OrderWithTime orderGetFields;
+  
+  final Deque<OrderWithTime> listTimedOrders = new LinkedList<OrderWithTime>();
+  
+  /**Reused instance to evaluate any info blocks.
+   * 
+   */
+  InspcDataExchangeAccess.Inspcitem infoAccessRx = new InspcDataExchangeAccess.Inspcitem();
+  
+  
+
+  
+  public final Map<Integer, Runnable> callbacksOnAnswer = new TreeMap<Integer, Runnable>();
   
   final InspcDataExchangeAccess.InspcDatagram accessRxTelg = new InspcDataExchangeAccess.InspcDatagram();
 
@@ -298,10 +336,9 @@ public class InspcTargetAccessor
   private final InspcCommPort commPort;	
 	
 	
-	public InspcTargetAccessor(InspcCommPort commPort, Address_InterProcessComm targetAddr, InspcAccessEvaluatorRxTelg inspcRxEval)
+	public InspcTargetAccessor(InspcCommPort commPort, Address_InterProcessComm targetAddr)
 	{ this.commPort = commPort;
 	  this.targetAddr = targetAddr;
-		this.rxEval = inspcRxEval;
 		this.infoAccess = new InspcTelgInfoSet();
     for(int ix = 0; ix < tx.length; ++ix){
       tx[ix] = new TxBuffer();
@@ -395,14 +432,17 @@ public class InspcTargetAccessor
 	}
 	
 	
-	/**Returns true if one time an answer was missing after the timeout wait time. 
+	/**Checks readiness of communication cycle. Returns true if a communication cycle is not pending (finished). 
+	 * Returns false if not all answer telegrams were received from the last request. 
+	 * If the send request time was before timeExpired (the timeout is expired)
+	 * one time an answer was missing after the timeout wait time. 
 	 * A new request should be sent after a longer time. But it should be sent because the target
 	 * may be reconnected. It is possible to send only after a manual command.
 	 */
-	public boolean isReady(long time){ 
+	public boolean isOrSetReady(long timeExpired){ 
 	  if(!bTaskPending.get()) return true;
 	  else {
-	    if((time - timeSend) > 3000){
+	    if((timeExpired - timeSend) >=0){
 	      //forgot a pending request:
 	      bTaskPending.set(false);
 	      bRequestWhileTaskPending = false;
@@ -415,7 +455,7 @@ public class InspcTargetAccessor
 	      //bSendPending.set(false);
 	      bHasAnswered = false;
 	      bNoAnswer = true;
-	      rxEval.ordersExpected.clear();  //after long waiting their is not any expected.
+	      ordersExpected.clear();  //after long waiting their is not any expected.
 	      return true;
 	    } else {
 	      if(!bRequestWhileTaskPending){ //it is the first one
@@ -428,6 +468,26 @@ public class InspcTargetAccessor
 	}
 	
 	
+	
+  /**Sets a expected order in the index of orders and registers a callback after all telegrams was received if given.
+   * @param order The unique order number.
+   * @param exec The execution for the answer. 
+   */
+  public void setExpectedOrder(int order, InspcAccessExecRxOrder_ifc actionOnRx)
+  {
+    if(actionOnRx !=null){
+      OrderWithTime timedOrder = new OrderWithTime(order, System.currentTimeMillis(), actionOnRx);
+      //listTimedOrders.addFirst(timedOrder);
+      ordersExpected.put(new Integer(order), timedOrder);
+      Runnable action = actionOnRx.callbackOnAnswer();
+      if(action !=null){
+        callbacksOnAnswer.put(new Integer(action.hashCode()), action);  //register the same action only one time.
+      }
+    }
+  }
+  
+  
+
   /**Adds the info block to send 'get value by path'
    * @param sPathInTarget
    * @return The order number. 0 if the cmd can't be created.
@@ -442,7 +502,7 @@ public class InspcTargetAccessor
       if(logTelg !=null){ 
         logTelg.sendMsg(identLogTelg, "send cmdGetValueByPath %s, order = %d", sPathInTarget, new Integer(order)); 
       }
-      rxEval.setExpectedOrder(order, actionOnRx);
+      setExpectedOrder(order, actionOnRx);
     } else {
       //too much info blocks
       order = 0;
@@ -466,7 +526,7 @@ public class InspcTargetAccessor
       if(logTelg !=null){ 
         logTelg.sendMsg(identLogTelg, "send cmdGetValueByPath %s, order = %d", sPathInTarget, new Integer(order)); 
       }
-      rxEval.setExpectedOrder(order, actionOnRx);
+      setExpectedOrder(order, actionOnRx);
     } else {
       //too much info blocks
       order = 0;
@@ -486,7 +546,7 @@ public class InspcTargetAccessor
     final int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
     prepareTelg(zPath + restChars);
     order = orderGenerator.getNewOrder();
-    rxEval.setExpectedOrder(order, actionOnRx);
+    setExpectedOrder(order, actionOnRx);
     txAccess.addChild(infoAccess);  
     infoAccess.addChildString(sPathInTarget);
     if(restChars >0) { infoAccess.addChildInteger(restChars, 0); }
@@ -526,7 +586,7 @@ public class InspcTargetAccessor
       //It prepares the telg head.
       prepareTelg(lengthInfo);  //It sends an existing telegram if there is not enough space for the idents-info
       int order = orderGenerator.getNewOrder();
-      rxEval.setExpectedOrder(order, actionRx4ValueByIdent);
+      setExpectedOrder(order, actionRx4ValueByIdent);
       txAccess.addChild(infoAccess);
       int posInTelg = infoAccess.getPositionInBuffer() + InspcDataExchangeAccess.Inspcitem.sizeofHead;
       System.arraycopy(dataInfoDataGetValueByIdent, 0, infoAccess.getData(), posInTelg, 4 * ixIdent5GetValueByIdent);
@@ -608,7 +668,7 @@ public class InspcTargetAccessor
     do {
       order = cmdSetValueByPath(sPathInTarget, value, typeofValue);    
       if(order !=0){ //save the order to the action. It is taken on receive.
-        this.rxEval.setExpectedOrder(order, exec);
+        this.setExpectedOrder(order, exec);
       } else {
         //XXXsendAndAwaitAnswer();  //calls execInspcRxOrder as callback.
         sent = true;
@@ -681,25 +741,26 @@ public class InspcTargetAccessor
   }
   
   
-  /**Adds the info block to send 'get value by path'
+  /**Adds the info block to send 'get address by path'
    * @param sPathInTarget
    * @return The order number. 0 if the cmd can't be created.
+   * @since 2014-04-28 new form
    */
-  public int cmdGetAddressByPath(String sPathInTarget)
+  public void cmdGetAddressByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
     if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + sPathInTarget.length() + 3 )){
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
       infoAccess.setCmdGetAddressByPath(sPathInTarget, order);
+      setExpectedOrder(order, actionOnRx);
       if(logTelg !=null){ 
         logTelg.sendMsg(identLogTelg, "send cmdGetAddressByPath %s, order = %d", sPathInTarget, new Integer(order)); 
       }
     } else {
-      //too much info blocks
-      order = 0;
+      //too much telegrams
+      throw new IllegalArgumentException("InspcTargetAccessor - too much telegrams;");
     }
-    return order;
   }
   
   
@@ -764,14 +825,31 @@ public class InspcTargetAccessor
     int lengthDatagram = tx[ixTxSend].nrofBytesTelg;
     int ok = commPort.send(this, tx[ixTxSend].buffer, lengthDatagram);
     if(logTelg !=null){ 
-      logTelg.sendMsg(identLogTelg +1, "send telg length= %s, ok = %d", new Integer(lengthDatagram), new Integer(ok)); 
+      logTelg.sendMsg(identLogTelg +1, "send telg length= %s, ok = %d, seqn=%d", new Integer(lengthDatagram)
+      , new Integer(ok), new Integer(nSeqNumberTxRx)); 
     }
     bShouldSend = false;
 	}
 	
 	
 	
-  void evaluateRxTelg(byte[] rxBuffer, int rxLength){
+  /**This routine is called from the received thread if a telegram with the sender of this target
+   * was received.
+   * <br><br>
+   * A communication cycle consists of maybe more as one answer for one request telegram
+   * and maybe more as one request telegram. This routine checks whether all answers for the pending
+   * request telegram were received. Only if all telegrams where received (especially the last one)
+   * then the maybe next request telegram is sent.
+   * <br><br>
+   * If all telegrams of the communication cycle are received, the flag {@link #bTaskPending} is set to false 
+   * and the {@link #isReady(long)} method will return true.
+   * <br><br>
+   * If any answer is missed, especially because the communication is disturbed or the device is faulty,
+   * then the {@link #isReady(long)} returns false till the given timeout has expired.
+   * @param rxBuffer
+   * @param rxLength
+   */
+  public void evaluateRxTelg(byte[] rxBuffer, int rxLength){
     timeReceive = System.currentTimeMillis();
     dtimeReceive = timeReceive - timeSend;
     if(logTelg !=null){ 
@@ -789,7 +867,7 @@ public class InspcTargetAccessor
       if((bitsAnswerNrRx[ixAnswer] & bitAnswer) ==0){
         bitsAnswerNrRx[ixAnswer] |= bitAnswer;
         //
-        rxEval.evaluate(accessRxTelg, null, time, logTelg, identLogTelg +5);
+        evaluate(accessRxTelg, null, time, logTelg, identLogTelg +5);
         //
         if(accessRxTelg.lastAnswer()){
           //bSendPending = false;
@@ -799,8 +877,7 @@ public class InspcTargetAccessor
           }
           Arrays.fill(bitsAnswerNrRx, 0);
           // 
-          rxEval.lastTelg();
-          txNextAfterRcv();
+          txNextAfterRcvOrSetReady();  //see isReady
           //
         } else {
           //sendPending: It is not the last answer, remain true
@@ -830,7 +907,7 @@ public class InspcTargetAccessor
   
 
   
-  private void txNextAfterRcv(){
+  private void txNextAfterRcvOrSetReady(){
     boolean wasLastTxTelg = tx[ixTxSend].lastTelg;  //the ixTxSend is the index of send still.
     ixTxSend +=1;  //next send slot
     if(ixTxSend < ixTxFill){
@@ -845,25 +922,277 @@ public class InspcTargetAccessor
       ixTxFill = 0;   //if the last one was received, the tx-buffer is free for new requests. 
       nSeqNumberTxRx = 0;
       bHasAnswered = true;
+      lastTelg();
       if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - All received; ");
     }  
   }
+
   
   
-	
 	/**Waits for answer from the target.
 	 * This method can be called in any users thread. Typically it is the thread, which has send the telegram
-	 * to the target. The alternate method is {@link #setExecuterAnswer(InspcAccessExecAnswerTelg_ifc)}.
+	 * to the target. 
 	 * 
 	 * @param timeout for waiting.
 	 * @return null on timeout, the answer datagrams elsewhere.
+	 * @since 2014-04-28 commented as deprecated
+	 * @deprecated The communication handles several requests. It is not proper that one await is programmed.
+	 *   The answer will be gotten for any information unit in the telegrams. 
+	 *   See {@link InspcAccessExecRxOrder_ifc}-argument of any {@link #cmdGetValueByPath(String, InspcAccessExecRxOrder_ifc)}...
+	 *   routine.
 	 */
-	public InspcDataExchangeAccess.InspcDatagram[] awaitAnswer(int timeout)
+	@Deprecated
+  public InspcDataExchangeAccess.InspcDatagram[] awaitAnswer(int timeout)
 	{ //InspcDataExchangeAccess.ReflDatagram[] answerTelgs = checkerRxTelg.waitForAnswer(timeout); 
   	long time = System.currentTimeMillis();
     dtimeWeakup = time - timeSend;
     return null; //answerTelgs;
   }
+	
+	
+	
+	
+  
+  /**Clean up the order list.
+   * @param timeOld The time before that the orders are old. 
+   * @return positive: number of removed orders. negative: number of found orders, whereby nothing is removed. 
+   *   Usual 0 if no orders are pending. If >0, some orders are wrong, if <0, the communication is slow.
+   */
+  public int checkAndRemoveOldOrders(long timeOld)
+  {
+    int foundOrders = 0;
+    int removedOrders = 0;
+    boolean bRepeatBecauseModification;
+    do{
+      bRepeatBecauseModification = false;
+      //if(ordersExpected.size() > 10){
+        Set<Map.Entry<Integer, OrderWithTime>> list = ordersExpected.entrySet();
+        try{
+          Iterator<Map.Entry<Integer, OrderWithTime>> iter = list.iterator();
+          while(iter.hasNext()){
+            foundOrders +=1;
+            Map.Entry<Integer, OrderWithTime> entry = iter.next();
+            OrderWithTime timedOrder = entry.getValue();
+            if(timedOrder.time < timeOld){
+              iter.remove();
+              removedOrders +=1;
+            }
+          }
+        } catch(Exception exc){ //Repeat it, the list ist modified
+          bRepeatBecauseModification = true;
+        }
+      //}
+    } while(bRepeatBecauseModification);
+      
+    return removedOrders > 0 ? removedOrders : -foundOrders;
+  }
+  
+  
+  
+  /**Evaluates a received telegram.
+   * @param telgHead The telegram
+   * @param executer if given, than the {@link InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem)}
+   *        -method is called for any info block.<br>
+   *        If null, then the order is searched like given with {@link #setExpectedOrder(int, InspcAccessExecRxOrder_ifc)}
+   *        and that special routine is executed.
+   * @return null if no error, if not null then it is an error description. 
+   */
+  public String evaluate(InspcDataExchangeAccess.InspcDatagram telgHead, InspcAccessExecRxOrder_ifc executer, long time, LogMessage log, int identLog)
+  { String sError = null;
+    int currentPos = InspcDataExchangeAccess.InspcDatagram.sizeofHead;
+    //for(InspcDataExchangeAccess.ReflDatagram telgHead: telgHeads){
+      int nrofBytesTelgInHead = telgHead.getLengthDatagram();
+      int nrofBytesTelg = telgHead.getLength();  //length from ByteDataAccess-management.
+      //telgHead.assertNotExpandable();
+      while(sError == null && currentPos + InspcDataExchangeAccess.Inspcitem.sizeofHead <= nrofBytesTelgInHead){
+        telgHead.addChild(infoAccessRx);
+        int nrofBytesInfo = infoAccessRx.getLenInfo();
+        if(nrofBytesInfo <8){
+          Debugutil.stop();
+        } else {
+          if(nrofBytesTelg < currentPos + nrofBytesInfo){
+            sError = "to less bytes in telg at " + currentPos + ": " 
+                   + nrofBytesInfo + " / " + (nrofBytesTelg - currentPos);
+          } else {
+            if(executer !=null){
+              executer.execInspcRxOrder(infoAccessRx, time, log, identLog);
+            } else {
+              int order = infoAccessRx.getOrder();
+              int cmd = infoAccessRx.getCmd();
+              OrderWithTime timedOrder = ordersExpected.remove(order);
+              /*
+              if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerFieldMethod){
+                //special case: The same order number is used for more items in the same sequence number.
+                if(timedOrder !=null){
+                  orderGetFields = timedOrder;
+                } else if(orderGetFields !=null && orderGetFields.order == order) {
+                  timedOrder = orderGetFields;
+                }
+              }
+              */
+              if(timedOrder !=null){
+                //remove timed order
+                InspcAccessExecRxOrder_ifc orderExec = timedOrder.exec;
+                if(orderExec !=null){
+                  orderExec.execInspcRxOrder(infoAccessRx, time, log, identLog);
+                } else {
+                  stop();  //should not 
+                }
+              }
+              //
+              //search the order whether it is expected:
+            }
+            infoAccessRx.setLengthElement(nrofBytesInfo);
+            //telgHead.setLengthCurrentChildElement(nrofBytesInfo); //to add the next.
+            currentPos += nrofBytesInfo;  //the same as stored in telgHead-access
+            
+          }
+        }
+      }
+    //}
+    return sError;
+  }
+  
+  
+  
+  public static float valueFloatFromRxValue(InspcDataExchangeAccess.Inspcitem info, int type)
+  {
+    float ret = 0;
+    if(type >= InspcDataExchangeAccess.kScalarTypes){
+      switch(type - InspcDataExchangeAccess.kScalarTypes){
+        case org.vishia.reflect.ClassJc.REFLECTION_char16: ret = (char)info.getChildInteger(2); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_char8: ret = (char)info.getChildInteger(1); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_double: ret = (float)info.getChildDouble(); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_float: ret = info.getChildFloat(); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int8: ret = info.getChildInteger(-1); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int16: ret = info.getChildInteger(-2); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int32: ret = info.getChildInteger(-4); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int64: ret = info.getChildInteger(-8); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int: ret = info.getChildInteger(-4); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint8: ret = info.getChildInteger(1); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint16: ret = info.getChildInteger(2); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint32: ret = info.getChildInteger(4); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint64: ret = info.getChildInteger(8); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint: ret = info.getChildInteger(4); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_boolean: ret = info.getChildInteger(1) == 0 ? 0.0f: 1.0f; break;
+      }      
+    } else if(type <= InspcDataExchangeAccess.maxNrOfChars){
+      try{
+        String sValue = info.getChildString(type);
+        ret = Float.parseFloat(sValue);
+      } catch(Exception exc){ ret = 0; }
+    }
+
+    return ret;
+  }
+  
+  
+  
+  
+
+  public static int valueIntFromRxValue(InspcDataExchangeAccess.Inspcitem info, int type)
+  {
+    int ret = 0;
+    if(type >= InspcDataExchangeAccess.kScalarTypes){
+      switch(type - InspcDataExchangeAccess.kScalarTypes){
+        case ClassJc.REFLECTION_char16: ret = (char)info.getChildInteger(2); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_char8:  ret = (char)info.getChildInteger(1); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_double: ret = (int)info.getChildDouble(); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_float:  ret = (int)info.getChildFloat(); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int8:   ret = (int)info.getChildInteger(-1); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int16:  ret = (int)info.getChildInteger(-2); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int32:  ret = (int)info.getChildInteger(-4); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int64:  ret = (int)info.getChildInteger(-8); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int:    ret = (int)info.getChildInteger(-4); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint8:  ret = (int)info.getChildInteger(1); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint16: ret = (int)info.getChildInteger(2); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint32: ret = (int)info.getChildInteger(4); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint64: ret = (int)info.getChildInteger(8); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint:   ret = (int)info.getChildInteger(4); break;
+        case org.vishia.reflect.ClassJc.REFLECTION_boolean:ret = info.getChildInteger(1) == 0 ? 0: 1; break;
+      }      
+    } else if(type == InspcDataExchangeAccess.kReferenceAddr){
+      ret = (int)info.getChildInteger(4);
+    } else if(type <= InspcDataExchangeAccess.maxNrOfChars){
+      try{
+        String sValue = info.getChildString(type);
+        ret = Integer.parseInt(sValue);
+      } catch(Exception exc){ ret = 0; }
+    }
+
+    return ret;
+  }
+  
+  
+  /**Gets the reflection type of the received information.
+   * 
+   * @param info
+   * @return The known character Z, C, D, F, B, S, I, J for the scalar types, 'c' for character array (String)
+   */
+  public static int getInspcTypeFromRxValue(InspcDataExchangeAccess.Inspcitem info)
+  {
+    char ret = 0;
+    int type = (int)info.getChildInteger(1);
+    return type;
+  }
+    
+    /**Gets the type of the received information.
+   * 
+   * @param info
+   * @return The known character Z, C, D, F, B, S, I, J for the scalar types, 'c' for character array (String)
+   */
+  public static char getTypeFromInspcType(int type)
+  {
+    final char ret;
+    if(type >= InspcDataExchangeAccess.kScalarTypes){
+      switch(type - InspcDataExchangeAccess.kScalarTypes){
+        case ClassJc.REFLECTION_char16: ret = 'S'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_char8:  ret = 'C'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_double: ret = 'D'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_float:  ret = 'F'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int8:   ret = 'B'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int16:  ret = 'S'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int32:  ret = 'I'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int64:  ret = 'J'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_int:    ret = 'I'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint8:  ret = 'B'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint16: ret = 'S'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint32: ret = 'I'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint64: ret = 'J'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_uint:   ret = 'I'; break;
+        case org.vishia.reflect.ClassJc.REFLECTION_boolean:ret = 'Z'; break;
+        default: ret = '?';
+      }      
+    } else if(type == InspcDataExchangeAccess.kReferenceAddr){
+      ret = 'I';
+    } else if(type <= InspcDataExchangeAccess.maxNrOfChars){
+        ret = 'c';
+    } else {
+      ret = '?'; //error
+    }
+    return ret;
+  }
+  
+  
+  /**Executes after the last answer telg was received.
+   * 
+   */
+  void lastTelg(){
+    Set<Map.Entry<Integer, Runnable>> list = callbacksOnAnswer.entrySet();
+    try{
+      Iterator<Map.Entry<Integer, Runnable>> iter = list.iterator();
+      while(iter.hasNext()){
+        Runnable run = iter.next().getValue();
+        run.run();   
+      }
+    } catch(Exception exc){
+      System.out.println("InspcTargetAccessor - lastTelg wrong callback; " + exc.getMessage());
+    }
+    callbacksOnAnswer.clear();
+  }
+  
+  
+
 	
 	
 	
@@ -879,7 +1208,7 @@ public class InspcTargetAccessor
     @Override public void execInspcRxOrder(InspcDataExchangeAccess.Inspcitem info, long time, LogMessage log, int identLog)
     { execRx4ValueByIdent(info, time, log, identLog);
     }
-    @Override public void finitTelg(int order){}  //empty
+    @Override public Runnable callbackOnAnswer(){return null; }  //empty
   };
 	
 	void stop(){}

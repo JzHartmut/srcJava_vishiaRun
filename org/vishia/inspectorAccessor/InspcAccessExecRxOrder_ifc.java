@@ -17,6 +17,14 @@ public interface InspcAccessExecRxOrder_ifc
    * Especially if more as one answer item is expected, it determines the end of answers.
    * @param order The order of request.
    */
-  void finitTelg(int order);
+  //void finitTelg(int order);
+  
+  /**If this method does not return null that callback address is registered. 
+   * If more as one requests uses the same address, it is registered only one time.
+   * Note that the same instance should registered only for the same device.
+   * Usual Only one telegram-entry, for example getFields, needs this mechanism.
+   * @return null if not used.
+   */
+  Runnable callbackOnAnswer();
   
 }

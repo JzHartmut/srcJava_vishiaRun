@@ -37,7 +37,7 @@ public class TestAccessor
     String sPathInTarget = "workingThread.data.yCos.";
     
     Address_InterProcessComm addrTarget = targetCommPort.createTargetAddr(sIpTarget);
-    inspcAccessor = new InspcTargetAccessor(targetCommPort, addrTarget, new InspcAccessEvaluatorRxTelg());
+    inspcAccessor = new InspcTargetAccessor(targetCommPort, addrTarget);
 
     //String sPathInTarget2 = "_DSP_.data1.bitField.bits-bit11."; 
     if(targetCommPort.open(sIpOwn))
@@ -50,7 +50,7 @@ public class TestAccessor
         InspcDataExchangeAccess.InspcDatagram[] answer = inspcAccessor.awaitAnswer(1000);
         if(answer !=null){
           long time = System.currentTimeMillis();
-          String sError = inspcAccessor.rxEval.evaluate(answer[0], testExec, time, null, 0);
+          String sError = inspcAccessor.evaluate(answer[0], testExec, time, null, 0);
         }
         try{ Thread.sleep(300);} catch(InterruptedException exc){}
       }
@@ -72,7 +72,7 @@ public class TestAccessor
       int cmd = info.getCmd();
       try{
         if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerValue){
-          float value = InspcAccessEvaluatorRxTelg.valueFloatFromRxValue(info, InspcAccessEvaluatorRxTelg.getInspcTypeFromRxValue(info));
+          float value = InspcTargetAccessor.valueFloatFromRxValue(info, InspcTargetAccessor.getInspcTypeFromRxValue(info));
           System.out.println("" + value);
         }
       } catch(Exception exc){
@@ -80,7 +80,7 @@ public class TestAccessor
       }
     }
 
-    @Override public void finitTelg(int order){}  //empty
+    @Override public Runnable callbackOnAnswer(){return null; }  //empty
 
   };
   
