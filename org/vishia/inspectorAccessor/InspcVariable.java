@@ -62,8 +62,6 @@ public class InspcVariable implements VariableAccess_ifc
    */
   public static final int version = 20131224;
 
-  final InspcStruct itsStruct;
-
   final InspcMng varMng;
   
   /**This class supplies the method to set the variable value from a received info block. 
@@ -104,7 +102,7 @@ public class InspcVariable implements VariableAccess_ifc
             valueI = (int)valueF;
           }
           if(log !=null){
-            log.sendMsg(identLog, "InspcVariable - receive; variable=%s, type=%c, val = %8X = %d = %f", sPathInTarget, cType, valueI, valueI, valueF);
+            log.sendMsg(identLog, "InspcVariable - receive; variable=%s, type=%c, val = %8X = %d = %f", ds.sPathInTarget, cType, valueI, valueI, valueF);
           }
           varMng.variableIsReceived(InspcVariable.this);
           timeRefreshed = time;
@@ -114,7 +112,7 @@ public class InspcVariable implements VariableAccess_ifc
           }
         } break;
         case InspcDataExchangeAccess.Inspcitem.kFailedPath:{
-          System.err.println("InspcAccessEvaluatorRxTelg - failed path; " + sPathInTarget);
+          System.err.println("InspcAccessEvaluatorRxTelg - failed path; " + ds.sPathInTarget);
           idTarget = kIdTargetDisabled;
         } break;
         
@@ -129,10 +127,7 @@ public class InspcVariable implements VariableAccess_ifc
   
   /*package private*/ final VariableRxAction rxAction = new VariableRxAction();
   
-  /**The path and name of the variable in the target system. */
-  final String sPathInTarget, sName;
-
-  final InspcTargetAccessor targetAccessor;
+  final InspcVarPathStructAcc ds;
   
   /**Special designations as value of {@link #idTarget} 
    */
@@ -172,13 +167,10 @@ public class InspcVariable implements VariableAccess_ifc
    * @param mng
    * @param sPathInTarget The access path.
    */
-  InspcVariable(InspcMng mng, InspcTargetAccessor targetAccessor, InspcStruct itsStruct, String sDataPath, String sName){
+  InspcVariable(InspcMng mng, InspcVarPathStructAcc data){
     this.varMng = mng;
-    this.itsStruct = itsStruct;
-    this.targetAccessor = targetAccessor;
-    this.sPathInTarget = sDataPath;
-    this.sName = sName;
-    itsStruct.registerVariable(this);
+    this.ds = data;
+    data.itsStruct.registerVariable(this);
   }
   
   
@@ -190,7 +182,7 @@ public class InspcVariable implements VariableAccess_ifc
   { //check whether the widget has an comm action already. 
     //First time a widgets gets its WidgetCommAction. Then for ever the action is kept.
     if(idTarget >= 1 && varMng.bUseGetValueByIndex){
-      return targetAccessor.cmdGetValueByIdent(this.idTarget, this.rxAction);
+      return ds.targetAccessor.cmdGetValueByIdent(this.idTarget, this.rxAction);
     } else if(idTarget == kIdTargetDisabled){
       if(retryDisabledVariable){
         idTarget = kIdTargetUndefined;  //in the next step: register or get by path
@@ -198,20 +190,20 @@ public class InspcVariable implements VariableAccess_ifc
       return true;  //true because the variable is handled.
     } else if(idTarget == kIdTargetUsePerPath || !varMng.bUseGetValueByIndex){
       //get by ident is not supported:
-      String sPathComm = this.sPathInTarget  + ".";
+      String sPathComm = this.ds.sPathInTarget  + ".";
       if(sPathComm.charAt(0) != '#'){
         Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
-        idx.put(this.sPathInTarget, this);
-        return targetAccessor.cmdGetValueByPath(sPathComm, this.rxAction) !=0;
+        idx.put(this.ds.sPathInTarget, this);
+        return ds.targetAccessor.cmdGetValueByPath(sPathComm, this.rxAction) !=0;
         //return varMng.requestValueByPath(sPathComm, this.rxAction);
       } else return true;  //variable is handled.
     } else {
       //register the variable in the target system:
-      String sPathComm = this.sPathInTarget  + ".";
+      String sPathComm = this.ds.sPathInTarget  + ".";
       if(sPathComm.charAt(0) != '#'){
         Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
-        idx.put(this.sPathInTarget, this);
-        return  targetAccessor.cmdRegisterByPath(sPathComm, this.rxAction) !=0;
+        idx.put(this.ds.sPathInTarget, this);
+        return  ds.targetAccessor.cmdRegisterByPath(sPathComm, this.rxAction) !=0;
       }
       return true;   //true because the variable is handled.
     }
@@ -294,7 +286,7 @@ public class InspcVariable implements VariableAccess_ifc
   
   
   
-  public InspcStruct struct() { return itsStruct; }
+  public InspcStruct struct() { return ds.itsStruct; }
   
   
   @Override public void setRefreshed(long time){ timeRefreshed = time; }
@@ -330,7 +322,7 @@ public class InspcVariable implements VariableAccess_ifc
 
   
   
-  @Override public String toString(){ return " Variable(" + sPathInTarget + ") "; }
+  @Override public String toString(){ return " Variable(" + ds.sDataPath + ") "; }
 
 
 }

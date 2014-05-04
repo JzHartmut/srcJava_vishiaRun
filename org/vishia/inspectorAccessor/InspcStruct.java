@@ -129,7 +129,7 @@ public final class InspcStruct
    * @param var
    */
   void registerVariable(InspcVariable var){
-    vars.put(var.sName, var);
+    vars.put(var.ds.sName, var);
   }
   
   

@@ -49,7 +49,7 @@ public interface UserInspcPlug_ifc // extends GralPlugUser2Gral_ifc
   String XXXreplacePathPrefix(String path, String[] target); 
   
   
-  InspcMng.PathStructAccessor getTargetFromPath(String sDataPath);
+  InspcVarPathStructAcc getTargetFromPath(String sDataPath);
 
   
 }

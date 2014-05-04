@@ -34,16 +34,24 @@ import org.vishia.util.StringFunctions;
 import org.vishia.util.ThreadRun;
 
 /**This class supports the communication via the inspector reflex access. 
- * It is a {@link VariableContainer_ifc}. It means any application can handle with variable. 
- * If a variable is requested, a time stamp is written their (see {@link InspcVariable#timeRequested})
- * and therefore this variable is requested via its {@link InspcVariable#sPathInTarget} from the associated
+ * <img src="../../../img/InspcMng.png"><br>Object model diagram
+ * <br><br>
+ * This class is a {@link VariableContainer_ifc}. It means the application can handle with variables, which's values
+ * are present in a target devices accessed via reflex access.
+ * <br><br>
+ * A Variable can be gotten via {@link VariableContainer_ifc#getVariable(String)} using this instance.
+ * To request an actual value for a variable {@link VariableAccess_ifc#requestValue(long)} 
+ * or {@link VariableAccess_ifc#requestValue(long, Runnable)} shoud be called. Therewith the time stamp 
+ * is written in the variable (see {@link InspcVariable#timeRequested})
+ * and that variable is requested via its {@link InspcVariable#ds} from the associated
  * target device.
  * <br><br>
  * This class supports free communication with Inspector reflex access outside the {@link VariableAccess_ifc}
- * thinking too. Especially via {@link #addUserOrder(Runnable)} some code snippets can be placed in the
+ * thinking too. Especially via {@link #addUserOrder(Runnable)} some code snippet can be placed in the
  * communication thread of this class.
  * <br><br>
- * This class starts an own thread for the send requests to the target device. That thread opens the
+ * This class starts an own thread {@link #startupThreads()} for the send requests to the target device. 
+ * That thread opens the
  * inspector reflex access communication via {@link InspcTargetAccessor#open(String)} which may use an
  * {@link org.vishia.communication.InterProcessComm} instance.
  * <br><br>
@@ -56,11 +64,11 @@ import org.vishia.util.ThreadRun;
  * {@link InspcTargetAccessor} and can get values from the target.
  * <br><br>
  * <b>Communication principle</b>:
- * The {@link #inspcThread} respectively the called method {@link #runInspcThread()} runs in a loop,
+ * The {@link #threadReqFromTarget} calls method {@link #procComm()} cyclically,
  * if the communication was opened till {@link #close()} is called. In this loop all requested variables
  * were handled with a request-value telegram and all {@link #addUserOrder(Runnable)} are processed.
  * <br><br>
- * In the {@link #runInspcThread()} all known variables from {@link #idxAllVars} are processed, see {@link #getVariable(String)}. 
+ * In the {@link #procComm()} all known variables from {@link #idxAllVars} are processed, see {@link #getVariable(String)}. 
  * But only if a value from a variable was requested in the last time, a new value is requested from a target device.
  * With that requests one send telegram is built. If the telegram is filled, it will be send.
  * Then the answer of the target device is awaiting, see {@link InspcTargetAccessor#sendAndAwaitAnswer()}. 
@@ -180,7 +188,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   int identLogTelg;
   
   /**This container holds all variables which are created. */
-  Map<String, VariableAccess_ifc> idxAllVars = new TreeMap<String, VariableAccess_ifc>();
+  Map<String, InspcVariable> idxAllVars = new TreeMap<String, InspcVariable>();
   
   
   /**This container holds all variables which are created. */
@@ -397,27 +405,15 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       bit = 0;
       sDataPathOfWidget = sDataPathP;
     }
-    VariableAccess_ifc var = idxAllVars.get(sDataPathOfWidget);
+    InspcVariable var = idxAllVars.get(sDataPathOfWidget);
     if(var == null){
-      if(sDataPathOfWidget.startsWith("java:")){
-        FieldJc[] field = new FieldJc[0];
-        int[] ix = new int[0];
-        String sPathJava = sDataPathOfWidget.substring(5);
-        MemSegmJc addr = SearchElement.searchObject(sPathJava, this, field, ix);
-        var = new FieldJcVariableAccess(this, field[0]);
-      } else {
-        PathStructAccessor path1 = getTargetFromPath(sDataPathOfWidget);
-        if(path1 !=null && path1.accessor !=null){
-          var = new InspcVariable(this, path1.accessor, path1.itsStruct, path1.sPathInTarget, path1.sName);
-        } else {
-          System.err.println("InspcMng - Variable target unknown; " + sDataPathOfWidget); 
-        }
-      }
-      if(var == null){
-        Assert.stop();
-        //TODO use dummy to prevent new requesting
-      } else {
+      InspcVarPathStructAcc path1 = getTargetFromPath(sDataPathOfWidget);
+      if(path1 !=null && path1.targetAccessor !=null){
+        var = new InspcVariable(this, path1);
         idxAllVars.put(sDataPathOfWidget, var);
+      } else {
+        System.err.println("InspcMng - Variable target unknown; " + sDataPathOfWidget); 
+        //TODO use dummy to prevent new requesting
       }
     }
     if(mask == -1){ return var; }
@@ -455,21 +451,21 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     int nrofVarsAll = 0;
     if(requestedFields !=null){
       requestedFields.fields.clear();
-      PathStructAccessor path1 = getTargetFromPath(requestedFields.path()); 
+      InspcVarPathStructAcc path1 = getTargetFromPath(requestedFields.path()); 
       //InspcTargetAccessor targetAccessor = requestedFields.targetAccessor();
-      path1.accessor.cmdGetFields(path1.sPathInTarget, requestedFields.rxActionGetFields);
+      path1.targetAccessor.cmdGetFields(path1.sPathInTarget, requestedFields.rxActionGetFields);
       requestedFields = null;
     }
-    for(Map.Entry<String,VariableAccess_ifc> entryVar: idxAllVars.entrySet()){
+    for(Map.Entry<String,InspcVariable> entryVar: idxAllVars.entrySet()){
       VariableAccess_ifc var = entryVar.getValue();
       nrofVarsAll +=1;
       if(var instanceof InspcVariable){
         InspcVariable varInspc = (InspcVariable)var;
         if(   var.isRequestedValue(retryDisabledVariable) ){  //handle only variable from Inspector access
-          if(varInspc.sPathInTarget.startsWith("#"))
+          if(varInspc.ds.sPathInTarget.startsWith("#"))
             Assert.stop();
           bRequest = true;
-          if(varInspc.targetAccessor.isOrSetReady(timeCurr-5000)){ //check whether the device is ready.
+          if(varInspc.ds.targetAccessor.isOrSetReady(timeCurr-5000)){ //check whether the device is ready.
             nrofVarsReq +=1;
             varInspc.requestValueFromTarget(timeCurr, retryDisabledVariable);
           } else {
@@ -596,43 +592,47 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
 
   
-  /**Splits and replaces a given data path in a variable GUI field to the target accessor,
+  /**Splits a given full data path with device:datapath maybe with alias:datapath in the device, path, name and returns a struct. 
    * It uses {@link #indexTargetAccessor} to get the target accessor instance.
-   * It creates or gets and references {@link InspcStruct} with all parents for this path.
+   * It uses {@link #idxAllStruct} to get the existing {@link InspcStruct} for the variable
    *  
-   * @param sDataPath The user given data path
-   * @param retDataPath
-   * @return
+   * @param sDataPath The user given data path maybe with alias, necessary with target.
+   *   An alias is written in form "alias:rest.of.path". A device is written "device:rest.of.path".
+   *   The distinction between alias and device is done with checking whether the charsequence before :
+   *   is detected as alias.
+   * @return structure which contains the device, path, name.
    */
-  public PathStructAccessor getTargetFromPath(String sDataPath){
+  public InspcVarPathStructAcc getTargetFromPath(String sDataPath){
     final InspcTargetAccessor accessor;
     final String sPathInTarget;
     final String sName;
     InspcStruct itsStruct;
     
-    int posSepDevice = sDataPath.indexOf(':');
+    String pathRepl = replacerAlias.replaceDataPathPrefix(sDataPath);
+    String sPathWithTarget = pathRepl !=null ? pathRepl : sDataPath;    //with or without replacement.
+    int posSepDevice = sPathWithTarget.indexOf(':');
     if(posSepDevice >0){
-      String sDevice = sDataPath.substring(0, posSepDevice);
+      String sDevice = sPathWithTarget.substring(0, posSepDevice);
       accessor = indexTargetAccessor.get(sDevice);
       if(accessor == null){
         errorDevice(sDevice);
       }
-      int posName = sDataPath.lastIndexOf('.');
+      int posName = sPathWithTarget.lastIndexOf('.');
       if(posName >0){
-        String sStructPath = sDataPath.substring(/*posSepDevice +1*/ 0, posName);
+        String sStructPath = sPathWithTarget.substring(/*posSepDevice +1*/ 0, posName);
         itsStruct = idxAllStruct.get(sStructPath);
         if(itsStruct == null){
           InspcStruct parent = getOrCreateParentStruct(sStructPath, accessor);
           itsStruct = new InspcStruct(sStructPath, accessor, parent);
           idxAllStruct.put(sStructPath, itsStruct);
         }
-        sName = sDataPath.substring(posName +1);
+        sName = sPathWithTarget.substring(posName +1);
       } else {
-        sName = sDataPath.substring(posSepDevice +1);
+        sName = sPathWithTarget.substring(posSepDevice +1);
         itsStruct = null;
       }
-      sPathInTarget = sDataPath.substring(posSepDevice +1);
-      return new PathStructAccessor(accessor, sPathInTarget, sName, itsStruct);
+      sPathInTarget = sPathWithTarget.substring(posSepDevice +1);
+      return new InspcVarPathStructAcc(accessor, sDataPath, sPathInTarget, sName, itsStruct);
       
     } else {
       return null;
@@ -688,13 +688,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         case 'D':
         case 'F': {
           double val = Double.parseDouble(value); 
-          var.targetAccessor.cmdSetValueByPath(var.sPathInTarget, val, null); 
+          var.ds.targetAccessor.cmdSetValueByPath(var.ds.sPathInTarget, val, null); 
         } break;
         case 'S':
         case 'B':
         case 'I': {
           int val = Integer.parseInt(value); 
-          var.targetAccessor.cmdSetValueByPath(var.sPathInTarget, val, null); 
+          var.ds.targetAccessor.cmdSetValueByPath(var.ds.sPathInTarget, val, null); 
         } break;
         case 's': {  //empty yet
           
@@ -723,7 +723,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   
   /*package private*/ void variableIsReceived(InspcVariable var){
-    idxRequestedVarFromTarget.remove(var.sPathInTarget);
+    idxRequestedVarFromTarget.remove(var.ds.sPathInTarget);
     if(idxRequestedVarFromTarget.isEmpty()){ //all variables are received:
       threadReqFromTarget.forceStep(false);
     }
@@ -799,21 +799,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   void stop(){}
   
-  public static class PathStructAccessor{
-    public final InspcTargetAccessor accessor;
-    public final String sPathInTarget;
-    public final String sName;
-    public final InspcStruct itsStruct;
-    
-    public PathStructAccessor(InspcTargetAccessor accessor, String sPathInTarget, String sName, InspcStruct itsStruct)
-    { this.accessor = accessor;
-      this.sPathInTarget = sPathInTarget;
-      this.sName = sName;
-      this.itsStruct = itsStruct;
-    }
-    
-  }
-
   @Override
   public int cmdGetFields(String sPathInTarget,
       InspcAccessExecRxOrder_ifc actionOnRx)
@@ -851,11 +836,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
 
   @Override
-  public void cmdGetAddressByPath(String sPathInTargetArg, InspcAccessExecRxOrder_ifc actionOnRx)
-  { String pathRepl = replacerAlias.replaceDataPathPrefix(sPathInTargetArg);
-    String sPathInTarget = pathRepl !=null ? pathRepl : sPathInTargetArg;    //with or without replacement.
-    PathStructAccessor path1 = getTargetFromPath(sPathInTarget); 
-    path1.accessor.cmdGetAddressByPath(path1.sPathInTarget, actionOnRx);
+  public void cmdGetAddressByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
+  { InspcVarPathStructAcc path1 = getTargetFromPath(sPathInTarget); 
+    path1.targetAccessor.cmdGetAddressByPath(path1.sPathInTarget, actionOnRx);
   }
 
 
@@ -863,9 +846,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   public void cmdSetValueByPath(String sPathInTargetArg, long value, int typeofValue, InspcAccessExecRxOrder_ifc actionOnRx)
   { String pathRepl = replacerAlias.replaceDataPathPrefix(sPathInTargetArg);
     String sPathInTarget = pathRepl !=null ? pathRepl : sPathInTargetArg;    //with or without replacement.
-    PathStructAccessor path1 = getTargetFromPath(sPathInTarget); 
+    InspcVarPathStructAcc path1 = getTargetFromPath(sPathInTarget); 
     if(path1 == null) throw new IllegalArgumentException("InspcMng.cmdSetValueByPath - failed path;" + sPathInTarget);
-    path1.accessor.cmdSetValueByPath(path1.sPathInTarget, value, typeofValue, actionOnRx);
+    path1.targetAccessor.cmdSetValueByPath(path1.sPathInTarget, value, typeofValue, actionOnRx);
   }
 
 
@@ -881,8 +864,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   public void cmdSetValueByPath(String sPathInTargetArg, float value, InspcAccessExecRxOrder_ifc actionOnRx)
   { String pathRepl = replacerAlias.replaceDataPathPrefix(sPathInTargetArg);
     String sPathInTarget = pathRepl !=null ? pathRepl : sPathInTargetArg;    //with or without replacement.
-    PathStructAccessor path1 = getTargetFromPath(sPathInTarget); 
-    path1.accessor.cmdSetValueByPath(path1.sPathInTarget, value, actionOnRx);
+    InspcVarPathStructAcc path1 = getTargetFromPath(sPathInTarget); 
+    path1.targetAccessor.cmdSetValueByPath(path1.sPathInTarget, value, actionOnRx);
   }
 
 
@@ -890,8 +873,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   public void cmdSetValueByPath(String sPathInTargetArg, double value, InspcAccessExecRxOrder_ifc actionOnRx)
   { String pathRepl = replacerAlias.replaceDataPathPrefix(sPathInTargetArg);
     String sPathInTarget = pathRepl !=null ? pathRepl : sPathInTargetArg;    //with or without replacement.
-    PathStructAccessor path1 = getTargetFromPath(sPathInTarget); 
-    path1.accessor.cmdSetValueByPath(path1.sPathInTarget, value, actionOnRx);
+    InspcVarPathStructAcc path1 = getTargetFromPath(sPathInTarget); 
+    path1.targetAccessor.cmdSetValueByPath(path1.sPathInTarget, value, actionOnRx);
   }
   
 }
