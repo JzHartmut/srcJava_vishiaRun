@@ -434,7 +434,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
 	/**Checks readiness of communication cycle. Returns true if a communication cycle is not pending (finished). 
 	 * Returns false if not all answer telegrams were received from the last request. 
-	 * If the send request time was before timeExpired (the timeout is expired)
+	 * If the time of the last send request was before timeExpired (the timeout is expired)
+	 * then it is assumed that the communication is faulty. Therefore all pending requests
 	 * one time an answer was missing after the timeout wait time. 
 	 * A new request should be sent after a longer time. But it should be sent because the target
 	 * may be reconnected. It is possible to send only after a manual command.
@@ -444,7 +445,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	  else {
 	    if((timeExpired - timeSend) >=0){
 	      //forgot a pending request:
-	      bTaskPending.set(false);
+        if(logTelg !=null) System.err.println("InspcTargetAccessor.isReady - recover after timeout target; " + toString());
 	      bRequestWhileTaskPending = false;
 	      ixTxFill = 0;
 	      ixTxSend = 0;
@@ -456,6 +457,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	      bHasAnswered = false;
 	      bNoAnswer = true;
 	      ordersExpected.clear();  //after long waiting their is not any expected.
+        bTaskPending.set(false);
 	      return true;
 	    } else {
 	      if(!bRequestWhileTaskPending){ //it is the first one
@@ -500,7 +502,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       order = orderGenerator.getNewOrder();
       infoAccess.setCmdGetFields(sPathInTarget, order);
       if(logTelg !=null){ 
-        logTelg.sendMsg(identLogTelg, "send cmdGetValueByPath %s, order = %d", sPathInTarget, new Integer(order)); 
+        logTelg.sendMsg(identLogTelg+idLogGetFields, "send cmdGetFields %s, order = %d", sPathInTarget, new Integer(order)); 
       }
       setExpectedOrder(order, actionOnRx);
     } else {
@@ -524,8 +526,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       order = orderGenerator.getNewOrder();
       infoAccess.setCmdGetValueByPath(sPathInTarget, order);
       if(logTelg !=null){ 
-        logTelg.sendMsg(identLogTelg, "send cmdGetValueByPath %s, order = %d", sPathInTarget, new Integer(order)); 
+        logTelg.sendMsg(identLogTelg+idLogGetValueByPath, "send cmdGetValueByPath %s, order = %d", sPathInTarget, new Integer(order)); 
       }
+      if(sPathInTarget.contains("xWCP_1"))
+        Debugutil.stop();
       setExpectedOrder(order, actionOnRx);
     } else {
       //too much info blocks
@@ -554,7 +558,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     infoAccess.setInfoHead(zInfo, InspcDataExchangeAccess.Inspcitem.kRegisterRepeat, order);
     //
     if(logTelg !=null){ 
-      logTelg.sendMsg(identLogTelg, "send registerByPath %s, order = %d", sPathInTarget, new Integer(order)); 
+      logTelg.sendMsg(identLogTelg+idLogRegisterByPath, "send registerByPath %s, order = %d", sPathInTarget, new Integer(order)); 
     }
     return order;
   }
@@ -629,7 +633,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
       if(logTelg !=null){ 
-        logTelg.sendMsg(identLogTelg, "send cmdSetValueByPath %s, order = %d, value=%8X, type=%d", sPathInTarget
+        logTelg.sendMsg(identLogTelg+idLogSetValueByPath, "send cmdSetValueByPath %s, order = %d, value=%8X, type=%d", sPathInTarget
             , new Integer(order), new Long(value), new Integer(typeofValue)); 
       }
       //infoAccess.setCmdSetValueByPath(sPathInTarget, value, typeofValue, order);
@@ -642,7 +646,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       infoAccess.setInfoHead(zInfo, InspcDataExchangeAccess.Inspcitem.kSetValueByPath, order);
       setExpectedOrder(order, actionOnRx);
       if(logTelg !=null){ 
-        logTelg.sendMsg(identLogTelg, "send cmdSetValueByPath %s, order = %d, value=%08X, type=%d", sPathInTarget, new Integer(order), new Long(value), new Integer(typeofValue)); 
+        logTelg.sendMsg(identLogTelg+idLogSetValueByPath, "send cmdSetValueByPath %s, order = %d, value=%08X, type=%d", sPathInTarget, new Integer(order), new Long(value), new Integer(typeofValue)); 
       }
     } else {
       //too much info blocks
@@ -717,7 +721,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       infoAccess.setCmdSetValueByPath(sPathInTarget, value, order);
       setExpectedOrder(order, actionOnRx);
       if(logTelg !=null){ 
-        logTelg.sendMsg(identLogTelg, "send cmdSetValueByPath %s, order = %d, value=%f", sPathInTarget, new Integer(order), new Float(value)); 
+        logTelg.sendMsg(identLogTelg+idLogSetValueByPath, "send cmdSetValueByPath %s, order = %d, value=%f", sPathInTarget, new Integer(order), new Float(value)); 
       }
     }   
   }
@@ -738,7 +742,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       infoAccess.setCmdSetValueByPath(sPathInTarget, value, order);
       setExpectedOrder(order, actionOnRx);
       if(logTelg !=null){ 
-        logTelg.sendMsg(identLogTelg, "send cmdSetValueByPath %s, order = %d, value=%f", sPathInTarget, new Integer(order), new Double(value)); 
+        logTelg.sendMsg(identLogTelg+idLogSetValueByPath, "send cmdSetValueByPath %s, order = %d, value=%f", sPathInTarget, new Integer(order), new Double(value)); 
       }
     }
   }
@@ -758,7 +762,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       infoAccess.setCmdGetAddressByPath(sPathInTarget, order);
       setExpectedOrder(order, actionOnRx);
       if(logTelg !=null){ 
-        logTelg.sendMsg(identLogTelg, "send cmdGetAddressByPath %s, order = %d", sPathInTarget, new Integer(order)); 
+        logTelg.sendMsg(identLogTelg + idLogGetAddress, "send cmdGetAddressByPath %s, order = %d", sPathInTarget, new Integer(order)); 
       }
     } else {
       //too much telegrams
@@ -827,8 +831,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     bIsSentTelg = true;
     int lengthDatagram = tx[ixTxSend].nrofBytesTelg;
     int ok = commPort.send(this, tx[ixTxSend].buffer, lengthDatagram);
+    if(ok == 100)
+      Debugutil.stop();
     if(logTelg !=null){ 
-      logTelg.sendMsg(identLogTelg +1, "send telg length= %s, ok = %d, seqn=%d", new Integer(lengthDatagram)
+      logTelg.sendMsg(identLogTelg +idLogTx, "send telg length= %s, ok = %d, seqn=%d", new Integer(lengthDatagram)
       , new Integer(ok), new Integer(nSeqNumberTxRx)); 
     }
     bShouldSend = false;
@@ -856,7 +862,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     timeReceive = System.currentTimeMillis();
     dtimeReceive = timeReceive - timeSend;
     if(logTelg !=null){ 
-      logTelg.sendMsg(identLogTelg+4, "recv telg after %d ms", new Long(dtimeReceive)); 
+      logTelg.sendMsg(identLogTelg+idLogRx, "recv telg after %d ms", new Long(dtimeReceive)); 
     }
     long time = System.currentTimeMillis();
     accessRxTelg.assignData(rxBuffer, rxLength);
@@ -870,13 +876,13 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       if((bitsAnswerNrRx[ixAnswer] & bitAnswer) ==0){
         bitsAnswerNrRx[ixAnswer] |= bitAnswer;
         //
-        evaluate(accessRxTelg, null, time, logTelg, identLogTelg +5);
+        evaluate(accessRxTelg, null, time, logTelg, identLogTelg +idLogRxItem);
         //
         if(accessRxTelg.lastAnswer()){
           //bSendPending = false;
           if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Rcv last answer; " + rxSeqnr);
           if(logTelg !=null){ 
-            logTelg.sendMsg(identLogTelg+4, "recv ok last telg seqn=%d nAnswer=%d after %d ms", new Integer(rxSeqnr), new Integer(nAnswer), new Long(dtimeReceive)); 
+            logTelg.sendMsg(identLogTelg+idLogRxLast, "recv ok last telg seqn=%d nAnswer=%d after %d ms", new Integer(rxSeqnr), new Integer(nAnswer), new Long(dtimeReceive)); 
           }
           Arrays.fill(bitsAnswerNrRx, 0);
           // 
@@ -886,7 +892,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
           //sendPending: It is not the last answer, remain true
           if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Rcv answer; " + nAnswer + "; seqn=" + rxSeqnr);
           if(logTelg !=null){ 
-            logTelg.sendMsg(identLogTelg+4, "recv ok not last telg seqn=%d nAnswer=%d after %d ms", new Integer(rxSeqnr), new Integer(nAnswer), new Long(dtimeReceive)); 
+            logTelg.sendMsg(identLogTelg+idLogRx, "recv ok not last telg seqn=%d nAnswer=%d after %d ms", new Integer(rxSeqnr), new Integer(nAnswer), new Long(dtimeReceive)); 
           }
         }
       } else {
@@ -894,14 +900,14 @@ public class InspcTargetAccessor implements InspcAccess_ifc
         if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor - faulty answernr; " + rxSeqnr + "; expected " + this.nSeqNumberTxRx);
         //faulty seqnr
         if(logTelg !=null){ 
-          logTelg.sendMsg(identLogTelg+4, "recv repeated telg seqn=%d nAnswer=%d after %d ms", new Integer(rxSeqnr), new Integer(nAnswer), new Long(dtimeReceive)); 
+          logTelg.sendMsg(identLogTelg+idLogRxRepeat, "recv repeated telg seqn=%d nAnswer=%d after %d ms", new Integer(rxSeqnr), new Integer(nAnswer), new Long(dtimeReceive)); 
         }
       }
     } else {
       //sendPending: is false, unexpected rx
       if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor - unexpected rx; ");
       if(logTelg !=null){ 
-        logTelg.sendMsg(identLogTelg+4, "recv failed seqn=%d after %d ms", new Integer(rxSeqnr), new Long(dtimeReceive)); 
+        logTelg.sendMsg(identLogTelg+idLogFailedSeq, "recv failed seqn=%d after %d ms", new Integer(rxSeqnr), new Long(dtimeReceive)); 
       }
 
     }

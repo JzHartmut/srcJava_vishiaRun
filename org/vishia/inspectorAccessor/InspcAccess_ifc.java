@@ -36,6 +36,14 @@ public interface InspcAccess_ifc
   static final public String sVersion = "2014-04-30";
 
   
+  /**Some adding values for telegrams. */ 
+  static int idLogGetValueByPath=0, idLogGetValueByIdent=1, idLogGetAddress=2, idLogGetFields=4
+    , idLogRegisterByPath=5, idLogSetValueByPath=6, idLogGetOther=7
+    , idLogTx=10, idLogRx=11, idLogRxLast=12, idLogRxNotlast=13
+    , idLogRxItem = 14, idLogFailedSeq=17, idLogRxRepeat=18, idLogRxError=19;  
+  
+
+  
   public int cmdGetFields(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx);
   
   

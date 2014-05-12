@@ -435,6 +435,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     boolean bRequest = false;
     bUserCalled = false;
     long timeCurr = System.currentTimeMillis();
+    /*
     boolean bPendingOrders = false;
     for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
       int removedOrPendingOrders = inspcAccessor.checkAndRemoveOldOrders(timeCurr - 5000);
@@ -445,6 +446,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         bPendingOrders = true;
       }
     }
+    */
     idxRequestedVarFromTarget.clear();  //clear it, only new requests are pending then.
     //System.out.println("InspcMng.ProcComm - step;");
     int nrofVarsReq = 0;
@@ -465,13 +467,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
           if(varInspc.ds.sPathInTarget.startsWith("#"))
             Assert.stop();
           bRequest = true;
-          if(varInspc.ds.targetAccessor.isOrSetReady(timeCurr-5000)){ //check whether the device is ready.
+          if(varInspc.ds.targetAccessor.isOrSetReady(timeCurr-10000)){ //check whether the device is ready.
             nrofVarsReq +=1;
             varInspc.requestValueFromTarget(timeCurr, retryDisabledVariable);
           } else {
             //The variable is not able to get, remove the request.
             //The request will be repeat if the variable is newly requested.
-            var.requestValue(0, null);
+            //var.requestValue(0, null);
           }
           
         }
