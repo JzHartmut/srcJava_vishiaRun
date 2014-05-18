@@ -227,7 +227,14 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   final Map<Integer, OrderWithTime> ordersExpected = new TreeMap<Integer, OrderWithTime>();
   
-  //OrderWithTime orderGetFields;
+  /**The last order for Get Fields.
+   * Special case: Only this telegram-info has more as one answer.
+   * Only one request 'get fields' should be send in one time.
+   * This order will be set on the first answer 'get fields' and remain for more answers.
+   * The next request 'get fields' will be received with the first field with another order,
+   * which is stored here etc.
+   */
+  OrderWithTime orderGetFields;
   
   final Deque<OrderWithTime> listTimedOrders = new LinkedList<OrderWithTime>();
   
@@ -447,6 +454,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	      //forgot a pending request:
         if(logTelg !=null) System.err.println("InspcTargetAccessor.isReady - recover after timeout target; " + toString());
 	      bRequestWhileTaskPending = false;
+	      synchronized(this){
+	        Debugutil.stop();
+	      }
 	      ixTxFill = 0;
 	      ixTxSend = 0;
 	      state = 'R';
@@ -632,10 +642,6 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     if(prepareTelg(zInfo )){
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
-      if(logTelg !=null){ 
-        logTelg.sendMsg(identLogTelg+idLogSetValueByPath, "send cmdSetValueByPath %s, order = %d, value=%8X, type=%d", sPathInTarget
-            , new Integer(order), new Long(value), new Integer(typeofValue)); 
-      }
       //infoAccess.setCmdSetValueByPath(sPathInTarget, value, typeofValue, order);
       InspcDataExchangeAccess.InspcSetValue accessSetValue = new InspcDataExchangeAccess.InspcSetValue(); 
       infoAccess.addChild(accessSetValue);
@@ -831,10 +837,12 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     bIsSentTelg = true;
     int lengthDatagram = tx[ixTxSend].nrofBytesTelg;
     int ok = commPort.send(this, tx[ixTxSend].buffer, lengthDatagram);
-    if(ok == 100)
-      Debugutil.stop();
+    synchronized(this){
+      if(ok == 96)
+        Debugutil.stop();
+    }
     if(logTelg !=null){ 
-      logTelg.sendMsg(identLogTelg +idLogTx, "send telg length= %s, ok = %d, seqn=%d", new Integer(lengthDatagram)
+      logTelg.sendMsg(identLogTelg +idLogTx, "send telg ix=%d, length= %d, ok = %d, seqn=%d", new Integer(ixTxSend), new Integer(lengthDatagram)
       , new Integer(ok), new Integer(nSeqNumberTxRx)); 
     }
     bShouldSend = false;
@@ -1029,7 +1037,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
               int order = infoAccessRx.getOrder();
               int cmd = infoAccessRx.getCmd();
               OrderWithTime timedOrder = ordersExpected.remove(order);
-              /*
+              //
               if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerFieldMethod){
                 //special case: The same order number is used for more items in the same sequence number.
                 if(timedOrder !=null){
@@ -1038,7 +1046,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
                   timedOrder = orderGetFields;
                 }
               }
-              */
+              //
               if(timedOrder !=null){
                 //remove timed order
                 InspcAccessExecRxOrder_ifc orderExec = timedOrder.exec;
@@ -1183,7 +1191,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   }
   
   
-  /**Executes after the last answer telg was received.
+  /**Executes after the last answer telegram of this sequence was received.
    * 
    */
   void lastTelg(){

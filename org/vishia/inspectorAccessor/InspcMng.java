@@ -464,7 +464,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       if(var instanceof InspcVariable){
         InspcVariable varInspc = (InspcVariable)var;
         if(   var.isRequestedValue(retryDisabledVariable) ){  //handle only variable from Inspector access
+          int dtimeRequested = (int)(timeCurr - varInspc.timeRequested);
+          if(dtimeRequested > 10000){
+            var.requestValue(0);  //old request set to 0
+          }
           if(varInspc.ds.sPathInTarget.startsWith("#"))
+            Assert.stop();
+          if(varInspc.ds.sPathInTarget.contains("vUAp"))
             Assert.stop();
           bRequest = true;
           if(varInspc.ds.targetAccessor.isOrSetReady(timeCurr-10000)){ //check whether the device is ready.

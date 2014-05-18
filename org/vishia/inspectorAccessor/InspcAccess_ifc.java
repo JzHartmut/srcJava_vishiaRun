@@ -38,10 +38,12 @@ public interface InspcAccess_ifc
   
   /**Some adding values for telegrams. */ 
   static int idLogGetValueByPath=0, idLogGetValueByIdent=1, idLogGetAddress=2, idLogGetFields=4
-    , idLogRegisterByPath=5, idLogSetValueByPath=6, idLogGetOther=7
+    , idLogRegisterByPath=5, idLogSetValueByPath=6, idLogGetOther=9
     , idLogTx=10, idLogRx=11, idLogRxLast=12, idLogRxNotlast=13
     , idLogRxItem = 14, idLogFailedSeq=17, idLogRxRepeat=18, idLogRxError=19;  
   
+  static int idLogRcvGetValueByPath=20, idLogRcvGetValueByIdent=21, idLogRcvGetAddress=22, idLogRcvGetFields=24
+  , idLogRcvRegisterByPath=25, idLogRcvSetValueByPath=26, idLogRcvGetOther=29;
 
   
   public int cmdGetFields(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx);
