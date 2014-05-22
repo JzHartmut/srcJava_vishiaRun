@@ -212,6 +212,10 @@ public class FieldVariableAccess implements VariableAccessArray_ifc
     return timeNew >0;
   }
   
+  
+  @Override public boolean isRefreshed(){ return timeLastRefreshed != 0 && (timeLastRefreshed - timeRequestRefresh ) >=0; }
+
+
 
   
   @Override public long getLastRefreshTime(){ return timeLastRefreshed; }

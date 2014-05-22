@@ -108,6 +108,8 @@ public class FieldJcVariableAccess implements VariableAccessArray_ifc
     return false;
   }
   
+  @Override public boolean isRefreshed(){ return true; }
+
 
 
   @Override

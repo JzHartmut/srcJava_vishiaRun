@@ -319,6 +319,7 @@ public class InspcVariable implements VariableAccess_ifc
     return timeNew >0;
   }
   
+  @Override public boolean isRefreshed(){ return timeRefreshed != 0 && (timeRefreshed - timeRequested ) >=0; }
 
   
   
