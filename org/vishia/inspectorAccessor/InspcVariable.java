@@ -94,6 +94,9 @@ public class InspcVariable implements VariableAccess_ifc
           if(typeInspc == InspcDataExchangeAccess.kTypeNoValue || typeInspc == InspcDataExchangeAccess.kInvalidIndex){
             idTarget = 0;  //try again.
           }
+          else if(cType == 'c'){ //character String
+            valueS = InspcTargetAccessor.valueStringFromRxValue(info, typeInspc);  
+          }
           else if("BSI".indexOf(cType) >=0){
             valueI = InspcTargetAccessor.valueIntFromRxValue(info, typeInspc);
             valueF = valueI;
@@ -156,6 +159,9 @@ public class InspcVariable implements VariableAccess_ifc
 
   /**The value from the target device. */
   int valueI;
+  
+  /**The value from the target device. */
+  String valueS;
   
   /**The type depends from the type in the target device. It is set if any answer is gotten. 
    * 'c' for character array. */
@@ -238,11 +244,12 @@ public class InspcVariable implements VariableAccess_ifc
     return valueI;
   }
 
-  @Override
-  public String getString()
-  {
-    // TODO Auto-generated method stub
-    return null;
+  @Override public String getString() 
+  { if(valueS !=null) { return valueS; }
+    else switch(cType) {
+      case 'F': case 'D': return Float.toString(valueF);
+      default: return Integer.toString(valueI); 
+    }//switch 
   }
 
   @Override

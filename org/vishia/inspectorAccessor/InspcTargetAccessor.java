@@ -1,6 +1,7 @@
 package org.vishia.inspectorAccessor;
 
 
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
@@ -13,6 +14,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
 
 
 import org.vishia.byteData.ByteDataAccess;
@@ -134,6 +136,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   /**The version history and license of this class.
    * <ul>
+   * <li>2014-01-08 Hartmut chg: {@link #cmdSetValueByPath(String, int, InspcAccessExecRxOrder_ifc)},
+   *   {@link #valueStringFromRxValue(org.vishia.communication.InspcDataExchangeAccess.Inspcitem, int)}
    * <li>2014-01-08 Hartmut chg: Now change of time regime. The request thread writes only data 
    *   and invokes the first send. All other communication is done in the receive thread. 
    *   The goal is: The target system should gotten only one telegram at one time, all telegrams one after another.
@@ -691,7 +695,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   }
   
   
-  /**Adds the info block to send 'get value by path'
+  /**Adds the info block to send 'set value by path'
    * @param sPathInTarget
    * @param value The value as long-image, it may be a double, float, int etc.
    * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
@@ -712,7 +716,28 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   }
   
   
-  /**Adds the info block to send 'get value by path'
+  /**Adds the info block to send 'set value by path'
+   * @param sPathInTarget
+   * @param value The value as int value, 32 bit
+   * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
+   *                    + {@link ClassJc#REFLECTION_double} etc.
+   * @return The order number. 0 if the cmd can't be created because the telgram is full.
+   */
+  public void cmdSetValueByPath(String sPathInTarget, int value, InspcAccessExecRxOrder_ifc actionOnRx)
+  { int order;
+    if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + 8 + sPathInTarget.length() + 3 )){
+      txAccess.addChild(infoAccess);
+      order = orderGenerator.getNewOrder();
+      infoAccess.setCmdSetValueByPath(sPathInTarget, value, order);
+      setExpectedOrder(order, actionOnRx);
+      if(logTelg !=null){ 
+        logTelg.sendMsg(identLogTelg+idLogSetValueByPath, "send cmdSetValueByPath %s, order = %d, value=%d", sPathInTarget, new Integer(order), new Integer(value)); 
+      }
+    }   
+  }
+  
+  
+  /**Adds the info block to send 'set value by path'
    * @param sPathInTarget
    * @param value The value as long-image, it may be a double, float, int etc.
    * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
@@ -733,7 +758,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   }
   
   
-  /**Adds the info block to send 'get value by path'
+  /**Adds the info block to send 'set value by path'
    * @param sPathInTarget
    * @param value The value as long-image, it may be a double, float, int etc.
    * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
@@ -1139,6 +1164,19 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 
     return ret;
   }
+  
+  
+  public static String valueStringFromRxValue(InspcDataExchangeAccess.Inspcitem info, int nBytesString)
+  {
+    String value = null; 
+    try {
+      value = info.getChildString(nBytesString);
+    } catch(UnsupportedEncodingException exc) {
+      value = "?encoding?";
+    }
+    return value;  
+  }
+  
   
   
   /**Gets the reflection type of the received information.

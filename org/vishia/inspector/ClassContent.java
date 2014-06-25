@@ -626,7 +626,8 @@ public final class ClassContent implements CmdConsumer_ifc
           if(bOk){
             boolean value;
             if(accSetValue !=null){
-              boolean setValue = accSetValue.getShort() !=0;  //the value to set
+              int ivalue = accSetValue.getShort();
+              boolean setValue = ivalue !=0;  //the value to set
               value = theField.setBoolean(theObject, setValue, idx);
             } else {
               value = theField.getBoolean(theObject, idx);
