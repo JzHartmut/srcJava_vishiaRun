@@ -176,7 +176,9 @@ public class InspcVariable implements VariableAccess_ifc
   InspcVariable(InspcMng mng, InspcVarPathStructAcc data){
     this.varMng = mng;
     this.ds = data;
-    data.itsStruct.registerVariable(this);
+    if(data.itsStruct !=null) {
+      data.itsStruct.registerVariable(this);
+    }
   }
   
   

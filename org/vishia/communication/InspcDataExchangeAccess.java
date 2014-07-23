@@ -515,35 +515,35 @@ public final static class InspcSetValue extends ByteDataAccess{
 
   /**Sets a byte value. */
   @Java4C.inline public void setBool(int value)
-  { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_boolean);  _setLong(15, 1, value);} 
+  { clearData(); _setLong(kType,1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_boolean);  _setLong(15, 1, value);} 
   
   /**Sets a byte value. */
   @Java4C.inline public void setByte(int value)
-  { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int8);  _setLong(15, 1, value);} 
+  { clearData(); _setLong(kType,1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int8);  _setLong(15, 1, value);} 
   
   /**Sets a short value. */
 	@Java4C.inline public void setShort(int value)
-  { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int16);  _setLong(14, 2, value);} 
+  { clearData(); _setLong(kType,1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16);  _setLong(14, 2, value);} 
   
   /**Sets a int32 value. */
 	@Java4C.inline public void setInt(int value)
-	{ clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int32); _setLong(12, 4, value);} 
+	{ clearData(); _setLong(kType,1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int32); _setLong(12, 4, value);} 
   
   /**Sets a long value (int64). */
 	@Java4C.inline public void setLong(long value)
-  { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_int64);  _setLong(8, 8, value);} 
+  { clearData(); _setLong(kType,1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int64);  _setLong(8, 8, value);} 
    
   /**Sets a float value. */
   @Java4C.inline public void setFloat(float value)
-  { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_float);  setFloat(12, value);} 
+  { clearData(); _setLong(kType,1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float);  setFloat(12, value);} 
   
   /**Sets a float value given by a int image. */
   @Java4C.inline public void setFloatIntImage(int value)
-  { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_float);  _setLong(12, 4, value);} 
+  { clearData(); _setLong(kType,1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float);  _setLong(12, 4, value);} 
   
   /**Sets a double value. */
 	@Java4C.inline public void setDouble(double value)
-  { clearData(); _setLong(kType,1, kScalarTypes+ClassJc.REFLECTION_double);  setDouble(8, value);} 
+  { clearData(); _setLong(kType,1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_double);  setDouble(8, value);} 
   
   @Java4C.inline @Override protected void specifyEmptyDefaultData() { }
 
