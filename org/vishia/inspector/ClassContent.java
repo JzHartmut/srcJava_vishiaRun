@@ -5,7 +5,6 @@ import org.vishia.bridgeC.MemSegmJc;
 import org.vishia.bridgeC.OS_TimeStamp;
 //import org.vishia.byteData.Field_Jc;
 import org.vishia.communication.InspcDataExchangeAccess;
-import org.vishia.inspector.SearchElement.SearchTrc;
 import org.vishia.reflect.ClassJc;
 import org.vishia.reflect.FieldJc;
 import org.vishia.reflect.MemAccessArrayDebugJc;

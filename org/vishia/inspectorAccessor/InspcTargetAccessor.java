@@ -401,7 +401,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   private boolean prepareTelg(int lengthNewInfo)
   { bHasAnswered = false;
-    if(ixTxFill >= tx.length ){
+    if(ixTxFill >= tx.length ){ //check more as one datagram
       System.err.println("InspcTargetAccessor - Too many telegram requests;");
       return false;
     }
@@ -415,7 +415,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     }
     if(!bFillTelg){
       //assert(tx[ixTxFill].stateOfTxTelg.compareAndSet(0, 'f'));
-      txAccess.assignEmpty(tx[ixTxFill].buffer);
+      Arrays.fill(tx[ixTxFill].buffer, (byte)0);
+      txAccess.assignClear(tx[ixTxFill].buffer);
       if(++nSeqNumber == 0){ nSeqNumber = 1; }
       txAccess.setHeadRequest(nEntrant, nSeqNumber, nEncryption);
       bFillTelg = true;
@@ -530,7 +531,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * @return The order number. 0 if the cmd can't be created.
    */
   public int cmdGetValueByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
-  { int order;
+  { int order = 5;
     if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + sPathInTarget.length() + 3 )){
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       txAccess.addChild(infoAccess);
@@ -895,7 +896,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       logTelg.sendMsg(identLogTelg+idLogRx, "recv telg after %d ms", new Long(dtimeReceive)); 
     }
     long time = System.currentTimeMillis();
-    accessRxTelg.assignData(rxBuffer, rxLength);
+    accessRxTelg.assign(rxBuffer, rxLength);
     int rxSeqnr = accessRxTelg.getSeqnr();
     //int rxAnswerNr = accessRxTelg.getAnswerNr();
     if(rxSeqnr == this.nSeqNumberTxRx){

@@ -3,7 +3,6 @@ package org.vishia.inspector;
 import java.io.UnsupportedEncodingException;
 
 import org.vishia.communication.InspcDataExchangeAccess;
-import org.vishia.communication.InterProcessComm;
 import org.vishia.util.Java4C;
 
 public class CmdExecuter implements AnswerComm_ifc
@@ -50,9 +49,9 @@ public class CmdExecuter implements AnswerComm_ifc
   }
 
 
-	boolean executeCmd(byte[] buffer, int nrofBytesReceived) 
-	{
-  	datagramCmd.assignData(buffer, nrofBytesReceived);
+  boolean executeCmd(byte[] buffer, int nrofBytesReceived) 
+  {
+  	datagramCmd.assignDatagram(buffer, nrofBytesReceived);
     int nEntrant = datagramCmd.getEntrant();
     boolean bOk = true;
     int nrofBytesProcessed;
@@ -114,7 +113,7 @@ public class CmdExecuter implements AnswerComm_ifc
       //dummy head with 2 empty information units.
       myAnswerData.setHeadAnswer(0, 0x080000, 0);
       myAnswerData.setLengthDatagram(8);
-      infoCmd.assignData(buffer, nrofBytesReceived);
+      infoCmd.assign(buffer, nrofBytesReceived);
       infoCmd.setBigEndian(true);
       maxNrofBytesAnswerPart = 1400;
       try{ nrofBytesAnswerPart = cmdConsumerMtbl.executeMonitorCmd(infoCmd, myAnswerData, maxNrofBytesAnswerPart);

@@ -97,7 +97,7 @@ public class InspcAccessCheckerRxTelg
   void applyReceivedTelg(byte[] rxBuffer, int zBuffer, LogMessage log, int identLog)
   {
     if(awaitTelg){
-      rxTelg.assignData(rxBuffer, zBuffer);
+      rxTelg.assign(rxBuffer, zBuffer);
       int rxSeqnr = rxTelg.getSeqnr();
       if(rxSeqnr == awaitSeqNumber){
         //TODO check if the answer should consist of more as one telg

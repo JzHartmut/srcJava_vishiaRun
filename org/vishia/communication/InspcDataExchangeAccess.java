@@ -24,14 +24,14 @@ package org.vishia.communication;
 
 import java.util.Arrays;
 
-import org.vishia.byteData.ByteDataAccess;
+import org.vishia.byteData.ByteDataAccessBase;
 import org.vishia.reflect.ClassJc;
 import org.vishia.util.Java4C;
 /**This class supports preparing data for the Inspector-datagram-definition.
  * @author Hartmut Schorrig
  *
  */
-public class InspcDataExchangeAccess
+public final class InspcDataExchangeAccess
 {
 
 	
@@ -86,10 +86,11 @@ public class InspcDataExchangeAccess
   public static final int version = 20120409;
 
   	
-	/**Preparing the header of a datagram.
+
+  /**Preparing the header of a datagram.
 	 * 
 	 */
-	public final static class InspcDatagram extends ByteDataAccess
+	public final static class InspcDatagram extends ByteDataAccessBase
 	{
 		private static final int knrofBytes = 0;
 		private static final int knEntrant = 2;  //2
@@ -102,31 +103,28 @@ public class InspcDataExchangeAccess
 
 		public InspcDatagram(byte[] buffer)
 		{ this();
-			assignEmpty(buffer);
-			setBigEndian(true);
+			assign(buffer, buffer.length,0);
+			super.setBigEndian(true);
 		}
 		
 		public InspcDatagram()
-		{ super();
+		{ super(sizeofHead);
 			setBigEndian(true);
 		}
 		
-		@Override protected final void specifyEmptyDefaultData()
-		{
-			Arrays.fill(data, 0, sizeofHead, (byte)0);
-		}
-
-		@Override protected final int specifyLengthElement() throws IllegalArgumentException
-		{ return 0;
-		}
-
-		@Override public final int specifyLengthElementHead()
-		{ return sizeofHead;
+		
+		/**Assigns a datagram.
+		 * @param data The data of the datagram.
+		 * @param length number of received data or buffer length for transmit.
+		 */
+		@Java4C.inline public final void assignDatagram(byte[] data, int length){
+		  super.assign(data, length, 0);
 		}
 		
-		public final void setLengthDatagram(int length){ setInt16(0, length); }
 		
-		public final int getLengthDatagram(){ return getInt16(0); }
+		@Java4C.inline public final void setLengthDatagram(int length){ setInt16(0, length); }
+		
+		@Java4C.inline public final int getLengthDatagram(){ return getInt16(0); }
 		
     /**Sets the head for an answer telegram. Sets the answer number to 1. 
      * Therefore it is for the first answer. All following answers uses {@link #incrAnswerNr()}
@@ -162,18 +160,18 @@ public class InspcDataExchangeAccess
       setInt32(kencryption, encryption);
     }
     
-		public final void setEntrant(int nr){ setInt16(knEntrant, nr); }
+    @Java4C.inline public final void setEntrant(int nr){ setInt16(knEntrant, nr); }
 		
-		public final int getEntrant(){ return getInt16(knEntrant); }
+    @Java4C.inline public final int getEntrant(){ return getInt16(knEntrant); }
 		
-		public final int getEncryption(){ return getInt32(kencryption); }
+    @Java4C.inline public final int getEncryption(){ return getInt32(kencryption); }
 		
-    public final void setSeqnr(int nr){ setInt32(kseqnr, nr); }
+    @Java4C.inline public final void setSeqnr(int nr){ setInt32(kseqnr, nr); }
 		
-		public final int getSeqnr(){ return getInt32(kseqnr); }
+    @Java4C.inline public final int getSeqnr(){ return getInt32(kseqnr); }
 		
 		/**Mark the datagram as last answer. */
-		public final void markAnswerNrLast()
+    public final void markAnswerNrLast()
 		{ int nr = getInt8(kanswerNr);
 		  nr |= 0x80;
 		  setInt8(kanswerNr, nr);
@@ -189,15 +187,15 @@ public class InspcDataExchangeAccess
 
     /**Gets the number of the answer datagram. 
      * The last datagramm is mask with the bit */
-    public final int getAnswerNr()
+    @Java4C.inline public final int getAnswerNr()
     { return getInt8(kanswerNr) & 0x7f;
     }
 
     /**Gets the information about the last answer datagram. */
-    public final boolean lastAnswer()
+    @Java4C.inline public final boolean lastAnswer()
     { return (getInt8(kanswerNr) & 0x80) == 0x80;
     }
-	}
+    }
 	
 	
 	
@@ -222,7 +220,7 @@ public class InspcDataExchangeAccess
 	 * In this case 8 Bytes are added after the head. The length stored in the head is 16. 
 	 * The <StringValue...> consists of a length byte, following by ASCII-character.
 	 */
-	public static class Inspcitem extends ByteDataAccess
+	public static class Inspcitem extends ByteDataAccessBase
 	{
       private final static int kbyteOrder = 4;
 	  public final static int sizeofHead = 8;
@@ -379,18 +377,6 @@ public class InspcDataExchangeAccess
     }
     
     
-		@Override protected final void specifyEmptyDefaultData()
-		{
-		}
-
-		@Override protected final int specifyLengthElement() throws IllegalArgumentException
-		{ return 0;
-		}
-
-		@Override public final int specifyLengthElementHead()
-		{ return sizeofHead;
-		}
-		
 		/**Sets the head data and sets the length of the ByteDataAccess-element.
 		 * @param length The length in head, the length of the info element
 		 * @param cmd The cmd of the info element
@@ -404,28 +390,28 @@ public class InspcDataExchangeAccess
 		  setLengthElement(lengthInfo);  //adjust the length in the access.
 		}
 		
-		public final void setLength(int length)
+		@Java4C.inline public final void setLength(int length)
 		{ setInt16(0, length); 
 	    setLengthElement(length);
     }
 		
-		public final void setCmd(int cmd)
+		@Java4C.inline public final void setCmd(int cmd)
 		{ setInt16(2, cmd); 
 		}
 		
 		/**Returns the cmd in a Reflitem. The cmd is coded see {@link #kFailedCommand}, {@link #kAnswerFieldMethod} etc.
 		 * @return
 		 */
-		public final int getCmd(){ return getInt16(2); }
+		@Java4C.inline public final int getCmd(){ return getInt16(2); }
 		
-		public final int getLenInfo(){ return getInt16(0); }
+		@Java4C.inline public final int getLenInfo(){ return getInt16(0); }
 		
 		/**Gets the order number of the info block. A sending info is set with the
 		 * {@link #setInfoHead(int, int, int)} with any order identification number which is unified for the target
 		 *   in a proper time. The received info returns the same order ident.   
 		 * @return The order from this Info block.
 		 */
-		public final int getOrder(){ return getInt32(kbyteOrder); }
+		@Java4C.inline public final int getOrder(){ return getInt32(kbyteOrder); }
 		
 			
 	}
@@ -470,7 +456,7 @@ public class InspcDataExchangeAccess
  * 
  */
 @Java4C.extendsOnlyMethods
-public final static class InspcSetValue extends ByteDataAccess{
+public final static class InspcSetValue extends ByteDataAccessBase{
 	
 	public final static int sizeofElement = 16;
 
@@ -484,74 +470,67 @@ public final static class InspcSetValue extends ByteDataAccess{
 	/**Gets a password for access control.
 	 * @return The password.
 	 */
-	@Java4C.inline public long getPwd(){ return _getLong(0, 6); }
+	@Java4C.inline public final long getPwd(){ return _getLong(0, 6); }
 	
 	
-	@Java4C.inline public void setPwd(int pwd){ _setLong(0, 6, pwd); }
+	@Java4C.inline public final void setPwd(int pwd){ _setLong(0, 6, pwd); }
 	
-	@Java4C.inline public byte getType(){ return (byte) _getLong(7, 1); }
+	@Java4C.inline public final byte getType(){ return (byte) _getLong(7, 1); }
 
-	@Java4C.inline public byte getByte(){ return (byte)_getLong(15, -1);} 
+	@Java4C.inline public final byte getByte(){ return (byte)_getLong(15, -1);} 
 	
-	@Java4C.inline public short getShort(){ return (short)_getLong(14, -2);} 
+	@Java4C.inline public final short getShort(){ return (short)_getLong(14, -2);} 
 	
 	/**A long value is provided in the bytes 8..15 in Big endian.
 	 * If only a int value will be used, it were found in the bit 12..15.
 	 * @return The int value.
 	 */
-	@Java4C.inline public int getInt(){ return (int)_getLong(12, -4); }
+	@Java4C.inline public final int getInt(){ return (int)_getLong(12, -4); }
 	
 	/**A long value is provided in the bytes 8..15 in Big endian.
 	 * @return The long value.
 	 */
-	@Java4C.inline public long getLong(){ return _getLong(8, -8); }
+	@Java4C.inline public final long getLong(){ return _getLong(8, -8); }
 	
 	/**A float value is provided in the bytes 8..11 in Big endian.
 	 * @return The float value.
 	 */
-	@Java4C.inline public float getFloat(){ return getFloat(8); }
+	@Java4C.inline public final float getFloat(){ return getFloat(8); }
 	
-	@Java4C.inline public double getDouble(){ return getDouble(8); }
+	@Java4C.inline public final double getDouble(){ return getDouble(8); }
 
   /**Sets a byte value. */
-  @Java4C.inline public void setBool(int value)
+  @Java4C.inline public final void setBool(int value)
   { clearData(); _setLong(kType,1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_boolean);  _setLong(15, 1, value);} 
   
   /**Sets a byte value. */
-  @Java4C.inline public void setByte(int value)
+  @Java4C.inline public final void setByte(int value)
   { clearData(); _setLong(kType,1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int8);  _setLong(15, 1, value);} 
   
   /**Sets a short value. */
-	@Java4C.inline public void setShort(int value)
+	@Java4C.inline public final void setShort(int value)
   { clearData(); _setLong(kType,1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16);  _setLong(14, 2, value);} 
   
   /**Sets a int32 value. */
-	@Java4C.inline public void setInt(int value)
+	@Java4C.inline public final void setInt(int value)
 	{ clearData(); _setLong(kType,1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int32); _setLong(12, 4, value);} 
   
   /**Sets a long value (int64). */
-	@Java4C.inline public void setLong(long value)
+	@Java4C.inline public final void setLong(long value)
   { clearData(); _setLong(kType,1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int64);  _setLong(8, 8, value);} 
    
   /**Sets a float value. */
-  @Java4C.inline public void setFloat(float value)
+  @Java4C.inline public final void setFloat(float value)
   { clearData(); _setLong(kType,1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float);  setFloat(12, value);} 
   
   /**Sets a float value given by a int image. */
-  @Java4C.inline public void setFloatIntImage(int value)
+  @Java4C.inline public final void setFloatIntImage(int value)
   { clearData(); _setLong(kType,1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float);  _setLong(12, 4, value);} 
   
   /**Sets a double value. */
-	@Java4C.inline public void setDouble(double value)
+	@Java4C.inline public final void setDouble(double value)
   { clearData(); _setLong(kType,1, InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_double);  setDouble(8, value);} 
   
-  @Java4C.inline @Override protected void specifyEmptyDefaultData() { }
-
-  @Java4C.inline @Override protected int specifyLengthElement() throws IllegalArgumentException
-	{ return sizeofElement; }
-
-  @Java4C.inline @Override public int specifyLengthElementHead()
-	{ return sizeofElement; }
 	
 	
 }//class SetValue
@@ -575,59 +554,66 @@ public final static class InspcSetValueData extends Inspcitem {
     setBigEndian(true);
   }
 
-  @Java4C.inline public void setAddress(int address){ _setLong(8, 4, address); }
+  
+  
+  
+  
 
-  @Java4C.inline public void setPosition(int position){ _setLong(12, 4, position); }
+    
+  
+  @Java4C.inline public final void setAddress(int address){ _setLong(8, 4, address); }
 
-  @Java4C.inline public void setBool(int value){ 
+  @Java4C.inline public final void setPosition(int position){ _setLong(12, 4, position); }
+
+  public final void setBool(int value){ 
     @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
-    setValue.assignAtIndex(16, this);
+    this.addChildAt(16, setValue);
     setValue.setBool((byte)value);
   }
   
-  @Java4C.inline public void setShort(int value){ 
+  public final void setShort(int value){ 
     @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
-    setValue.assignAtIndex(16, this);
+    this.addChildAt(16, setValue);
     setValue.setShort((short)value);
   }
   
-  @Java4C.inline public void setByte(int value){ 
+  public final void setByte(int value){ 
     @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
-    setValue.assignAtIndex(16, this);
+    this.addChildAt(16, setValue);
     setValue.setByte((byte)value);
   }
   
-  @Java4C.inline public void setInt(int value){ 
+  public final void setInt(int value){ 
     @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
-    setValue.assignAtIndex(16, this);
+    this.addChildAt(16, setValue);
     setValue.setInt(value);
   }
   
-  @Java4C.inline public void setFloat(float value){ 
+  public final void setFloat(float value){ 
     @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
-    setValue.assignAtIndex(16, this);
+    this.addChildAt(16, setValue);
     setValue.setFloat(value);
   }
   
-  @Java4C.inline public void setFloatIntImage(int value){ 
+  public final void setFloatIntImage(int value){ 
     @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
-    setValue.assignAtIndex(16, this);
+    this.addChildAt(16, setValue);
     setValue.setFloatIntImage(value);
   }
   
-  @Java4C.inline public void setDouble(double value){ 
+  public final void setDouble(double value){ 
     @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
-    setValue.assignAtIndex(16, this);
+    this.addChildAt(16, setValue);
     setValue.setDouble(value);
   }
   
-  @Java4C.inline public void setLong(long value){ 
+  public final void setLong(long value){ 
     @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
-    setValue.assignAtIndex(16, this);
+    this.addChildAt(16, setValue);
     setValue.setLong(value);
   }
   
-  @Java4C.inline public void setHead(int order){
+  @Java4C.inline public final void setHead(int order){
     super.setInfoHead(sizeofElement, InspcDataExchangeAccess.Inspcitem.kSetvaluedata, order);
   }
 
