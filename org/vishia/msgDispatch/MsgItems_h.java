@@ -267,7 +267,7 @@ public class MsgItems_h
       }
 
       /**Because the method has fix childs, the setBigEndian method is overridden to apply the endian to all fix childs. */
-      @Override public void setBigEndian(boolean val)
+      public void setBigEndianItem(boolean val)
       { super.setBigEndian(val);
       
           
