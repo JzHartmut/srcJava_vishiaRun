@@ -3,13 +3,16 @@ package org.vishia.communication;
 
 
 
-/** This interface is the applicable interface to realize a communication between processes at the same processor board
-  *  or between processes via network using UDP/IP.
-  * In generally, realization of this class is hardware-depended.
-  * An implementation with socket communications (using java.net.Socket*) exists.
-  * But the user can realize its own solutions based on this interface, at example
-  * with using dual port RAM-communication at system level.
-*/
+/**This interface is the applicable interface to realize a communication between processes at the same processor board
+ * or between processes via network using UDP/IP.
+ * In generally, realization of this class is hardware-depended.
+ * An implementation with socket communications (using java.net.Socket*) exists.
+ * But the user can realize its own solutions based on this interface, at example
+ * with using dual port RAM-communication at system level.
+ * <br><br>
+ * Hint for Java4C-usage: In C this interface is existing too, see CRuntimeJavalike/Include/Ipc/InterProcessComm.h.
+ * For Java2C-translating the CRuntimeJavalike/stc/Ipc.stc file describes this class. This class is not translated by iteself.
+ */
 public interface InterProcessComm
 {
   /**version, history and license:

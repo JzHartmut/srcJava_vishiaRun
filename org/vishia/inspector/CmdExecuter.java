@@ -1,6 +1,7 @@
 package org.vishia.inspector;
 
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.util.Java4C;
@@ -28,7 +29,13 @@ public class CmdExecuter implements AnswerComm_ifc
   /**@java2c=simpleRef. */
 	private Comm comm;
   
-  private final byte[] bufferAnswerData = new byte[1500]; 
+  @Java4C.SimpleArray
+  private final byte[] data_bufferAnswerData = new byte[1500]; 
+  
+  @Java4C.PtrVal
+  private final byte[] bufferAnswerData = data_bufferAnswerData; 
+  
+  
   
   private final InspcDataExchangeAccess.InspcDatagram myAnswerData = new InspcDataExchangeAccess.InspcDatagram(bufferAnswerData); 
   
@@ -49,7 +56,12 @@ public class CmdExecuter implements AnswerComm_ifc
   }
 
 
-  boolean executeCmd(byte[] buffer, int nrofBytesReceived) 
+  /**Executes the given command received with this datagram
+   * @param buffer contains the datagram
+   * @param nrofBytesReceived
+   * @return true if ok, false if nok
+   */
+  boolean executeCmd(@Java4C.PtrVal byte[] buffer, int nrofBytesReceived) 
   {
   	datagramCmd.assignDatagram(buffer, nrofBytesReceived);
     int nEntrant = datagramCmd.getEntrant();
@@ -63,6 +75,7 @@ public class CmdExecuter implements AnswerComm_ifc
     /**@java2c=dynamic-call. */
   	@Java4C.DynamicCall final CmdConsumer_ifc cmdConsumerMtbl = cmdConsumer;
   	myAnswerData.removeChildren();
+  	Arrays.fill(bufferAnswerData, 0, bufferAnswerData.length, (byte)0);
     //String test = myAnswerData.toString();
     if(nEntrant < 0){
       //a negative number: It is an entrant, the telegram has the common head.

@@ -45,7 +45,11 @@ public class Comm implements Runnable
 	private final int[] nrofBytesReceived = new int[1];
 	
 	/**Use a static receive buffer. It is important for C-applications. */
-	private final byte[] rxBuffer = new byte[1500];
+	@Java4C.SimpleArray
+	private final byte[] data_rxBuffer = new byte[1500];
+	
+	/**For C: store the reference and length of the SimpleArray in the next structure. */
+	@Java4C.PtrVal private final byte[] rxBuffer =  data_rxBuffer;
 	
 	/**@java2c=simpleRef. */
 	private final Address_InterProcessComm myAnswerAddress;
@@ -175,7 +179,7 @@ public class Comm implements Runnable
    * @param nrofBytesAnswer number of bytes to send.
    * @return number of bytes sent or a negative value on error.
    */
-  public final int sendAnswer(byte[] bufferAnswerData, int nrofBytesAnswer)  
+  public final int sendAnswer(@Java4C.PtrVal byte[] bufferAnswerData, int nrofBytesAnswer)  
   { int nrofSentBytes;
   	/**@java2c=dynamic-call. */
   	@Java4C.DynamicCall InterProcessComm ipcMtbl = ipc;  //java2c: build Mtbl-pointer.
