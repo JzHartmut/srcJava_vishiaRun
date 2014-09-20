@@ -84,7 +84,8 @@ public class InspcVariable implements VariableAccess_ifc
       switch(cmd){
         case InspcDataExchangeAccess.Inspcitem.kAnswerRegisterRepeat: {
           int ident = (int)info.getChildInteger(4);
-          InspcVariable.this.idTarget = ident;
+          InspcVariable.this.handleTarget = ident;
+          InspcVariable.this.modeTarget = ModeHandleVariable.kTargetUseByHandle;
         } //no break, use next case too!
         //$FALL-THROUGH$
         case InspcDataExchangeAccess.Inspcitem.kAnswerValueByIndex:  //same handling, though only one of some values are gotten.
@@ -92,7 +93,7 @@ public class InspcVariable implements VariableAccess_ifc
           int typeInspc = InspcTargetAccessor.getInspcTypeFromRxValue(info);
           InspcVariable.this.cType = InspcTargetAccessor.getTypeFromInspcType(typeInspc);
           if(typeInspc == InspcDataExchangeAccess.kTypeNoValue || typeInspc == InspcDataExchangeAccess.kInvalidIndex){
-            idTarget = 0;  //try again.
+            modeTarget = ModeHandleVariable.kTargetNotSet;  //try again.
           }
           else if(cType == 'c'){ //character String
             valueS = InspcTargetAccessor.valueStringFromRxValue(info, typeInspc);  
@@ -116,7 +117,7 @@ public class InspcVariable implements VariableAccess_ifc
         } break;
         case InspcDataExchangeAccess.Inspcitem.kFailedPath:{
           System.err.println("InspcAccessEvaluatorRxTelg - failed path; " + ds.sPathInTarget);
-          idTarget = kIdTargetDisabled;
+          modeTarget = ModeHandleVariable.kIdTargetDisabled;
         } break;
         
       }//switch
@@ -140,11 +141,17 @@ public class InspcVariable implements VariableAccess_ifc
    */
   protected final static int kIdTargetUsePerPath = -2; 
   
+  enum ModeHandleVariable {
+    kTargetNotSet, kIdTargetDisabled, kIdTargetUsePerPath, kTargetUseByHandle
+  }
+  
+  ModeHandleVariable modeTarget = ModeHandleVariable.kTargetNotSet;
+  
   /**If >=0 then it is the identification of the variable in the target device.
    * if <0 then see {@link #kIdTargetDisabled} etc.
    * The the value can be gotten calling getValueByIdent().
    */
-  int idTarget = kIdTargetUndefined;
+  int handleTarget;
   
   /**Timestamp in milliseconds after 1970 when the variable was requested. 
    * A value may be gotten only if a new request is pending. */
@@ -189,32 +196,38 @@ public class InspcVariable implements VariableAccess_ifc
   public boolean requestValueFromTarget(long timeCurrent, boolean retryDisabledVariable)  
   { //check whether the widget has an comm action already. 
     //First time a widgets gets its WidgetCommAction. Then for ever the action is kept.
-    if(idTarget >= 1 && varMng.bUseGetValueByIndex){
-      return ds.targetAccessor.cmdGetValueByIdent(this.idTarget, this.rxAction);
-    } else if(idTarget == kIdTargetDisabled){
-      if(retryDisabledVariable){
-        idTarget = kIdTargetUndefined;  //in the next step: register or get by path
+    if(varMng.bUseGetValueByHandle){
+      if(modeTarget == ModeHandleVariable.kTargetUseByHandle){
+        return ds.targetAccessor.cmdGetValueByIdent(this.handleTarget, this.rxAction);
+      } else {
+        //register the variable in the target system:
+        String sPathComm = this.ds.sPathInTarget  + ".";
+        if(sPathComm.charAt(0) != '#'){
+          Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
+          idx.put(this.ds.sPathInTarget, this);
+          return  ds.targetAccessor.cmdRegisterByPath(sPathComm, this.rxAction) !=0;
+        }
+      }
+    } else if(modeTarget == ModeHandleVariable.kIdTargetDisabled){
+      if(retryDisabledVariable && this.ds.sPathInTarget.charAt(0) != '#'){
+        modeTarget = ModeHandleVariable.kTargetNotSet;  //in the next step: register or get by path
       }
       return true;  //true because the variable is handled.
-    } else if(idTarget == kIdTargetUsePerPath || !varMng.bUseGetValueByIndex){
-      //get by ident is not supported:
+    } else {
+      //get by handle is not supported:
       String sPathComm = this.ds.sPathInTarget  + ".";
       if(sPathComm.charAt(0) != '#'){
+        modeTarget = ModeHandleVariable.kIdTargetUsePerPath;
         Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
         idx.put(this.ds.sPathInTarget, this);
         return ds.targetAccessor.cmdGetValueByPath(sPathComm, this.rxAction) !=0;
         //return varMng.requestValueByPath(sPathComm, this.rxAction);
-      } else return true;  //variable is handled.
-    } else {
-      //register the variable in the target system:
-      String sPathComm = this.ds.sPathInTarget  + ".";
-      if(sPathComm.charAt(0) != '#'){
-        Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
-        idx.put(this.ds.sPathInTarget, this);
-        return  ds.targetAccessor.cmdRegisterByPath(sPathComm, this.rxAction) !=0;
+      } else { 
+        modeTarget = ModeHandleVariable.kIdTargetDisabled;
+        return true;  //variable is handled.
       }
-      return true;   //true because the variable is handled.
     }
+    return true;   //true because the variable is handled.
   }
   
   
@@ -322,7 +335,7 @@ public class InspcVariable implements VariableAccess_ifc
   
   @Override public boolean isRequestedValue(boolean retryFaultyVariables){
     if(timeRequested == 0) return false;  //never requested
-    if(idTarget == kIdTargetDisabled && !retryFaultyVariables) 
+    if(modeTarget == ModeHandleVariable.kIdTargetDisabled && !retryFaultyVariables) 
       return false;
     long timeNew = timeRequested - timeRefreshed;
     return timeNew >0;
@@ -332,7 +345,13 @@ public class InspcVariable implements VariableAccess_ifc
 
   
   
-  @Override public String toString(){ return " Variable(" + ds.sDataPath + ") "; }
+  @Override public String toString(){ 
+    StringBuilder u = new StringBuilder();
+    u.append("Variable: ").append(ds.sDataPath);
+    u.append(" m=").append(modeTarget)
+      .append(" h=").append(Integer.toHexString(handleTarget));
+    return u.toString();
+  }
 
 
 }

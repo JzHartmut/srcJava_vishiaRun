@@ -3,19 +3,24 @@ package org.vishia.inspector;
 
 import org.vishia.bridgeC.MemSegmJc;
 import org.vishia.reflect.FieldJc;
+import org.vishia.util.Java4C;
 
-/**This class contains the description to access one variable in memory
- * to get a value not by path but by a ident. The structure stores the type, memory address
+/**This class contains the description to access to one variable in memory
+ * to get a value not by path but by a handle. The structure stores the type, memory address
  * and some access info. In Java the memory address is the Object reference where the Field is located.
  * In C it is adapted in the same kind to support Java2C-translation.
+ * <br><br>
+ * Note that this struct in C should be used less memory because it is an array element of a large array (1024..4096). 
+ * Note that the length of integer should regard 4-byte-boundary for special processors which does not support a integer on any boundary.
  * @author Hartmut Schorrig
  *
  */
-public class InspcDataInfo
+@Java4C.NoObject public class InspcDataInfo
 {
 
   /**Version, history and license
    * <ul>
+   * <li>2014-09-21 Hartmut comment and Java4C 
    * <li>2012-04-07 Hartmut created, converted from the C implementation.
    * <li>2006-00-00 Hartmut created for C/C++
    * </ul>
@@ -58,20 +63,32 @@ public class InspcDataInfo
    */
   int lastUsed;
   
+  /**The address and maybe segment in address space of the variable. */ 
   final MemSegmJc addr = new MemSegmJc();
   
   /**Address and Segment of the value. @java2c=simpleRef. */
-  FieldJc addrValue;
+  @Java4C.SimpleRef @Java4C.ConstRef FieldJc reflectionField;
 
-  /**Nr of bytes to read and transfer. */
+  /**Nr of bytes of the type to read and transfer. */
   byte sizeofValue;
 
-  byte dummy;
-  
   /**The type of the value, to send in telegram, see kScalarTypes_DataExchangeCmd_OBM. 
    * If 0, than the entry is free.
    */
   byte typeValue;
+  
+  /**If it is a recording order, size of the buffer. */
+  short lengthData;  
+  
+  /**This check code should be sent from request to safety the correctness of request. 
+   * seconds: 65536 = 18 h. 
+   * Don't start at 0. A reset on target seems to have a valid check.
+   */
+  int check;  
+      
+  /**Timestamp seconds after 1970 of creation. An item is only valid for a defined time. 
+   * This is because the check may be repeated in a longer time spread. */
+  int secondOfCreation;
   
   /**The kind of order:
    * 'm': build min, max and mid
@@ -79,17 +96,9 @@ public class InspcDataInfo
    * 
    * 
    */ 
-  byte kindofOrder;
-
-  /**If it is a recording order, size of the buffer. */
-  short lengthData;  
+  //byte kindofOrder;
+  //byte dummy;
   
-  /**The indendificator should be sent from request to safety the correctness of request. 
-   * seconds: 65536 = 18 h. 
-   * Don't start at 0. A reset on target seems to have a valid check.
-   * */
-  short check;  
-  //OS_ValuePtr theObject;
-      
+
   
 }

@@ -117,7 +117,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    *   should start with "java:" then the variable is searched internally. TODO now it isn't tested well, the start instance
    *   should be given by constructor, because it should be either the start instance of the whole application or a special
    *   data area.
-   * <li>2012-04-17 Hartmut new: {@link #bUseGetValueByIndex}: Access via getValuePerPath for downward compatibility with target device.
+   * <li>2012-04-17 Hartmut new: {@link #bUseGetValueByHandle}: Access via getValuePerPath for downward compatibility with target device.
    * <li>2012-04-08 Hartmut new: Support of GetValueByIdent, catch of some exception, 
    * <li>2012-04-05 Hartmut new: Use {@link LogMessage to test telegram trafic}
    * <li>2012-04-02 Hartmut all functionality from org.vishia.guiInspc.InspcGuiComm now here,
@@ -235,7 +235,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   String sIpTarget;
   
-  boolean bUseGetValueByIndex;
+  boolean bUseGetValueByHandle;
 
   boolean bUserCalled;
 
@@ -289,7 +289,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     this.indexTargetAccessor = new TreeMap<String, InspcTargetAccessor>();
     this.listTargetAccessor = new LinkedList<InspcTargetAccessor>();
     this.sOwnIpcAddr = sOwnIpcAddr;
-    this.bUseGetValueByIndex = bUseGetValueByIndex;
+    this.bUseGetValueByHandle = bUseGetValueByIndex;
     this.user = user;
     if(user !=null){
       user.setInspcComm(this);
@@ -312,7 +312,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   public void setmodeRetryDisabledVariables(boolean retry){ retryDisabledVariable = retry; }
   
-  public void setmodeGetValueByIndex(boolean byIndex){ bUseGetValueByIndex = byIndex; }
+  public void setmodeGetValueByIndex(boolean byIndex){ bUseGetValueByHandle = byIndex; }
   
   
   @Override public void setCallbackOnReceivedData(Runnable callback){
@@ -458,12 +458,12 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       path1.targetAccessor.cmdGetFields(path1.sPathInTarget, requestedFields.rxActionGetFields);
       requestedFields = null;
     }
-    for(Map.Entry<String,InspcVariable> entryVar: idxAllVars.entrySet()){
+    for(Map.Entry<String,InspcVariable> entryVar: idxAllVars.entrySet()){ //check all variables of the system.
       VariableAccess_ifc var = entryVar.getValue();
       nrofVarsAll +=1;
       if(var instanceof InspcVariable){
         InspcVariable varInspc = (InspcVariable)var;
-        if(   var.isRequestedValue(retryDisabledVariable) ){  //handle only variable from Inspector access
+        if(   var.isRequestedValue(retryDisabledVariable) ){              //but handle only variable which are requested
           int dtimeRequested = (int)(timeCurr - varInspc.timeRequested);
           if(dtimeRequested > 10000){
             var.requestValue(0);  //old request set to 0

@@ -133,6 +133,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   /**The version history and license of this class.
    * <ul>
+   * <li>2014-09-21 Hartmut TODO use a state machine .
    * <li>2014-01-08 Hartmut chg: {@link #cmdSetValueByPath(String, int, InspcAccessExecRxOrder_ifc)},
    *   {@link #valueStringFromRxValue(org.vishia.communication.InspcDataExchangeAccess.Inspcitem, int)}
    * <li>2014-01-08 Hartmut chg: Now change of time regime. The request thread writes only data 
@@ -450,7 +451,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	 * may be reconnected. It is possible to send only after a manual command.
 	 */
 	public boolean isOrSetReady(long timeExpired){ 
-	  if(!bTaskPending.get()) return true;
+	  if(!bTaskPending.get()){
+	    return true;
+	  }
 	  else {
 	    if((timeExpired - timeSend) >=0){
 	      //forgot a pending request:
@@ -597,25 +600,28 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * @return true if the telegram is sent.
    */
   boolean txCmdGetValueByIdent() {
-    if(ixIdent5GetValueByIdent > 0){
+    if(ixIdent5GetValueByIdent > 0 && isOrSetReady(System.currentTimeMillis() - 5000)){
       int lengthInfo = accInfoDataGetValueByIdent.getLength();
       //It prepares the telg head.
-      prepareTelg(lengthInfo);  //It sends an existing telegram if there is not enough space for the idents-info
-      int order = orderGenerator.getNewOrder();
-      setExpectedOrder(order, actionRx4ValueByIdent);
-      txAccess.addChild(infoAccess);
-      int posInTelg = infoAccess.getPositionInBuffer() + InspcDataExchangeAccess.Inspcitem.sizeofHead;
-      System.arraycopy(dataInfoDataGetValueByIdent, 0, infoAccess.getData(), posInTelg, 4 * ixIdent5GetValueByIdent);
-      infoAccess.setInfoHead(lengthInfo + InspcDataExchangeAccess.Inspcitem.sizeofHead, InspcDataExchangeAccess.Inspcitem.kGetValueByIndex, order);
-      ixIdent5GetValueByIdent = 0;
-      accInfoDataGetValueByIdent.assignEmpty(dataInfoDataGetValueByIdent);
-      return true;
-    } else return false;
+      if(prepareTelg(lengthInfo)){  //It sends an existing telegram if there is not enough space for the idents-info
+        int order = orderGenerator.getNewOrder();
+        setExpectedOrder(order, actionRx4ValueByIdent);
+        txAccess.addChild(infoAccess);
+        int posInTelg = infoAccess.getPositionInBuffer() + InspcDataExchangeAccess.Inspcitem.sizeofHead;
+        System.arraycopy(dataInfoDataGetValueByIdent, 0, infoAccess.getData(), posInTelg, 4 * ixIdent5GetValueByIdent);
+        infoAccess.setInfoHead(lengthInfo + InspcDataExchangeAccess.Inspcitem.sizeofHead, InspcDataExchangeAccess.Inspcitem.kGetValueByIndex, order);
+        ixIdent5GetValueByIdent = 0;
+        accInfoDataGetValueByIdent.assignEmpty(dataInfoDataGetValueByIdent);
+        return true;
+      } else {
+        return false; //any problem, tegegram can't be sent.
+      }
+    } else return false; //no data
   }
   
   final void execRx4ValueByIdent(InspcDataExchangeAccess.Inspcitem info, long time, LogMessage log, int identLog){
     //int lenInfo = info.getLength();
-    int ixVal = (int)info.getChildInteger(4);
+    int ixVal = (int)info.getChildInteger(4);  //first index of variable in this answer item
     while(info.sufficingBytesForNextChild(1)){  //at least one byte in info, 
       InspcAccessExecRxOrder_ifc action = actionRx4GetValueByIdent[ixVal];
       ixVal +=1;
@@ -805,6 +811,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * @return true if anything to send, false if no cmd was given.
    */
   public boolean cmdFinit(){
+    txCmdGetValueByIdent();
     if(bFillTelg){
       bTaskPending.set(true);
       completeDatagramAndMaybeSend(true);
@@ -1059,6 +1066,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
             } else {
               int order = infoAccessRx.getOrder();
               int cmd = infoAccessRx.getCmd();
+              if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerValueByIndex)
+                stop();
               OrderWithTime timedOrder = ordersExpected.remove(order);
               //
               if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerFieldMethod){

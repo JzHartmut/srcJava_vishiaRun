@@ -821,11 +821,12 @@ public final class ClassContent implements CmdConsumer_ifc
           freeOrder = registeredDataAccess[ixReg];
         }
         freeOrder.lastUsed = currentTime;
-        freeOrder.addrValue = theField;
+        freeOrder.secondOfCreation = currentTime;
+        freeOrder.reflectionField = theField;
         freeOrder.addr.set(theObject);
         //don't start by 0 on reset of the target! date-20131208
         //- freeOrder.check +=1; //change it to detect old requests at same index.
-        freeOrder.check = (short)(currentTime);
+        freeOrder.check = currentTime & 0xfffff;
         int ixAnswer = ixReg | (freeOrder.check <<12);
         answerItem.addChildInteger(4, ixAnswer); 
         getSetValue(theField, idx, theObject, null, maxNrofAnswerBytes);
@@ -846,8 +847,7 @@ public final class ClassContent implements CmdConsumer_ifc
 
 
 	
-	int cmdGetValueByIndex(InspcDataExchangeAccess.Inspcitem cmd
-    , InspcDataExchangeAccess.InspcDatagram answer, int maxNrofAnswerBytes) 
+  int cmdGetValueByIndex(InspcDataExchangeAccess.Inspcitem cmd, InspcDataExchangeAccess.InspcDatagram answer, int maxNrofAnswerBytes) 
   throws IllegalArgumentException, UnsupportedEncodingException
   {
     int nrofVariable = (cmd.getLenInfo() - InspcDataExchangeAccess.Inspcitem.sizeofHead) / 4; 
@@ -866,8 +866,8 @@ public final class ClassContent implements CmdConsumer_ifc
         int check = (idxReq >> 12) & 0xfffff;
         InspcDataInfo order = registeredDataAccess[idxDataAccess];
         //TODO check if it matches in space of telegram!
-        if(check == order.check && order.addrValue !=null){
-          getSetValue(order.addrValue, 0, order.addr, null, maxNrofAnswerBytes);
+        if(check == order.check && order.reflectionField !=null){
+          getSetValue(order.reflectionField, 0, order.addr, null, maxNrofAnswerBytes);
         } else {
           //The ident is faulty. Any ident request should have its answer.
           answerItem.addChildInteger(1, InspcDataExchangeAccess.kInvalidIndex);

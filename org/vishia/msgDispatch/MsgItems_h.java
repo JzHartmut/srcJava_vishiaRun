@@ -90,7 +90,7 @@ public class MsgItems_h
     @Override
     protected void specifyEmptyDefaultData()
     {
-      for(int ii=idxBegin; ii < idxEnd; ii++)
+      for(int ii=ixBegin; ii < ixEnd; ii++)
       { super.data[ii] = 0;
       }
     }
@@ -213,7 +213,7 @@ public class MsgItems_h
     @Override
     protected void specifyEmptyDefaultData()
     {
-      for(int ii=idxBegin; ii < idxEnd; ii++)
+      for(int ii=ixBegin; ii < ixEnd; ii++)
       { super.data[ii] = 0;
       }
     }
@@ -261,8 +261,8 @@ public class MsgItems_h
       {
       
         //NOTE: use super.data etc to prevent false using of a local element data. super is ByteDataAccess.    
-        int length = super.idxEnd - kIdxmsgItems;
-        msgItems.assignData(super.data, length, super.idxBegin + kIdxmsgItems);  //embedded structure
+        int length = super.ixEnd - kIdxmsgItems;
+        msgItems.assignData(super.data, length, super.ixBegin + kIdxmsgItems);  //embedded structure
         msgItems.setBigEndian(super.bBigEndian);
       }
 
