@@ -12,16 +12,20 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-
-
 import org.vishia.byteData.ByteDataAccess;
 import org.vishia.byteData.ByteDataAccessSimple;
 import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
+import org.vishia.event.Event;
+import org.vishia.event.EventThread;
+import org.vishia.event.EventTimerMng;
 import org.vishia.inspector.InspcTelgInfoSet;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.ClassJc;
+import org.vishia.states.StateComposite;
+import org.vishia.states.StateSimple;
+import org.vishia.states.StateTop;
 import org.vishia.util.Debugutil;
 
 /**An instance of this class accesses one target device via InterProcessCommunication, usual Ethernet-Sockets.
@@ -255,6 +259,125 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 
   char state = 'R';
   
+
+  
+  
+  
+  
+  enum Cmd{ fill, send};
+  
+  class Ev extends Event<Cmd, Cmd>{ Ev(Cmd cmd){ super(cmd); } };
+  
+  Ev evFill = new Ev(Cmd.fill);
+  
+  Ev evSend = new Ev(Cmd.send);
+  
+
+  
+  
+  class States extends StateTop
+  //StateTop states1 = new StateTop()
+  {
+    
+    
+    
+    
+    class StateIdle extends StateSimple {
+      //StateSimple stateIdle = new StateSimple(states, "idle"){
+
+      StateTrans addRequest_Filling = new StateTrans(){ @Override protected int trans(Event<?, ?> ev)
+      {
+        if(ev == evFill){
+          return exit().entry(StateFilling.class, ev); 
+        } else return 0;
+      }};
+    
+      
+    };
+    
+    
+    class StateFilling extends StateSimple {
+      //StateSimple stateFilling = new StateSimple(states, "filling"){
+
+      StateTrans addRequest = new StateTrans(){ @Override protected int trans(Event<?, ?> ev)
+      {
+        if(ev == evFill){
+          return mTrans;  //remain in state
+        } else return 0;
+      }};
+    
+
+      StateTrans shouldSend_WaitReceive = new StateTrans(){ @Override protected int trans(Event<?, ?> ev)
+      {
+        if(ev == evSend){
+          return exit().entry(StateWaitReceive.class, ev);  //remain in state
+        } else return 0;
+      }};
+    
+      
+    };
+    
+    
+    
+    class StateWaitReceive extends StateSimple {
+      //StateSimple stateSending = new StateSimple(states, "sending"){
+
+      @Override protected void entryAction(Event<?, ?> ev) {
+        timeSend = System.currentTimeMillis(); 
+      }
+      
+      
+      StateTrans receive_Receive = new StateTrans(){ @Override protected int trans(Event<?, ?> ev)
+      {
+        // TODO Auto-generated method stub
+        return 0;
+      }};
+    
+      StateTrans timeout_Idle = new StateTrans(){ @Override protected int trans(Event<?, ?> ev)
+      {
+        // TODO Auto-generated method stub
+        return 0;
+      }};
+      
+    };
+    
+    
+    
+    class StateReceive extends StateSimple {
+    //StateSimple stateWaitAnswer = new StateSimple(states, "waitAnswer"){
+
+      StateTrans lastAnswer_Idle = new StateTrans(){ @Override protected int trans(Event<?, ?> ev)
+      {
+        // TODO Auto-generated method stub
+        return 0;
+      }};
+    
+      StateTrans notLastAnswer_WaitReceive = new StateTrans(){ @Override protected int trans(Event<?, ?> ev)
+      {
+        // TODO Auto-generated method stub
+        return 0;
+      }};
+      
+    };
+    
+    
+ 
+    
+    
+    
+    
+  }
+  
+  
+  //States states1 = new States();
+  
+  
+  //final StateTop states = new StateTop(null);
+  
+  
+  
+  
+  
 	/**If true, then a TelgHead is prepared already and some more info can be taken into the telegram.
 	 * If false then the txBuffer is unused yet.
 	 */
@@ -409,7 +532,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     if(bFillTelg && (txAccess.getLengthTotal() + lengthNewInfo) > tx[ixTxFill].buffer.length){
       //the next requested info does not fit in the current telg. 
       //Therefore send the telg but only if the other telgs are received already!
-      completeDatagramAndMaybeSend(false);
+      completeDatagram(false);
       if((ixTxFill) >= tx.length){
         return false;   //not enough space for communication. 
       }
@@ -511,6 +634,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   public int cmdGetFields(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
+    //states.processEvent(evFill);
+    //if(states.isInState(stateFilling))
+      stop();
     if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + sPathInTarget.length() + 3 )){
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       txAccess.addChild(infoAccess);
@@ -814,7 +940,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     txCmdGetValueByIdent();
     if(bFillTelg){
       bTaskPending.set(true);
-      completeDatagramAndMaybeSend(true);
+      completeDatagram(true);
       send();   //send the first telegramm now
       return true;
     } else {
@@ -836,9 +962,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   
   
-  /**Completes this datagram. Send it if it is the first one or all others has received already.
+  /**Completes this datagram with all head information.
    */
-  private void completeDatagramAndMaybeSend(boolean lastTelg){
+  private void completeDatagram(boolean lastTelg){
     assert(bFillTelg);
     int lengthDatagram = txAccess.getLength();
     tx[ixTxFill].nrofBytesTelg = lengthDatagram;

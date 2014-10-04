@@ -248,10 +248,6 @@ public final class InspcDataExchangeAccess
      */
     public final static int kGetFields = 0x10;
     
-    /**@deprecated */
-    @Deprecated
-    public final static int kGetFieldsFurther = 0x12; 
-    
     
     /**Antwort auf Aufforderung zur Rueckgabe einer Liste von Attributen, Assoziationen oder Methoden.
     Das Antwort-Item enthaelt einen Eintrag f�r ein Element, Type DataExchangeString_OBM.
@@ -364,10 +360,9 @@ public final class InspcDataExchangeAccess
     
     public final static int kFailedCommand = 0xFF;
     
-    public static final int kReference = 0xdf;
     
     
-    public static final int kSpecialValueStart = 0x7000, kSpecialValueLast = 0x7fff;
+    //public static final int kSpecialValueStart = 0x7000, kSpecialValueLast = 0x7fff;
     
     public Inspcitem(int sizeData){
       super(sizeofHead, sizeData);
