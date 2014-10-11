@@ -22,6 +22,8 @@ import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessComm_SocketImpl;
 import org.vishia.event.Event;
 import org.vishia.event.EventConsumer;
+import org.vishia.event.EventThread;
+import org.vishia.event.EventTimerMng;
 import org.vishia.inspector.SearchElement;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.FieldJc;
@@ -170,6 +172,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    */
   private final ThreadRun threadReqFromTarget;
   
+  
+  /**Thread which manages timers and creates time events. */
+  final EventTimerMng threadTimer = new EventTimerMng("timerEv");
+  
+  /**Thread which manages the queue of all events of state machines. */
+  final EventThread threadEvent = new EventThread("events");
+  
   private final InspcPlugUser_ifc user;
 
   ReplaceAlias_ifc replacerAlias;
@@ -179,6 +188,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    */
   Runnable callbackOnRxData;
   
+  
+  Runnable callbackShowingTargetCommState;
   
   /**If true then writes a log of all send and received telegrams. */
   LogMessage logTelg;
@@ -317,6 +328,12 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   @Override public void setCallbackOnReceivedData(Runnable callback){
     this.callbackOnRxData = callback;
+  }
+  
+  
+  
+  public void setCallbackShowingState(Runnable callback) {
+    this.callbackShowingTargetCommState = callback;
   }
 
   /*
@@ -650,6 +667,15 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
 
   
+  public int getStateOfTargetComm(int ixTarget) {
+    if(ixTarget < listTargetAccessor.size()) {
+      InspcTargetAccessor target = listTargetAccessor.get(ixTarget);
+      return target.getStateInfo();
+    } else return 0;
+  }
+  
+  
+  
   /**Gets or creates the parent for the given path. The parent is referenced in {@link #idxAllStruct}.
    * @param sPathChild
    * @return null if it is the root.
@@ -753,7 +779,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     commPort.open(sOwnIpcAddr);
     for(Map.Entry<String, String> e : indexTargetIpcAddr.entrySet()){
       Address_InterProcessComm addrTarget = commPort.createTargetAddr(e.getValue());
-      InspcTargetAccessor accessor = new InspcTargetAccessor(commPort, addrTarget);
+      InspcTargetAccessor accessor = new InspcTargetAccessor(commPort, addrTarget, threadTimer, threadEvent);
       indexTargetAccessor.put(e.getKey(), accessor);
       listTargetAccessor.add(accessor);
     }
@@ -783,6 +809,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
      */
     @Override public final int step(int cycletime, int cycletimelast, int calctimelast, long timesecondsAbs){
       //bThreadRuns = true;
+      if(callbackShowingTargetCommState !=null) {
+        callbackShowingTargetCommState.run();
+      }
       if(callbackOnRxData !=null){
         callbackOnRxData.run();         //show the received values.
         //the next requests for variables will be set.
@@ -803,6 +832,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   { //bThreadRuns = false;
     threadReqFromTarget.close();
     commPort.close();
+    threadEvent.close();
+    threadTimer.close();
   }
   
   void stop(){}

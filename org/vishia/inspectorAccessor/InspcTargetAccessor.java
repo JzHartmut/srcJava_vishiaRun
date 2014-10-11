@@ -265,6 +265,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   final States states;
   
   
+  private final StateSimple stateIdle, stateWaitAnswer;
+  
   enum Cmd{ fill, send, lastAnswer};
   
   class Ev extends Event<Cmd, Cmd>{ Ev(Cmd cmd){ super(cmd); } };
@@ -291,8 +293,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       {
         if(trans ==null) return new StateTrans("addRequest", StateFilling.class);
         if(ev == evFill){
-          trans.exitState();
-          trans.entryState(ev); 
+          trans.doExit();
+          trans.doEntry(ev); 
         } 
         return trans;
       }
@@ -319,8 +321,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       {
         if(trans ==null) return new StateTrans("shouldSend", StateWaitReceive.class);
         if(ev == evSend){
-          trans.exitState();
-          trans.entryState(ev); 
+          trans.doExit();
+          trans.doEntry(ev); 
         } 
         return trans;
       }
@@ -342,8 +344,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       {
         if(trans ==null) return new StateTrans("lastAnswer", StateIdle.class);
         if(ev == evLastAnswer){
-          trans.exitState();
-          trans.entryState(ev); 
+          trans.doExit();
+          trans.doEntry(ev); 
         } 
         return trans;
       }
@@ -476,7 +478,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   private final InspcCommPort commPort;	
 	
-  public InspcTargetAccessor(InspcCommPort commPort, Address_InterProcessComm targetAddr)
+  public InspcTargetAccessor(InspcCommPort commPort, Address_InterProcessComm targetAddr, EventTimerMng timer, EventThread threadEvents)
   { this.commPort = commPort;
     this.targetAddr = targetAddr;
     this.infoAccess = new InspcTelgInfoSet();
@@ -487,6 +489,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     }
     commPort.registerTargetAccessor(this);
     states = new States();	
+    stateIdle = states.getState(States.StateIdle.class);
+    stateWaitAnswer = states.getState(States.StateWaitReceive.class);
+    states.setTimerAndThread(timer, threadEvents);
     //The factory should be loaded already. Then the instance is able to get. Loaded before!
   }
 
@@ -533,7 +538,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   private boolean prepareTelg(int lengthNewInfo)
   { bHasAnswered = false;
-    states.processEvent(evFill);
+    states.applyEvent(evFill);
     if(!states.isInState(States.StateFilling.class)){
       stop();
     }
@@ -646,7 +651,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   public int cmdGetFields(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
-    //states.processEvent(evFill);
+    //states.applyEvent(evFill);
     //if(states.isInState(stateFilling))
       stop();
     if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + sPathInTarget.length() + 3 )){
@@ -701,7 +706,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   { final int order;
     final int zPath = sPathInTarget.length();
     final int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
-    prepareTelg(zPath + restChars);
+    prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + zPath + restChars);
     order = orderGenerator.getNewOrder();
     setExpectedOrder(order, actionOnRx);
     txAccess.addChild(infoAccess);  
@@ -950,7 +955,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   public boolean cmdFinit(){
     txCmdGetValueByIdent();
-    states.processEvent(evSend);
+    states.applyEvent(evSend);
     if(bFillTelg){
       bTaskPending.set(true);
       completeDatagram(true);
@@ -1056,7 +1061,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
         evaluate(accessRxTelg, null, time, logTelg, identLogTelg +idLogRxItem);
         //
         if(accessRxTelg.lastAnswer()){
-          states.processEvent(evLastAnswer);
+          states.applyEvent(evLastAnswer);
           //bSendPending = false;
           if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Rcv last answer; " + rxSeqnr);
           if(logTelg !=null){ 
@@ -1373,6 +1378,13 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       ret = '?'; //error
     }
     return ret;
+  }
+  
+  
+  int getStateInfo() {
+    if(stateIdle.isInState()) return 1;
+    else if(stateWaitAnswer.isInState()) return 2;
+    else return 0;
   }
   
   
