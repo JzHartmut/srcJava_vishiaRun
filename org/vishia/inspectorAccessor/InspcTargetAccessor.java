@@ -25,7 +25,7 @@ import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.ClassJc;
 import org.vishia.states.StateComposite;
 import org.vishia.states.StateSimple;
-import org.vishia.states.StateTop;
+import org.vishia.states.StateMachine;
 import org.vishia.util.Debugutil;
 
 /**An instance of this class accesses one target device via InterProcessCommunication, usual Ethernet-Sockets.
@@ -137,6 +137,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   /**The version history and license of this class.
    * <ul>
+   * <li>2014-10-12 Hartmut State machine included, tested but not active used. 
    * <li>2014-09-21 Hartmut TODO use a state machine .
    * <li>2014-01-08 Hartmut chg: {@link #cmdSetValueByPath(String, int, InspcAccessExecRxOrder_ifc)},
    *   {@link #valueStringFromRxValue(org.vishia.communication.InspcDataExchangeAccess.Inspcitem, int)}
@@ -261,10 +262,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
 
   
+  final States states;
   
   
-  
-  enum Cmd{ fill, send};
+  enum Cmd{ fill, send, lastAnswer};
   
   class Ev extends Event<Cmd, Cmd>{ Ev(Cmd cmd){ super(cmd); } };
   
@@ -272,11 +273,12 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   Ev evSend = new Ev(Cmd.send);
   
+  Ev evLastAnswer = new Ev(Cmd.lastAnswer);
+  
 
   
   
-  class States extends StateTop
-  //StateTop states1 = new StateTop()
+  class States extends StateMachine
   {
     
     
@@ -285,12 +287,15 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     class StateIdle extends StateSimple {
       //StateSimple stateIdle = new StateSimple(states, "idle"){
 
-      StateTrans addRequest_Filling = new StateTrans(){ @Override protected int trans(Event<?, ?> ev)
+      StateTrans addRequest_Filling(Event<?, ?> ev, StateTrans trans)
       {
+        if(trans ==null) return new StateTrans("addRequest", StateFilling.class);
         if(ev == evFill){
-          return exit().entry(StateFilling.class, ev); 
-        } else return 0;
-      }};
+          trans.exitState();
+          trans.entryState(ev); 
+        } 
+        return trans;
+      }
     
       
     };
@@ -299,20 +304,26 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     class StateFilling extends StateSimple {
       //StateSimple stateFilling = new StateSimple(states, "filling"){
 
-      StateTrans addRequest = new StateTrans(){ @Override protected int trans(Event<?, ?> ev)
+      StateTrans addRequest(Event<?, ?> ev, StateTrans trans)
       {
+        if(trans ==null) return new StateTrans("addRequest", StateFilling.class);
         if(ev == evFill){
-          return mTrans;  //remain in state
-        } else return 0;
-      }};
+          trans.retTrans = mEventConsumed;  //remain in state
+        } 
+        return trans;
+      }
+
     
 
-      StateTrans shouldSend_WaitReceive = new StateTrans(){ @Override protected int trans(Event<?, ?> ev)
+      StateTrans shouldSend_WaitReceive(Event<?, ?> ev, StateTrans trans)
       {
+        if(trans ==null) return new StateTrans("shouldSend", StateWaitReceive.class);
         if(ev == evSend){
-          return exit().entry(StateWaitReceive.class, ev);  //remain in state
-        } else return 0;
-      }};
+          trans.exitState();
+          trans.entryState(ev); 
+        } 
+        return trans;
+      }
     
       
     };
@@ -322,22 +333,20 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     class StateWaitReceive extends StateSimple {
       //StateSimple stateSending = new StateSimple(states, "sending"){
 
-      @Override protected void entryAction(Event<?, ?> ev) {
+      @Override public int entry(Event<?, ?> ev) {
         timeSend = System.currentTimeMillis(); 
+        return 0;
       }
       
-      
-      StateTrans receive_Receive = new StateTrans(){ @Override protected int trans(Event<?, ?> ev)
+      StateTrans lastAnswer_WaitReceive(Event<?, ?> ev, StateTrans trans)
       {
-        // TODO Auto-generated method stub
-        return 0;
-      }};
-    
-      StateTrans timeout_Idle = new StateTrans(){ @Override protected int trans(Event<?, ?> ev)
-      {
-        // TODO Auto-generated method stub
-        return 0;
-      }};
+        if(trans ==null) return new StateTrans("lastAnswer", StateIdle.class);
+        if(ev == evLastAnswer){
+          trans.exitState();
+          trans.entryState(ev); 
+        } 
+        return trans;
+      }
       
     };
     
@@ -346,13 +355,13 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     class StateReceive extends StateSimple {
     //StateSimple stateWaitAnswer = new StateSimple(states, "waitAnswer"){
 
-      StateTrans lastAnswer_Idle = new StateTrans(){ @Override protected int trans(Event<?, ?> ev)
+      StateTrans lastAnswer_Idle = new StateTrans("lastAnswer", StateIdle.class){ @Override protected int trans(Event<?, ?> ev)
       {
         // TODO Auto-generated method stub
         return 0;
       }};
     
-      StateTrans notLastAnswer_WaitReceive = new StateTrans(){ @Override protected int trans(Event<?, ?> ev)
+      StateTrans notLastAnswer_WaitReceive = new StateTrans("notLastAnswer", StateReceive.class){ @Override protected int trans(Event<?, ?> ev)
       {
         // TODO Auto-generated method stub
         return 0;
@@ -467,20 +476,19 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   private final InspcCommPort commPort;	
 	
-	
-	public InspcTargetAccessor(InspcCommPort commPort, Address_InterProcessComm targetAddr)
-	{ this.commPort = commPort;
-	  this.targetAddr = targetAddr;
-		this.infoAccess = new InspcTelgInfoSet();
+  public InspcTargetAccessor(InspcCommPort commPort, Address_InterProcessComm targetAddr)
+  { this.commPort = commPort;
+    this.targetAddr = targetAddr;
+    this.infoAccess = new InspcTelgInfoSet();
     for(int ix = 0; ix < tx.length; ++ix){
       tx[ix] = new TxBuffer();
       tx[ix].buffer = new byte[1400];
       //tx[ix].stateOfTxTelg.set(0);
     }
-		commPort.registerTargetAccessor(this);
-		
+    commPort.registerTargetAccessor(this);
+    states = new States();	
     //The factory should be loaded already. Then the instance is able to get. Loaded before!
-	}
+  }
 
 	
 	/**Sets the target address for the next telegram assembling and the next send()-invocation.
@@ -525,6 +533,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   private boolean prepareTelg(int lengthNewInfo)
   { bHasAnswered = false;
+    states.processEvent(evFill);
+    if(!states.isInState(States.StateFilling.class)){
+      stop();
+    }
     if(ixTxFill >= tx.length ){ //check more as one datagram
       System.err.println("InspcTargetAccessor - Too many telegram requests;");
       return false;
@@ -938,6 +950,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   public boolean cmdFinit(){
     txCmdGetValueByIdent();
+    states.processEvent(evSend);
     if(bFillTelg){
       bTaskPending.set(true);
       completeDatagram(true);
@@ -1043,6 +1056,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
         evaluate(accessRxTelg, null, time, logTelg, identLogTelg +idLogRxItem);
         //
         if(accessRxTelg.lastAnswer()){
+          states.processEvent(evLastAnswer);
           //bSendPending = false;
           if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Rcv last answer; " + rxSeqnr);
           if(logTelg !=null){ 
