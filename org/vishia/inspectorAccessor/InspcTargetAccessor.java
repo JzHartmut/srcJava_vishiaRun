@@ -283,15 +283,49 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   class States extends StateMachine
   {
     
+    States(EventThread thread, EventTimerMng timer){ super(thread, timer); }
     
     
-    
-    class StateIdle extends StateSimple {
+    class StateInactive extends StateSimple {
       //StateSimple stateIdle = new StateSimple(states, "idle"){
 
       StateTrans addRequest_Filling(Event<?, ?> ev, StateTrans trans)
       {
-        if(trans ==null) return new StateTrans("addRequest", StateFilling.class);
+        if(trans ==null) return new StateTrans(StateFilling.class);
+        if(ev == evFill){
+          trans.doExit();
+          trans.doEntry(ev); 
+        } 
+        return trans;
+      }
+    
+      
+    };
+    
+    
+    class StateIdle extends StateSimple {
+   
+      @Override public int entry(Event<?,?> ev){
+        //stateMachine.timeout(System.currentTimeMillis() + 10000);
+        return 0;
+      }
+      
+      Timeout timeout = new Timeout(10000, StateInactive.class){};
+      
+      StateTrans timeout_Inactive(Event<?, ?> ev, StateTrans trans)
+      {
+        if(trans ==null) return new StateTrans(StateInactive.class);
+        if(ev instanceof EventTimerMng.TimeEvent){
+          trans.doExit();
+          trans.doEntry(ev); 
+        } 
+        return trans;
+      }
+    
+      
+      StateTrans addRequest_Filling(Event<?, ?> ev, StateTrans trans)
+      {
+        if(trans ==null) return new StateTrans(StateFilling.class);
         if(ev == evFill){
           trans.doExit();
           trans.doEntry(ev); 
@@ -308,9 +342,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 
       StateTrans addRequest(Event<?, ?> ev, StateTrans trans)
       {
-        if(trans ==null) return new StateTrans("addRequest", StateFilling.class);
+        if(trans ==null) return new StateTrans(StateFilling.class); //remain in state
         if(ev == evFill){
-          trans.retTrans = mEventConsumed;  //remain in state
+          trans.retTrans = mTransit;  
         } 
         return trans;
       }
@@ -319,7 +353,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 
       StateTrans shouldSend_WaitReceive(Event<?, ?> ev, StateTrans trans)
       {
-        if(trans ==null) return new StateTrans("shouldSend", StateWaitReceive.class);
+        if(trans ==null) return new StateTrans(StateWaitReceive.class);
         if(ev == evSend){
           trans.doExit();
           trans.doEntry(ev); 
@@ -342,7 +376,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       
       StateTrans lastAnswer_WaitReceive(Event<?, ?> ev, StateTrans trans)
       {
-        if(trans ==null) return new StateTrans("lastAnswer", StateIdle.class);
+        if(trans ==null) return new StateTrans(StateIdle.class);
         if(ev == evLastAnswer){
           trans.doExit();
           trans.doEntry(ev); 
@@ -357,13 +391,13 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     class StateReceive extends StateSimple {
     //StateSimple stateWaitAnswer = new StateSimple(states, "waitAnswer"){
 
-      StateTrans lastAnswer_Idle = new StateTrans("lastAnswer", StateIdle.class){ @Override protected int trans(Event<?, ?> ev)
+      StateTrans lastAnswer_Idle = new StateTrans(StateIdle.class){ @Override protected int trans(Event<?, ?> ev)
       {
         // TODO Auto-generated method stub
         return 0;
       }};
     
-      StateTrans notLastAnswer_WaitReceive = new StateTrans("notLastAnswer", StateReceive.class){ @Override protected int trans(Event<?, ?> ev)
+      StateTrans notLastAnswer_WaitReceive = new StateTrans(StateReceive.class){ @Override protected int trans(Event<?, ?> ev)
       {
         // TODO Auto-generated method stub
         return 0;
@@ -488,10 +522,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       //tx[ix].stateOfTxTelg.set(0);
     }
     commPort.registerTargetAccessor(this);
-    states = new States();	
+    states = new States(threadEvents, timer);	
     stateIdle = states.getState(States.StateIdle.class);
     stateWaitAnswer = states.getState(States.StateWaitReceive.class);
-    states.setTimerAndThread(timer, threadEvents);
     //The factory should be loaded already. Then the instance is able to get. Loaded before!
   }
 
