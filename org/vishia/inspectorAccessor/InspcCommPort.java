@@ -6,9 +6,12 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.vishia.communication.Address_InterProcessComm;
+import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessCommFactory;
 import org.vishia.communication.InterProcessCommFactoryAccessor;
+import org.vishia.reflect.FieldJc;
+import org.vishia.util.Assert;
 
 /**This class is one communication port for a target communication.
  * <ul>
@@ -21,6 +24,38 @@ import org.vishia.communication.InterProcessCommFactoryAccessor;
  */
 public class InspcCommPort implements Closeable
 {
+  /**Version, history and license.
+   * <ul>
+   * <li>2014-11-05 Hartmut: catch exception in thread loop
+   * <li>2011-05-01 Hartmut: Created
+   * </ul>
+   * <br><br>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL ist not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   */
+  public static final String version = "2014-11-09";
+
   private InterProcessComm ipc;
   
   String sOwnIpAddr;
@@ -124,7 +159,12 @@ public class InspcCommPort implements Closeable
         String keyTargetAccessor = targetSenderAddr.toString();
         InspcTargetAccessor targetAccessor = targetAccessors.get(keyTargetAccessor);
         if(targetAccessor !=null){
-          targetAccessor.evaluateRxTelg(rxBuffer, result[0]);
+          try{ 
+            targetAccessor.evaluateRxTelg(rxBuffer, result[0]);
+          } catch(Exception exc) {
+            CharSequence sText = Assert.exceptionInfo("InspcCommPort - exception while evaluating receice telegram; ", exc, 0, 10);
+            System.err.append(sText);
+          }
         } else {
           System.out.append("InspcCommPort - receive from unknown target; "+ keyTargetAccessor);
         }

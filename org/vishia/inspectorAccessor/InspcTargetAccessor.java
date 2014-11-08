@@ -293,6 +293,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       {
         if(trans ==null) return new StateTrans(StateFilling.class);
         if(ev == evFill){
+          trans.retTrans = mTransit | mEventConsumed;
           trans.doExit();
           trans.doEntry(ev); 
         } 
@@ -316,6 +317,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       {
         if(trans ==null) return new StateTrans(StateInactive.class);
         if(ev instanceof EventTimerMng.TimeEvent){
+          trans.retTrans = mTransit | mEventConsumed;
           trans.doExit();
           trans.doEntry(ev); 
         } 
@@ -327,6 +329,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       {
         if(trans ==null) return new StateTrans(StateFilling.class);
         if(ev == evFill){
+          trans.retTrans = mTransit | mEventConsumed;
           trans.doExit();
           trans.doEntry(ev); 
         } 
@@ -344,7 +347,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       {
         if(trans ==null) return new StateTrans(StateFilling.class); //remain in state
         if(ev == evFill){
-          trans.retTrans = mTransit;  
+          trans.retTrans = mTransit | mEventConsumed;  
         } 
         return trans;
       }
@@ -355,6 +358,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       {
         if(trans ==null) return new StateTrans(StateWaitReceive.class);
         if(ev == evSend){
+          trans.retTrans = mTransit | mEventConsumed;
           trans.doExit();
           trans.doEntry(ev); 
         } 
@@ -378,6 +382,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       {
         if(trans ==null) return new StateTrans(StateIdle.class);
         if(ev == evLastAnswer){
+          trans.retTrans = mTransit | mEventConsumed;
           trans.doExit();
           trans.doEntry(ev); 
         } 
