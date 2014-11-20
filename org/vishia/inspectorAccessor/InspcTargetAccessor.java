@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.vishia.byteData.ByteDataAccess;
+import org.vishia.byteData.ByteDataAccessBase;
 import org.vishia.byteData.ByteDataAccessSimple;
 import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
@@ -482,8 +483,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
 	//ByteBuffer acc4ValueByIdent = new ByteBuffer();
 	
-	/**Managing instance of {@link ByteDataAccess} for {@link #dataInfoDataGetValueByIdent}. */
-	private final ByteDataAccess accInfoDataGetValueByIdent = new ByteDataAccessSimple(dataInfoDataGetValueByIdent, true);
+	/**Managing instance of {@link ByteDataAccessBase} for {@link #dataInfoDataGetValueByIdent}. */
+	private final ByteDataAccessBase accInfoDataGetValueByIdent = new ByteDataAccessSimple(dataInfoDataGetValueByIdent, true);
 	
 	private final InspcAccessExecRxOrder_ifc[] actionRx4GetValueByIdent = new InspcAccessExecRxOrder_ifc[zIdent4GetValueByIdent]; 
 	//InspcVariable[] variable4GetValueByIdent = new InspcVariable[zIdent4GetValueByIdent];
@@ -792,7 +793,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
         System.arraycopy(dataInfoDataGetValueByIdent, 0, infoAccess.getData(), posInTelg, 4 * ixIdent5GetValueByIdent);
         infoAccess.setInfoHead(lengthInfo + InspcDataExchangeAccess.Inspcitem.sizeofHead, InspcDataExchangeAccess.Inspcitem.kGetValueByIndex, order);
         ixIdent5GetValueByIdent = 0;
-        accInfoDataGetValueByIdent.assignEmpty(dataInfoDataGetValueByIdent);
+        accInfoDataGetValueByIdent.assignClear(dataInfoDataGetValueByIdent);
         return true;
       } else {
         return false; //any problem, tegegram can't be sent.

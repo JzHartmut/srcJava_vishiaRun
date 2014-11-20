@@ -51,7 +51,7 @@ public final class InspcDataExchangeAccess
    *   </ul> 
    * <li>2012-04-09 Hartmut new: Some enhancements, especially {@link Inspcitem#kGetValueByIndex} 
    *   The {@link Inspcitem#setInfoHead(int, int, int)} and {@link Inspcitem#setLength(int)} now adjusts the
-   *   length of the element and parent in the {@link ByteDataAccess} data with the same.
+   *   length of the element and parent in the {@link ByteDataAccessBase} data with the same.
    *   Set this information at end of filling variable data in an Info item, then all is correct.
    * <li>2011-06-21 Hartmut new {@link InspcSetValue} completed with set-methods. 
    *     Note: Because this class is used in Java2C for C-Programming, the short methods should be designated
@@ -208,9 +208,9 @@ public final class InspcDataExchangeAccess
    * An information entry contains this header and may be some childs. 
    * The childs may be simple integer or String childs getting and setting
    * with the methodes to add
-   * {@link ByteDataAccess#addChildInteger(int, long)} or {@link ByteDataAccess#addChildString(String)}. 
+   * {@link ByteDataAccessBase#addChildInteger(int, long)} or {@link ByteDataAccessBase#addChildString(String)}. 
    * and the methods to get
-   * {@link ByteDataAccess#getChildInteger(int)} or {@link ByteDataAccess#getChildString(int)}.
+   * {@link ByteDataAccessBase#getChildInteger(int)} or {@link ByteDataAccessBase#getChildString(int)}.
    * The childs may be described by a named-here class, forex {@link InspcSetValue}
    * <br><br>
    * The structure of an information entry may be described with XML, where the XML is only

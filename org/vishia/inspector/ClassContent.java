@@ -90,7 +90,7 @@ public final class ClassContent implements CmdConsumer_ifc
   // * @java2c=simpleRef. */
   //private InspcDataExchangeAccess.Datagram answerP;
   
-  /**Access element for {@link ByteDataAccess} to the answer Item. 
+  /**Access element for {@link ByteDataAccessBase} to the answer Item. 
    * It is reused whenever an info item is to be added. */
   private final InspcDataExchangeAccess.Inspcitem answerItem = new InspcDataExchangeAccess.Inspcitem();
   
