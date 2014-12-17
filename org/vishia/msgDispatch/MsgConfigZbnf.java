@@ -19,7 +19,8 @@ public class MsgConfigZbnf extends MsgConfig
   
   final List<MsgConfigItem> listItems = new LinkedList<MsgConfigItem>();
   
-  /**Reads the configuration from a file with given syntax.An example for such a syntax file is:
+  /**Reads the configuration from a file with given syntax.
+   * Syntax:
    * <pre>
 MsgConfig::= { <item> } \e.
 
