@@ -290,9 +290,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     class StateInactive extends StateSimple {
       //StateSimple stateIdle = new StateSimple(states, "idle"){
 
-      StateTrans addRequest_Filling(Event<?, ?> ev, StateTrans trans)
+      Trans addRequest_Filling(Event<?, ?> ev, Trans trans)
       {
-        if(trans ==null) return new StateTrans(StateFilling.class);
+        if(trans ==null) return new Trans(StateFilling.class);
         if(ev == evFill){
           trans.retTrans = mTransit | mEventConsumed;
           trans.doExit();
@@ -314,9 +314,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       
       Timeout timeout = new Timeout(10000, StateInactive.class){};
       
-      StateTrans timeout_Inactive(Event<?, ?> ev, StateTrans trans)
+      Trans timeout_Inactive(Event<?, ?> ev, Trans trans)
       {
-        if(trans ==null) return new StateTrans(StateInactive.class);
+        if(trans ==null) return new Trans(StateInactive.class);
         if(ev instanceof EventTimerMng.TimeEvent){
           trans.retTrans = mTransit | mEventConsumed;
           trans.doExit();
@@ -326,9 +326,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       }
     
       
-      StateTrans addRequest_Filling(Event<?, ?> ev, StateTrans trans)
+      Trans addRequest_Filling(Event<?, ?> ev, Trans trans)
       {
-        if(trans ==null) return new StateTrans(StateFilling.class);
+        if(trans ==null) return new Trans(StateFilling.class);
         if(ev == evFill){
           trans.retTrans = mTransit | mEventConsumed;
           trans.doExit();
@@ -344,9 +344,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     class StateFilling extends StateSimple {
       //StateSimple stateFilling = new StateSimple(states, "filling"){
 
-      StateTrans addRequest(Event<?, ?> ev, StateTrans trans)
+      Trans addRequest(Event<?, ?> ev, Trans trans)
       {
-        if(trans ==null) return new StateTrans(StateFilling.class); //remain in state
+        if(trans ==null) return new Trans(StateFilling.class); //remain in state
         if(ev == evFill){
           trans.retTrans = mTransit | mEventConsumed;  
         } 
@@ -355,9 +355,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 
     
 
-      StateTrans shouldSend_WaitReceive(Event<?, ?> ev, StateTrans trans)
+      Trans shouldSend_WaitReceive(Event<?, ?> ev, Trans trans)
       {
-        if(trans ==null) return new StateTrans(StateWaitReceive.class);
+        if(trans ==null) return new Trans(StateWaitReceive.class);
         if(ev == evSend){
           trans.retTrans = mTransit | mEventConsumed;
           trans.doExit();
@@ -379,9 +379,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
         return 0;
       }
       
-      StateTrans lastAnswer_WaitReceive(Event<?, ?> ev, StateTrans trans)
+      Trans lastAnswer_WaitReceive(Event<?, ?> ev, Trans trans)
       {
-        if(trans ==null) return new StateTrans(StateIdle.class);
+        if(trans ==null) return new Trans(StateIdle.class);
         if(ev == evLastAnswer){
           trans.retTrans = mTransit | mEventConsumed;
           trans.doExit();
@@ -397,13 +397,13 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     class StateReceive extends StateSimple {
     //StateSimple stateWaitAnswer = new StateSimple(states, "waitAnswer"){
 
-      StateTrans lastAnswer_Idle = new StateTrans(StateIdle.class){ @Override protected int trans(Event<?, ?> ev)
+      Trans lastAnswer_Idle = new Trans(StateIdle.class){ @Override protected int check(Event<?, ?> ev)
       {
         // TODO Auto-generated method stub
         return 0;
       }};
     
-      StateTrans notLastAnswer_WaitReceive = new StateTrans(StateReceive.class){ @Override protected int trans(Event<?, ?> ev)
+      Trans notLastAnswer_WaitReceive = new Trans(StateReceive.class){ @Override protected int check(Event<?, ?> ev)
       {
         // TODO Auto-generated method stub
         return 0;
@@ -577,7 +577,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   private boolean prepareTelg(int lengthNewInfo)
   { bHasAnswered = false;
-    states.applyEvent(evFill);
+    states.processEvent(evFill);
     if(!states.isInState(States.StateFilling.class)){
       stop();
     }
@@ -994,7 +994,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   public boolean cmdFinit(){
     txCmdGetValueByIdent();
-    states.applyEvent(evSend);
+    states.processEvent(evSend);
     if(bFillTelg){
       bTaskPending.set(true);
       completeDatagram(true);
@@ -1100,7 +1100,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
         evaluate(accessRxTelg, null, time, logTelg, identLogTelg +idLogRxItem);
         //
         if(accessRxTelg.lastAnswer()){
-          states.applyEvent(evLastAnswer);
+          states.processEvent(evLastAnswer);
           //bSendPending = false;
           if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Rcv last answer; " + rxSeqnr);
           if(logTelg !=null){ 
