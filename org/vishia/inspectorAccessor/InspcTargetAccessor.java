@@ -397,16 +397,14 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     class StateReceive extends StateSimple {
     //StateSimple stateWaitAnswer = new StateSimple(states, "waitAnswer"){
 
-      Trans lastAnswer_Idle = new Trans(StateIdle.class){ @Override protected int check(Event<?, ?> ev)
+      Trans lastAnswer_Idle = new Trans(StateIdle.class){ @Override protected void check(Event<?, ?> ev)
       {
         // TODO Auto-generated method stub
-        return 0;
       }};
     
-      Trans notLastAnswer_WaitReceive = new Trans(StateReceive.class){ @Override protected int check(Event<?, ?> ev)
+      Trans notLastAnswer_WaitReceive = new Trans(StateReceive.class){ @Override protected void check(Event<?, ?> ev)
       {
         // TODO Auto-generated method stub
-        return 0;
       }};
       
     };
