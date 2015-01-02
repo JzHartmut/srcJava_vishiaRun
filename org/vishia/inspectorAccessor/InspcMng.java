@@ -20,7 +20,8 @@ import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessComm_SocketImpl;
-import org.vishia.event.Event;
+import org.vishia.event.EventMsg;
+import org.vishia.event.EventMsg2;
 import org.vishia.event.EventConsumer;
 import org.vishia.event.EventThread;
 import org.vishia.event.EventTimerMng;
@@ -266,7 +267,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    * 
    */
   final EventConsumer XXXcallback = new EventConsumer(){
-    @Override public int processEvent(Event ev)
+    @Override public int processEvent(EventMsg ev)
     { callbackOnRxData(ev); 
       return 1;
     }
@@ -770,7 +771,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   /**This routine will be invoked if all data are received from the target.
    * @param ev
    */
-  void callbackOnRxData(Event ev){
+  void callbackOnRxData(EventMsg ev){
     
   }
   
@@ -803,7 +804,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
      * <li>It waits some milliseconds, 
      * <li>then requests values from target
      * <li>the waits for receiving all values or for a maximal time.
-     * <li>then calls {@link #callbackOnRxData(Event)} to show the values.
+     * <li>then calls {@link #callbackOnRxData(EventMsg2)} to show the values.
      * <li>then loops.
      * </ul>
      */

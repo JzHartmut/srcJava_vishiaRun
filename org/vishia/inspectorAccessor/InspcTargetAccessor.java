@@ -4,6 +4,7 @@ package org.vishia.inspectorAccessor;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Deque;
+import java.util.EventObject;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
@@ -18,7 +19,7 @@ import org.vishia.byteData.ByteDataAccessSimple;
 import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
-import org.vishia.event.Event;
+import org.vishia.event.EventMsg2;
 import org.vishia.event.EventThread;
 import org.vishia.event.EventTimerMng;
 import org.vishia.inspector.InspcTelgInfoSet;
@@ -270,7 +271,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   enum Cmd{ fill, send, lastAnswer};
   
-  class Ev extends Event<Cmd, Cmd>{ Ev(Cmd cmd){ super(cmd); } };
+  class Ev extends EventMsg2<Cmd, Cmd>{ Ev(Cmd cmd){ super(cmd); } };
   
   Ev evFill = new Ev(Cmd.fill);
   
@@ -290,7 +291,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     class StateInactive extends StateSimple {
       //StateSimple stateIdle = new StateSimple(states, "idle"){
 
-      Trans addRequest_Filling(Event<?, ?> ev, Trans trans)
+      Trans addRequest_Filling(EventObject ev, Trans trans)
       {
         if(trans ==null) return new Trans(StateFilling.class);
         if(ev == evFill){
@@ -307,14 +308,14 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     
     class StateIdle extends StateSimple {
    
-      @Override public int entry(Event<?,?> ev){
+      @Override public int entry(EventObject ev){
         //stateMachine.timeout(System.currentTimeMillis() + 10000);
         return 0;
       }
       
       Timeout timeout = new Timeout(10000, StateInactive.class){};
       
-      Trans timeout_Inactive(Event<?, ?> ev, Trans trans)
+      Trans timeout_Inactive(EventObject ev, Trans trans)
       {
         if(trans ==null) return new Trans(StateInactive.class);
         if(ev instanceof EventTimerMng.TimeEvent){
@@ -326,7 +327,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       }
     
       
-      Trans addRequest_Filling(Event<?, ?> ev, Trans trans)
+      Trans addRequest_Filling(EventObject ev, Trans trans)
       {
         if(trans ==null) return new Trans(StateFilling.class);
         if(ev == evFill){
@@ -344,7 +345,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     class StateFilling extends StateSimple {
       //StateSimple stateFilling = new StateSimple(states, "filling"){
 
-      Trans addRequest(Event<?, ?> ev, Trans trans)
+      Trans addRequest(EventObject ev, Trans trans)
       {
         if(trans ==null) return new Trans(StateFilling.class); //remain in state
         if(ev == evFill){
@@ -355,7 +356,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 
     
 
-      Trans shouldSend_WaitReceive(Event<?, ?> ev, Trans trans)
+      Trans shouldSend_WaitReceive(EventObject ev, Trans trans)
       {
         if(trans ==null) return new Trans(StateWaitReceive.class);
         if(ev == evSend){
@@ -374,12 +375,12 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     class StateWaitReceive extends StateSimple {
       //StateSimple stateSending = new StateSimple(states, "sending"){
 
-      @Override public int entry(Event<?, ?> ev) {
+      @Override public int entry(EventObject ev) {
         timeSend = System.currentTimeMillis(); 
         return 0;
       }
       
-      Trans lastAnswer_WaitReceive(Event<?, ?> ev, Trans trans)
+      Trans lastAnswer_WaitReceive(EventObject ev, Trans trans)
       {
         if(trans ==null) return new Trans(StateIdle.class);
         if(ev == evLastAnswer){
@@ -397,12 +398,12 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     class StateReceive extends StateSimple {
     //StateSimple stateWaitAnswer = new StateSimple(states, "waitAnswer"){
 
-      Trans lastAnswer_Idle = new Trans(StateIdle.class){ @Override protected void check(Event<?, ?> ev)
+      Trans lastAnswer_Idle = new Trans(StateIdle.class){ @Override protected void check(EventObject ev)
       {
         // TODO Auto-generated method stub
       }};
     
-      Trans notLastAnswer_WaitReceive = new Trans(StateReceive.class){ @Override protected void check(Event<?, ?> ev)
+      Trans notLastAnswer_WaitReceive = new Trans(StateReceive.class){ @Override protected void check(EventObject ev)
       {
         // TODO Auto-generated method stub
       }};
