@@ -285,7 +285,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   class States extends StateMachine
   {
     
-    States(EventThread thread, EventTimerMng timer){ super(thread, timer); }
+    States(EventThread thread, EventTimerMng timer){ super("InspcTargetAccessor", thread, timer); }
     
     
     class StateInactive extends StateSimple {

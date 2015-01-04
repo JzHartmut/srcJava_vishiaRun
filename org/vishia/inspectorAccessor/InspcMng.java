@@ -3,6 +3,7 @@ package org.vishia.inspectorAccessor;
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.EventObject;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -267,10 +268,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    * 
    */
   final EventConsumer XXXcallback = new EventConsumer(){
-    @Override public int processEvent(EventMsg ev)
+    @Override public int processEvent(EventObject ev)
     { callbackOnRxData(ev); 
       return 1;
     }
+    
+    @Override public String getStateInfo(){ return "no-state"; }
+
     @Override public String toString(){ return "InspcMng - callback rxdata"; }
 
   };
@@ -771,7 +775,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   /**This routine will be invoked if all data are received from the target.
    * @param ev
    */
-  void callbackOnRxData(EventMsg ev){
+  void callbackOnRxData(EventObject ev){
     
   }
   
