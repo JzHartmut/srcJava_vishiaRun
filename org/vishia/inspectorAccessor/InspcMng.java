@@ -721,23 +721,34 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   
   public void cmdSetValueOfField(InspcStruct struct, InspcStruct.FieldOfStruct field, String value){
+    String valueTrimmed = value.trim();
     InspcVariable var = getOrCreateVariable(struct, field);
     if(var !=null){
-      switch(var.cType){
-        case 'D':
-        case 'F': {
-          double val = Double.parseDouble(value); 
-          var.ds.targetAccessor.cmdSetValueByPath(var.ds.sPathInTarget, val, null); 
-        } break;
-        case 'S':
-        case 'B':
-        case 'I': {
-          int val = Integer.parseInt(value); 
-          var.ds.targetAccessor.cmdSetValueByPath(var.ds.sPathInTarget, val, null); 
-        } break;
-        case 's': {  //empty yet
-          
-        } break;
+      try{
+        switch(var.cType){
+          case 'D':
+          case 'F': {
+            double val = Double.parseDouble(valueTrimmed); 
+            var.ds.targetAccessor.cmdSetValueByPath(var.ds.sPathInTarget, val, null); 
+          } break;
+          case 'S':
+          case 'B':
+          case 'I': {
+            int val;
+            if(valueTrimmed.startsWith("0x")){
+              val = Integer.parseInt(valueTrimmed.substring(2),16); 
+            } else {
+              val = Integer.parseInt(valueTrimmed); 
+            }
+            var.ds.targetAccessor.cmdSetValueByPath(var.ds.sPathInTarget, val, null); 
+          } break;
+          case 's': {  //empty yet
+            
+          } break;
+        }
+      } catch(Exception exc){
+        //usual number format exception
+        System.err.println("InspcMng.cmdSetValueOfField - exception" + exc.getMessage() + "; ");
       }
     }
 

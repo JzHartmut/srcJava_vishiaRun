@@ -846,9 +846,9 @@ public class FieldJc
    * @throws IllegalAccessException
    */
   public String getString(MemSegmJc instance, int... ix) throws IllegalArgumentException, IllegalAccessException {
-     Object obj1 = field.get(instance.obj());
-     final String sValue;
-     if(obj1 == null){ sValue = "null"; }
+    Object obj1 = (this.field == null) ? instance.obj() : field.get(instance.obj());  //regard super field.
+    final String sValue;
+    if(obj1 == null){ sValue = "null"; }
     else { sValue = obj1.toString(); }
     return sValue;
   }

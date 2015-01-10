@@ -470,7 +470,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	/**Number of idents to get values per ident. It determines the length of an info block,
 	 * see {@link #dataInfoDataGetValueByIdent}. An info block has to be no longer than a UDP-telegram.
 	 */
-	private final static int zIdent4GetValueByIdent = 320;
+	private final static int zIdent4GetValueByIdent = 400;
 	
 	private int ixIdent5GetValueByIdent;
 	
