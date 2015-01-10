@@ -11,6 +11,7 @@ public final class ClassJc
   
   /**Version, history and license
    * <ul>
+   * <li>2015-01-10 Hartmut chg: {@link ClassJc#getSuperField()}. 
    * <li>2012-04-08 Hartmut new {@link #nrofBytesScalarTypes}, some correction parallel 
    *   to CRuntimeJavalike/.../Jc/ReflectionJc.h,c
    * <li>2009 Hartmut created as adapter for C-programming
@@ -124,6 +125,12 @@ public final class ClassJc
    * remote CPU. */
   private final Class<?> clazz;
   
+  private ClassJc superClass;
+  
+  private FieldJc superField;
+  
+  private boolean bSuperClassChecked;
+  
   /**All fields of this class. */
   private Map<String, FieldJc> indexNameFields;
   
@@ -197,6 +204,7 @@ public final class ClassJc
     ClassJc clazzJc = allClasses.get(className);
     if(clazzJc == null){
       clazzJc = new ClassJc(clazz);
+      allClasses.put(className, clazzJc);
     }
     return clazzJc;
   }
@@ -220,6 +228,7 @@ public final class ClassJc
     ClassJc clazzJc = allClasses.get(className);
     if(clazzJc == null){
       clazzJc = new ClassJc(className, ModifierJc.mPrimitiv);
+      allClasses.put(className, clazzJc);
     }
     return clazzJc;
   }
@@ -253,7 +262,25 @@ public final class ClassJc
   
   
   public ClassJc getEnclosingClass(){
+    //Note: outer classes are designated in Java with this$0 etc. as Field already.
     return null; //TODO
   }
   
+  public ClassJc getSuperClass(){
+    if(!bSuperClassChecked){
+      Class<?> superClass1 = clazz.getSuperclass();
+      if(superClass1 != Object.class){
+        superClass = ClassJc.fromClass(superClass1);
+        superField = new FieldJc(superClass, "super");
+      } 
+      bSuperClassChecked = true;
+    }
+    return superClass;
+  }
+  
+  
+  public FieldJc getSuperField(){
+    getSuperClass();  //only for check bSuperClassChecked
+    return superField;
+  }
 }

@@ -22,6 +22,7 @@ public final class ClassContent implements CmdConsumer_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2015-01-10 Hartmut chg: Now detects a superclass, provides a Field "super" which is regarded in @link {@link FieldJc} and @link {@link ClassJc#getSuperField()}. 
    * <li>2014-11-02 Hartmut chg: {@link #evaluateFieldGetFields(org.vishia.communication.InspcDataExchangeAccess.InspcDatagram, FieldJc, int, int)}:
    *   Problem with answer for long structures with second telegram. TODO: test it for C too!
    * <li>2013-12-07 Hartmut requfix: Check of the Index for getValueByIndex: Don't start from 0, because a reseted target 
@@ -294,10 +295,12 @@ public final class ClassContent implements CmdConsumer_ifc
           //not a question to collection size, but real clazz found:
           //show the fields:
           if(memObj.obj() !=null && MemSegmJc.segment(memObj)==0){
+            //Note: outer classes are designated in Java with this$0 etc. as Field already.
+            //ClassJc superObj = clazz.getEnclosingClass();
             /**Check whether an outer class exists. */
-            ClassJc outerObj = clazz.getEnclosingClass();
-            if(outerObj !=null){
-              evaluateFieldGetFields(answer, "_outer", outerObj, 0, 0, nOrderNr, maxNrofAnswerBytes);
+            ClassJc superType = clazz.getSuperClass();
+            if(superType !=null){
+              evaluateFieldGetFields(answer, "super", superType, 0, 0, nOrderNr, maxNrofAnswerBytes);
             }
           }
           /**Gets the fields of the real class of the found reference-field. 

@@ -289,7 +289,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     
     
     class StateInactive extends StateSimple {
-      //StateSimple stateIdle = new StateSimple(states, "idle"){
+      final boolean isDefault = true;
 
       Trans addRequest_Filling(EventObject ev, Trans trans)
       {

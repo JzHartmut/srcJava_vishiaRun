@@ -92,7 +92,11 @@ public class SearchElement
 	          	sName = sElement;
 	          }
 	          sElement = null; //clear_StringJc(&sElement);
-	          field = clazz.getDeclaredField(sName);
+	          if(sName.equals("super")){
+	            field = clazz.getSuperField();
+	          } else {
+	            field = clazz.getDeclaredField(sName);
+	          }
 	          sName = null; //clear_StringJc(&sName);
 	
 	          if(  field != null    //instead exception. See getDeclaredField_ClassJc(). 

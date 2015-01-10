@@ -378,6 +378,16 @@ public class FieldJc
   }
   
   
+  public FieldJc(ClassJc clazz, String name){
+    this.type = clazz;
+    this.field = null;
+    this.name = name;
+    this.staticArraySize = null;
+    this.cPrimitveType = '\0';
+    this.annotations = null;
+  }
+  
+  
   
   public String getName(){ return name; }
   
@@ -487,6 +497,10 @@ public class FieldJc
       Object[] objArray = (Object[])instanceM.obj();
       retObj = objArray[idx[0]];     //an indexOutOfBoundsException may be occured.
       clazz = ClassJc.getClass(retObj);
+    }
+    else if(name.equals("super")){
+      retObj = instanceM.obj();  //same instance
+      clazz = type;  //the super type.
     }
     else
     {
