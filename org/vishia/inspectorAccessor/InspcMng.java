@@ -21,8 +21,8 @@ import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessComm_SocketImpl;
-import org.vishia.event.EventMsg;
-import org.vishia.event.EventMsg2;
+import org.vishia.event.EventCmdType;
+import org.vishia.event.EventCmdPingPongType;
 import org.vishia.event.EventConsumer;
 import org.vishia.event.EventThread;
 import org.vishia.event.EventTimerMng;
@@ -819,7 +819,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
      * <li>It waits some milliseconds, 
      * <li>then requests values from target
      * <li>the waits for receiving all values or for a maximal time.
-     * <li>then calls {@link #callbackOnRxData(EventMsg2)} to show the values.
+     * <li>then calls {@link #callbackOnRxData(EventCmdPingPongType)} to show the values.
      * <li>then loops.
      * </ul>
      */

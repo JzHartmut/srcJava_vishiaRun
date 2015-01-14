@@ -19,7 +19,7 @@ import org.vishia.byteData.ByteDataAccessSimple;
 import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
-import org.vishia.event.EventMsg2;
+import org.vishia.event.EventCmdPingPongType;
 import org.vishia.event.EventThread;
 import org.vishia.event.EventTimerMng;
 import org.vishia.inspector.InspcTelgInfoSet;
@@ -271,7 +271,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   enum Cmd{ fill, send, lastAnswer};
   
-  class Ev extends EventMsg2<Cmd, Cmd>{ Ev(Cmd cmd){ super(cmd); } };
+  class Ev extends EventCmdPingPongType<Cmd, Cmd>{ Ev(Cmd cmd){ super(cmd); } };
   
   Ev evFill = new Ev(Cmd.fill);
   
