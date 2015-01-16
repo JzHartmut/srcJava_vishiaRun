@@ -285,7 +285,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   class States extends StateMachine
   {
     
-    States(EventThread thread, EventTimerMng timer){ super("InspcTargetAccessor", thread, timer); }
+    States(EventThread thread){ super("InspcTargetAccessor", thread); }
     
     
     class StateInactive extends StateSimple {
@@ -517,7 +517,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   private final InspcCommPort commPort;	
 	
-  public InspcTargetAccessor(InspcCommPort commPort, Address_InterProcessComm targetAddr, EventTimerMng timer, EventThread threadEvents)
+  public InspcTargetAccessor(InspcCommPort commPort, Address_InterProcessComm targetAddr, EventThread threadEvents)
   { this.commPort = commPort;
     this.targetAddr = targetAddr;
     this.infoAccess = new InspcTelgInfoSet();
@@ -527,7 +527,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       //tx[ix].stateOfTxTelg.set(0);
     }
     commPort.registerTargetAccessor(this);
-    states = new States(threadEvents, timer);	
+    states = new States(threadEvents);	
     stateIdle = states.getState(States.StateIdle.class);
     stateWaitAnswer = states.getState(States.StateWaitReceive.class);
     //The factory should be loaded already. Then the instance is able to get. Loaded before!

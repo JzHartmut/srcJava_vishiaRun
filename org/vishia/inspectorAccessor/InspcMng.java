@@ -176,7 +176,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   
   /**Thread which manages timers and creates time events. */
-  final EventTimerMng threadTimer = new EventTimerMng("timerEv");
+  //final EventTimerMng threadTimer = new EventTimerMng("timerEv");
   
   /**Thread which manages the queue of all events of state machines. */
   final EventThread threadEvent = new EventThread("events");
@@ -795,7 +795,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     commPort.open(sOwnIpcAddr);
     for(Map.Entry<String, String> e : indexTargetIpcAddr.entrySet()){
       Address_InterProcessComm addrTarget = commPort.createTargetAddr(e.getValue());
-      InspcTargetAccessor accessor = new InspcTargetAccessor(commPort, addrTarget, threadTimer, threadEvent);
+      InspcTargetAccessor accessor = new InspcTargetAccessor(commPort, addrTarget, threadEvent);
       indexTargetAccessor.put(e.getKey(), accessor);
       listTargetAccessor.add(accessor);
     }
@@ -849,7 +849,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     threadReqFromTarget.close();
     commPort.close();
     threadEvent.close();
-    threadTimer.close();
   }
   
   void stop(){}
