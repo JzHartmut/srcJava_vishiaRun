@@ -21,7 +21,6 @@ import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.event.EventCmdPingPongType;
 import org.vishia.event.EventThread;
-import org.vishia.event.EventTimerMng;
 import org.vishia.inspector.InspcTelgInfoSet;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.ClassJc;
@@ -318,11 +317,6 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       Trans timeout_Inactive(EventObject ev, Trans trans)
       {
         if(trans ==null) return new Trans(StateInactive.class);
-        if(ev instanceof EventTimerMng.TimeEvent){
-          trans.retTrans = mTransit | mEventConsumed;
-          trans.doExit();
-          trans.doEntry(ev); 
-        } 
         return trans;
       }
     

@@ -25,7 +25,6 @@ import org.vishia.event.EventCmdType;
 import org.vishia.event.EventCmdPingPongType;
 import org.vishia.event.EventConsumer;
 import org.vishia.event.EventThread;
-import org.vishia.event.EventTimerMng;
 import org.vishia.inspector.SearchElement;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.FieldJc;
