@@ -48,7 +48,13 @@ public class WriteCurveCsv  implements WriteCurve_ifc{
 
   Timeshort timeshortabs;
   
-  String[] sColumn;
+  String[] sPathsColumn;
+  
+  String[] sNamesColumn;
+  
+  String[] sColorsColumn;
+  
+  float[] aScale7div, aMid, aLine0;
   
   SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss.SSS");
   
@@ -56,15 +62,25 @@ public class WriteCurveCsv  implements WriteCurve_ifc{
   
   @Override public void setFile(File fOut){
     this.fOut = fOut;
-    sColumn = null;
+    sPathsColumn = null;
   }
   
   @Override public void setTrackInfo(int nrofTracks, int ixTrack, String sPath, String sName
       , String sColor, float scale7div, float mid, float line0){
-    if(sColumn == null){
-      sColumn = new String[nrofTracks];
+    if(sPathsColumn == null || sPathsColumn.length != nrofTracks) { //only create new instances for arrays if necessary.
+      sPathsColumn = new String[nrofTracks];
+      sNamesColumn = new String[nrofTracks];
+      sColorsColumn = new String[nrofTracks];
+      aScale7div = new float[nrofTracks];
+      aMid = new float[nrofTracks];
+      aLine0 = new float[nrofTracks];
     }
-    sColumn[ixTrack] = sPath;
+    this.sPathsColumn[ixTrack] = sPath;
+    this.sNamesColumn[ixTrack] = sName;
+    this.sColorsColumn[ixTrack] = sColor;
+    this.aScale7div[ixTrack] = scale7div;
+    this.aMid[ixTrack] = mid;
+    this.aLine0[ixTrack] = line0;
   }
   
   public WriteCurveCsv() {
@@ -100,17 +116,43 @@ public class WriteCurveCsv  implements WriteCurve_ifc{
       out.close();
     }
     out = new FileWriter(fOut);
+    out.append("CurveView-CSV version 150120\n");
+    writeStringLine(out, "name", sNamesColumn);
+    writeStringLine(out, "color", sColorsColumn);
+    writeFloatLine(out, "scale/div", aScale7div);
+    writeFloatLine(out, "midValue", aMid);
+    writeFloatLine(out, "0-line", aLine0);
+    writeStringLine(out, "time", sPathsColumn);
+  }
+
+  
+  private void writeStringLine(Writer out, String col0, String[] inp) throws IOException {
     uLine.setLength(0);
-    uLine.append("time; ");
-    for(String sColumn1: sColumn){
+    uLine.append(col0).append("; ");
+    for(String sColumn1: inp){
       if(sColumn1 == null){
         sColumn1 = "?";
       }
       uLine.append(sColumn1).append(";  ");
     }
-    out.append(uLine);
+    out.append(uLine).append('\n');
+    
   }
-
+  
+  private void writeFloatLine(Writer out, String col0, float[] inp) throws IOException {
+    uLine.setLength(0);
+    uLine.append(col0).append("; ");
+    for(float val: inp){
+      
+      uLine.append(Float.toString(val)).append(";  ");
+    }
+    out.append(uLine).append('\n');
+    
+  }
+  
+  
+  
+  
   @Override public void writeCurveTimestamp(Timeshort timeshortabs) {
     this.timeshortabs = timeshortabs;
     
