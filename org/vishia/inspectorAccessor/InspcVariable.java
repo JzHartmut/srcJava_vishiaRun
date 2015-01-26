@@ -20,6 +20,9 @@ public class InspcVariable implements VariableAccess_ifc
   
   /**Version, history and license.
    * <ul>
+   * <li>2013-12-07 Hartmut new: {@link #sValueToTarget} is set on {@link #setString(String)}. Then the new content
+   *   is sent to target to change it there. It is done in the {@link #requestValueFromTarget(long, boolean)} 
+   *   because this routine is called if the field is shown. Only if it is shown the change can be done.
    * <li>2013-12-07 Hartmut new: {@link #itsStruct} 
    * <li>2013-12-07 Hartmut chg: In {@link VariableRxAction}: Answer from target with info.cmd = {@link InspcDataExchangeAccess.Inspcitem#kFailedPath} 
    *   disables this variable from data communication. TODO enable with user action if the target was changed (recompiled, restarted etc).
@@ -60,7 +63,7 @@ public class InspcVariable implements VariableAccess_ifc
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20131224;
+  public static final int version = 20150127;
 
   final InspcMng varMng;
   
@@ -174,6 +177,9 @@ public class InspcVariable implements VariableAccess_ifc
    * 'c' for character array. */
   char cType = 'F';
   
+  /**The value of the variable was set from {@link VariableAccess_ifc}. It means it should be sent to target.*/
+  String sValueToTarget;
+  
   /**Creates a variable. A variable is an entity, which will be gotten with one access to the 
    * target device. It may be a String or a short static array too.
    * 
@@ -196,6 +202,29 @@ public class InspcVariable implements VariableAccess_ifc
   public boolean requestValueFromTarget(long timeCurrent, boolean retryDisabledVariable)  
   { //check whether the widget has an comm action already. 
     //First time a widgets gets its WidgetCommAction. Then for ever the action is kept.
+    if(sValueToTarget !=null) { //thread safety: atomic operation set the reference.
+      String sPathComm = this.ds.sPathInTarget  + ".";
+      try{
+        if("BSI".indexOf(cType) >=0){
+          final int value;
+          if(sValueToTarget.startsWith("0x")){
+            value = Integer.parseInt(sValueToTarget.substring(2),16);
+          } else {
+            value = Integer.parseInt(sValueToTarget);
+          }
+          ds.targetAccessor.cmdSetValueByPath(sPathComm, value, null);
+        } else if(cType == 'F') {
+          float value = Float.parseFloat(sValueToTarget);
+          ds.targetAccessor.cmdSetValueByPath(sPathComm, value, null);
+        } else {
+          System.out.println("InspcVariable - faulty type for setValue; " + cType);
+        }
+      } catch(NumberFormatException exc) {
+        System.err.println("InspcVariable - faulty value for setValue; " + sValueToTarget);
+      }
+      sValueToTarget = null;
+      return true;
+    }
     if(varMng.bUseGetValueByHandle){
       if(modeTarget == ModeHandleVariable.kTargetUseByHandle){
         return ds.targetAccessor.cmdGetValueByIdent(this.handleTarget, this.rxAction);
@@ -297,9 +326,9 @@ public class InspcVariable implements VariableAccess_ifc
 
   @Override
   public String setString(String value)
-  {
-    // TODO Auto-generated method stub
-    return null;
+  { sValueToTarget = value.trim();   //it will be sent if it is set, thread safe by setting one atomic reference.
+    //System.out.println("TODO InscVariable.setString(); " + value);
+    return value;
   }
   
   

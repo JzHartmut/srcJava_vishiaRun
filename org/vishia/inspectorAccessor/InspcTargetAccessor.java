@@ -570,7 +570,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   private boolean prepareTelg(int lengthNewInfo)
   { bHasAnswered = false;
-    states.processEvent(evFill);
+    if(evFill.occupy(null, false)) {
+      states.processEvent(evFill);    //set state to fill
+    } else; //don't send the event, it is in queue already from last prepareTelg invocation.
     if(!states.isInState(States.StateFilling.class)){
       stop();
     }
@@ -988,9 +990,11 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   public boolean cmdFinit(){
     txCmdGetValueByIdent();
     states.processEvent(evSend);
-    if(bFillTelg){
+    if(bFillTelg || ixTxFill >0){
       bTaskPending.set(true);
-      completeDatagram(true);
+      if(bFillTelg) {
+        completeDatagram(true);
+      }
       send();   //send the first telegramm now
       return true;
     } else {
@@ -1017,14 +1021,17 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   private void completeDatagram(boolean lastTelg){
     assert(bFillTelg);
     int lengthDatagram = txAccess.getLength();
-    tx[ixTxFill].nrofBytesTelg = lengthDatagram;
-    txAccess.setLengthDatagram(lengthDatagram);
-    tx[ixTxFill].nSeq = nSeqNumber;
-    tx[ixTxFill].lastTelg = lastTelg;
-    bFillTelg = false;
-    state = 's';
-    if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - complete Datagram; " + lastTelg + "; " + ixTxFill + "; seqnr " + nSeqNumber);
-    ixTxFill +=1;
+    if(ixTxFill < tx.length) {
+      assert(lengthDatagram <= tx[ixTxFill].buffer.length);
+      tx[ixTxFill].nrofBytesTelg = lengthDatagram;
+      txAccess.setLengthDatagram(lengthDatagram);
+      tx[ixTxFill].nSeq = nSeqNumber;
+      tx[ixTxFill].lastTelg = lastTelg;
+      bFillTelg = false;
+      state = 's';
+      if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - complete Datagram; " + lastTelg + "; " + ixTxFill + "; seqnr " + nSeqNumber);
+      ixTxFill +=1;
+    }
   }
   
   

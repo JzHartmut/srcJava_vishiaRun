@@ -272,9 +272,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       return 1;
     }
     
-    @Override public String getStateInfo(){ return "no-state"; }
-
-    @Override public String toString(){ return "InspcMng - callback rxdata"; }
+     @Override public String toString(){ return "InspcMng - callback rxdata"; }
 
   };
   

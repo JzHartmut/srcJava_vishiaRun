@@ -47,7 +47,7 @@ public final class ClassContent implements CmdConsumer_ifc
    * <li> You can redistribute copies of this source to everybody.
    * <li> Every user of this source, also the user of redistribute copies
    *    with or without payment, must accept this license for further using.
-   * <li> But the LPGL ist not appropriate for a whole software product,
+   * <li> But the LPGL is not appropriate for a whole software product,
    *    if this source is only a part of them. It means, the user
    *    must publish this part of source,
    *    but don't need to publish the whole source of the own product.
@@ -62,7 +62,7 @@ public final class ClassContent implements CmdConsumer_ifc
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20120409;
+  public static final int version = 20150125;
 
   
   /**The Object from which the user-given path starts to search. 
