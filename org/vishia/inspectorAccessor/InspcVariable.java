@@ -1,5 +1,6 @@
 package org.vishia.inspectorAccessor;
 
+import java.text.ParseException;
 import java.util.Map;
 
 import org.vishia.bridgeC.ConcurrentLinkedQueue;
@@ -8,6 +9,8 @@ import org.vishia.byteData.VariableAccessArray_ifc;
 import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.msgDispatch.LogMessage;
+import org.vishia.util.StringPart;
+import org.vishia.util.StringPartScan;
 
 /**This class presents a variable, which is accessed by a {@link InspcTargetAccessor} to get or set its value.
  * The value of the variable is presented with the {@link VariableAccessArray_ifc}. 
@@ -214,8 +217,22 @@ public class InspcVariable implements VariableAccess_ifc
           }
           ds.targetAccessor.cmdSetValueByPath(sPathComm, value, null);
         } else if(cType == 'F') {
-          float value = Float.parseFloat(sValueToTarget);
-          ds.targetAccessor.cmdSetValueByPath(sPathComm, value, null);
+          sValueToTarget = sValueToTarget.replace(',','.');  //use decimal point instead german colon 
+          StringPartScan spValue = new StringPartScan(sValueToTarget);
+          spValue.setIgnoreWhitespaces(true);
+          try{ 
+            if(spValue.scanFloatNumber().scanOk()) {
+              double value = spValue.getLastScannedFloatNumber(); //Float.parseFloat(sValueToTarget);
+              if(spValue.scan("k").scanOk()){
+                value *= 1000.0f;
+              } else if(spValue.scan("M").scanOk()){
+                value *= 1000000.0f;
+              }
+              ds.targetAccessor.cmdSetValueByPath(sPathComm, value, null);
+            }
+          } catch(ParseException exc){
+            
+          }
         } else {
           System.out.println("InspcVariable - faulty type for setValue; " + cType);
         }

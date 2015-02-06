@@ -232,7 +232,7 @@ public final class ClassContent implements CmdConsumer_ifc
         memObj.set(SearchElement.searchObject(sVariablePath, rootObj, fieldP, idxP));
         idx = idxP[0];
         field = fieldP[0];
-        found = memObj.obj() != null;
+        found = memObj.obj() != null && field !=null;
         if(found)
         { /**Field is found. */
           modifiers = field.getModifiers();
