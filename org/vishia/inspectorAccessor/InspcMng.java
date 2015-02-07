@@ -21,10 +21,9 @@ import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessComm_SocketImpl;
-import org.vishia.event.EventCmdType;
-import org.vishia.event.EventCmdPingPongType;
+import org.vishia.event.EventCmdtype;
 import org.vishia.event.EventConsumer;
-import org.vishia.event.EventThread;
+import org.vishia.event.EventTimerThread;
 import org.vishia.inspector.SearchElement;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.FieldJc;
@@ -178,7 +177,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   //final EventTimerMng threadTimer = new EventTimerMng("timerEv");
   
   /**Thread which manages the queue of all events of state machines. */
-  final EventThread threadEvent = new EventThread("events");
+  final EventTimerThread threadEvent = new EventTimerThread("events");
   
   private final InspcPlugUser_ifc user;
 

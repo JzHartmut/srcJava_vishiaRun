@@ -19,8 +19,9 @@ import org.vishia.byteData.ByteDataAccessSimple;
 import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
-import org.vishia.event.EventCmdPingPongType;
-import org.vishia.event.EventThread;
+import org.vishia.event.EventCmdtypeWithBackEvent;
+import org.vishia.event.EventTimeout;
+import org.vishia.event.EventTimerThread;
 import org.vishia.inspector.InspcTelgInfoSet;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.ClassJc;
@@ -270,7 +271,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   enum Cmd{ fill, send, lastAnswer};
   
-  class Ev extends EventCmdPingPongType<Cmd, Cmd>{ Ev(Cmd cmd){ super(cmd); } };
+  class Ev extends EventCmdtypeWithBackEvent<Cmd, Ev>{ Ev(Cmd cmd){ super(cmd); } };
   
   Ev evFill = new Ev(Cmd.fill);
   
@@ -284,7 +285,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   class States extends StateMachine
   {
     
-    States(EventThread thread){ super("InspcTargetAccessor", thread); }
+    States(EventTimerThread thread){ super("InspcTargetAccessor", thread); }
     
     
     class StateInactive extends StateSimple {
@@ -312,55 +313,31 @@ public class InspcTargetAccessor implements InspcAccess_ifc
         return 0;
       }
       
-      Timeout timeout = new Timeout(10000, StateInactive.class){};
+      Timeout timeout = new Timeout(10000, StateInactive.class);
       
-      Trans timeout_Inactive(EventObject ev, Trans trans)
-      {
-        if(trans ==null) return new Trans(StateInactive.class);
-        return trans;
-      }
+      Trans addRequest_Filling = new Trans(StateFilling.class);
     
-      
-      Trans addRequest_Filling(EventObject ev, Trans trans)
-      {
-        if(trans ==null) return new Trans(StateFilling.class);
-        if(ev == evFill){
-          trans.retTrans = mTransit | mEventConsumed;
-          trans.doExit();
-          trans.doEntry(ev); 
-        } 
-        return trans;
+      @Override protected Trans selectTrans(EventObject ev){
+        if(ev instanceof EventTimeout) return timeout;
+        else if(ev == evFill) return addRequest_Filling;
+        else return null;
       }
-    
-      
+
     };
     
     
     class StateFilling extends StateSimple {
       //StateSimple stateFilling = new StateSimple(states, "filling"){
 
-      Trans addRequest(EventObject ev, Trans trans)
-      {
-        if(trans ==null) return new Trans(StateFilling.class); //remain in state
-        if(ev == evFill){
-          trans.retTrans = mTransit | mEventConsumed;  
-        } 
-        return trans;
-      }
-
+      Trans addRequest = new Trans(StateFilling.class); //remain in state
+  
+      Trans shouldSend_WaitReceive = new Trans(StateWaitReceive.class);
     
-
-      Trans shouldSend_WaitReceive(EventObject ev, Trans trans)
-      {
-        if(trans ==null) return new Trans(StateWaitReceive.class);
-        if(ev == evSend){
-          trans.retTrans = mTransit | mEventConsumed;
-          trans.doExit();
-          trans.doEntry(ev); 
-        } 
-        return trans;
+      @Override protected Trans selectTrans(EventObject ev){
+        if(ev == evFill) return addRequest;
+        else if(ev == evSend) return shouldSend_WaitReceive;
+        else return null;
       }
-    
       
     };
     
@@ -511,7 +488,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   private final InspcCommPort commPort;	
 	
-  public InspcTargetAccessor(InspcCommPort commPort, Address_InterProcessComm targetAddr, EventThread threadEvents)
+  public InspcTargetAccessor(InspcCommPort commPort, Address_InterProcessComm targetAddr, EventTimerThread threadEvents)
   { this.commPort = commPort;
     this.targetAddr = targetAddr;
     this.infoAccess = new InspcTelgInfoSet();
