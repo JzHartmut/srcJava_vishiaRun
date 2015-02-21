@@ -1,7 +1,7 @@
 
 set DSTDIR=..\..\
 set DST=docuSrcJava_vishiaRun
-set DST_priv=docuSrcJava_vishiaRun_priv
+set DST_priv=docuSrcJavaPriv_vishiaRun
 
 set SRC=-subpackages org.vishia 
 

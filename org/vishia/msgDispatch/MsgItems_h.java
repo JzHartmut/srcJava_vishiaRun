@@ -42,7 +42,7 @@ public class MsgItems_h
 
 
 
-  public static class MsgItem extends ByteDataAccess
+  public static class MsgItem extends ByteDataAccessBase
   {
     
     protected static final int kSizevalues = 4;
@@ -68,26 +68,20 @@ public class MsgItems_h
       
     /** Constructs the data management class*/
     public MsgItem()
-    { 
+    { super(kIdxAfterLast);
     }
 
     /** Constructs as a child inside another ByteDataAccess*/
-    public MsgItem(ByteDataAccess parent, int idxChildInParent)
-    { try{ assignAtIndex(idxChildInParent, parent); }
+    public MsgItem(ByteDataAccessBase parent, int idxChildInParent)
+    { super(kIdxAfterLast);
+      try{ assignAt(idxChildInParent, parent); }
       catch(IllegalArgumentException exc)
       { //it won't be have any exception because specifyLengthElement() inside this class is the only source for it.
       }
     }
     
 
-
-
-    @Override
-    public int specifyLengthElementHead()
-    { return kIdxAfterLast;  //NOTE all are head bytes, no dynamic!
-    }
-
-    @Override
+    //@Override
     protected void specifyEmptyDefaultData()
     {
       for(int ii=ixBegin; ii < ixEnd; ii++)
@@ -95,11 +89,6 @@ public class MsgItems_h
       }
     }
 
-    @Override
-    protected int specifyLengthElement() throws IllegalArgumentException
-    {
-      return kIdxAfterLast;
-    }
 
         
 	    public void set_timestamp(int val)
@@ -154,19 +143,14 @@ public class MsgItems_h
         
       public final static int size_values = 4;
           
-      /**Because the method has fix childs, the assignDataToFixChilds method is overridden to apply to all fix childs. */
-      @Override protected void assignDataToFixChilds() throws IllegalArgumentException
-      {
       
-      }
-
       
   }
 
 
 
 
-  public static class MsgItems extends ByteDataAccess
+  public static class MsgItems extends ByteDataAccessBase
   {
     
     protected static final int kSizemsgItems = 20;
@@ -191,12 +175,13 @@ public class MsgItems_h
       
     /** Constructs the data management class*/
     public MsgItems()
-    { 
+    { super(kIdxAfterLast);
     }
 
     /** Constructs as a child inside another ByteDataAccess*/
-    public MsgItems(ByteDataAccess parent, int idxChildInParent)
-    { try{ assignAtIndex(idxChildInParent, parent); }
+    public MsgItems(ByteDataAccessBase parent, int idxChildInParent)
+    { super(kIdxAfterLast);
+      try{ assignAt(idxChildInParent, parent); }
       catch(IllegalArgumentException exc)
       { //it won't be have any exception because specifyLengthElement() inside this class is the only source for it.
       }
@@ -205,23 +190,13 @@ public class MsgItems_h
 
 
 
-    @Override
-    public int specifyLengthElementHead()
-    { return kIdxAfterLast;  //NOTE all are head bytes, no dynamic!
-    }
-
-    @Override
+ 
+    //@Override
     protected void specifyEmptyDefaultData()
     {
       for(int ii=ixBegin; ii < ixEnd; ii++)
       { super.data[ii] = 0;
       }
-    }
-
-    @Override
-    protected int specifyLengthElement() throws IllegalArgumentException
-    {
-      return kIdxAfterLast;
     }
 
         
@@ -257,12 +232,12 @@ public class MsgItems_h
       //note: method to set msgItems, not able to generate.
         
       /**Because the method has fix childs, the assignDataToFixChilds method is overridden to apply to all fix childs. */
-      @Override protected void assignDataToFixChilds() throws IllegalArgumentException
+      protected void assignDataToFixChildren() throws IllegalArgumentException
       {
       
         //NOTE: use super.data etc to prevent false using of a local element data. super is ByteDataAccess.    
         int length = super.ixEnd - kIdxmsgItems;
-        msgItems.assignData(super.data, length, super.ixBegin + kIdxmsgItems);  //embedded structure
+        msgItems.assign(super.data, length, super.ixBegin + kIdxmsgItems);  //embedded structure
         msgItems.setBigEndian(super.bBigEndian);
       }
 
