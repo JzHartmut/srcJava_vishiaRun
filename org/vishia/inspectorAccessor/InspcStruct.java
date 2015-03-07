@@ -153,19 +153,15 @@ public final class InspcStruct
     switch(cmd){
       case InspcDataExchangeAccess.Inspcitem.kAnswerFieldMethod: {
         int zString = info.getLenInfo() - 8;
-        try{ 
-          String sField = info.getChildString(zString); 
-          int posSep = sField.indexOf(':');
-          int posTypeEnd = sField.indexOf("...");
-          String name = sField.substring(0, posSep);
-          String type = sField.substring(posSep+1, posTypeEnd > posSep ? posTypeEnd : sField.length());
-          FieldOfStruct field = new FieldOfStruct(this, name, type, posTypeEnd >0);
-          fields.add(field);
-          bUpdated = true;
-          //build all variables   
-        } catch(UnsupportedEncodingException exc){
-          System.err.println("InspcStruct - unexpected UnsupportedEncodingException while getFields;" +  path);
-        }
+        String sField = info.getChildString(zString); 
+        int posSep = sField.indexOf(':');
+        int posTypeEnd = sField.indexOf("...");
+        String name = sField.substring(0, posSep);
+        String type = sField.substring(posSep+1, posTypeEnd > posSep ? posTypeEnd : sField.length());
+        FieldOfStruct field = new FieldOfStruct(this, name, type, posTypeEnd >0);
+        fields.add(field);
+        bUpdated = true;
+        //build all variables   
       } break;
       case InspcDataExchangeAccess.Inspcitem.kFailedPath:{
         System.err.println("InspcAccessEvaluatorRxTelg - failed path; " + path);

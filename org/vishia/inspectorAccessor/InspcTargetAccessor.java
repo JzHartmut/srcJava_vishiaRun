@@ -317,7 +317,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       
       Trans addRequest_Filling = new Trans(StateFilling.class);
     
-      @Override protected Trans selectTrans(EventObject ev){
+      @Override protected Trans checkTrans(EventObject ev){
         if(ev instanceof EventTimeout) return timeout;
         else if(ev == evFill) return addRequest_Filling;
         else return null;
@@ -333,7 +333,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
       Trans shouldSend_WaitReceive = new Trans(StateWaitReceive.class);
     
-      @Override protected Trans selectTrans(EventObject ev){
+      @Override protected Trans checkTrans(EventObject ev){
         if(ev == evFill) return addRequest;
         else if(ev == evSend) return shouldSend_WaitReceive;
         else return null;
@@ -1337,11 +1337,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   public static String valueStringFromRxValue(InspcDataExchangeAccess.Inspcitem info, int nBytesString)
   {
     String value = null; 
-    try {
-      value = info.getChildString(nBytesString);
-    } catch(UnsupportedEncodingException exc) {
-      value = "?encoding?";
-    }
+    value = info.getChildString(nBytesString);
     return value;  
   }
   

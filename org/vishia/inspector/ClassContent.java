@@ -193,8 +193,7 @@ public final class ClassContent implements CmdConsumer_ifc
     
     nCmd = cmd.getCmd();
     int nrofBytesCmd = cmd.getLenInfo();
-    try{ sVariablePath = cmd.getChildString(nrofBytesCmd-8); }
-    catch(UnsupportedEncodingException exc){ sVariablePath = ""; }
+    sVariablePath = cmd.getChildString(nrofBytesCmd-8);
     ixFieldStart = 0;
     /**Check whether its a question to collection size: */  
     idxCollectionQuest = sVariablePath.indexOf("<?>");
