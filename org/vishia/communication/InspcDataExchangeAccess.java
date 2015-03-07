@@ -28,6 +28,7 @@ import org.vishia.bridgeC.MemC;
 import org.vishia.byteData.ByteDataAccessBase;
 import org.vishia.reflect.ClassJc;
 import org.vishia.util.Java4C;
+import org.vishia.util.StringFormatter;
 /**This class supports preparing data for the Inspector-datagram-definition.
  * @author Hartmut Schorrig
  *
@@ -408,6 +409,35 @@ public final class InspcDataExchangeAccess
      * @return The order from this Info block.
      */
     @Java4C.Inline public final int getOrder(){ return getInt32(kbyteOrder); }
+    
+    
+    @Java4C.Exclude
+    @Override public void infoFormattedAppend(StringFormatter u) {
+      String cmd;
+      int cmd1 = getCmd();
+      int z = getLenInfo();
+      int s = -1;  //start of string
+      switch( cmd1 ) {
+        case kGetFields:    cmd = "getValueByPath "; s = 8; break;
+        case kGetValueByPath:    cmd = "getValueByPath "; s = 8; break;
+        case kGetAddressByPath:  cmd = "getAddressByPath ";  s = 8; break;
+        case kSetValueByPath:    cmd = "setValueByPath "; break;
+        case kSetStringByPath:   cmd = "setStringByPath "; break;
+        case kFailedPath:        cmd = "failedPath "; break;
+        case kNoRessource:       cmd = "noRessource "; break;
+        case kFailedCommand:     cmd = "failedCmd "; break;
+        case kAnswerValue:       cmd = "answerValue "; break;
+        case kGetMsg:            cmd = "getMsg "; break;
+        default: cmd = Integer.toHexString(cmd1);
+      }
+      String path = s >0 ? getString(s, z-s) : "";
+      u.addint(ixBegin, "33331")
+      .add("..").addint(ixBegin + sizeHead,"333331")
+      .add("..").addint(ixChildEnd,"333331")
+      .add(bExpand ? '+' : ':').addint(ixEnd,"333331").add(":");
+      u.addHexLine(data, ixBegin, sizeofHead, StringFormatter.k4left).add(": ");
+      u.add(cmd).add(path);
+    }
     
     
   }

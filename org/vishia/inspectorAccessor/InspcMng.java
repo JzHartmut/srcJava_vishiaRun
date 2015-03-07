@@ -482,6 +482,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       if(var instanceof InspcVariable){
         InspcVariable varInspc = (InspcVariable)var;
         if(   var.isRequestedValue(retryDisabledVariable) ){              //but handle only variable which are requested
+          nrofVarsReq +=1;
           int dtimeRequested = (int)(timeCurr - varInspc.timeRequested);
           if(dtimeRequested > 10000){
             var.requestValue(0);  //old request set to 0
@@ -492,12 +493,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
             Assert.stop();
           bRequest = true;
           if(varInspc.ds.targetAccessor.isOrSetReady(timeCurr-10000)){ //check whether the device is ready.
-            nrofVarsReq +=1;
             varInspc.requestValueFromTarget(timeCurr, retryDisabledVariable);
           } else {
+            
+            //System.out.println("Device Not ready");
             //The variable is not able to get, remove the request.
             //The request will be repeat if the variable is newly requested.
-            //var.requestValue(0, null);
+            var.requestValue(0, null);
           }
           
         }

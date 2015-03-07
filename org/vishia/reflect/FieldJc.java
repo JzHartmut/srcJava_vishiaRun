@@ -447,7 +447,7 @@ public class FieldJc
      { length = getArraylengthUML_Map(adr);
      } break; 
      case ModifierJc.kObjectArrayJc:
-     { int[] array = (int[])(adr.obj());  //it is known that it is an ObjectArrayJc
+     { Object[] array = (Object[])(adr.obj());  //it is known that it is an ObjectArrayJc
        length = array.length;
      } break; 
      case ModifierJc.kStaticArray:

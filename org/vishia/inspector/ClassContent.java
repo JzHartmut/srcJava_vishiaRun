@@ -316,11 +316,24 @@ public final class ClassContent implements CmdConsumer_ifc
           }
         }
       }
+      else //field not found or instance is null
+      {
+        answer.addChild(answerItem);
+        //answerItem.setCmd(InspcDataExchangeAccess.Inspcitem.kFailedPath);
+        int order = cmd.getOrder();
+        answerItem.setInfoHead(InspcDataExchangeAccess.Inspcitem.sizeofHead, InspcDataExchangeAccess.Inspcitem.kFailedPath, order);
+        nrofAnswerBytes = answer.getLengthTotal();
+      }
       
     } catch(Exception exc){
       /**Unexpected ...*/
       System.out.println("ClassContent-getFields - unexpected:");
       exc.printStackTrace();
+      answer.addChild(answerItem);
+      //answerItem.setCmd(InspcDataExchangeAccess.Inspcitem.kFailedPath);
+      int order = cmd.getOrder();
+      answerItem.setInfoHead(InspcDataExchangeAccess.Inspcitem.sizeofHead, InspcDataExchangeAccess.Inspcitem.kFailedPath, order);
+      nrofAnswerBytes = answer.getLengthTotal();
     }
     return 0;
   }  
