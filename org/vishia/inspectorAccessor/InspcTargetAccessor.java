@@ -1207,57 +1207,53 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   public String evaluate(InspcDataExchangeAccess.InspcDatagram telgHead, InspcAccessExecRxOrder_ifc executer, long time, LogMessage log, int identLog)
   { String sError = null;
-    int currentPos = InspcDataExchangeAccess.InspcDatagram.sizeofHead;
+    //int currentPos = InspcDataExchangeAccess.InspcDatagram.sizeofHead;
     //for(InspcDataExchangeAccess.ReflDatagram telgHead: telgHeads){
-      int nrofBytesTelgInHead = telgHead.getLengthDatagram();
-      int nrofBytesTelg = telgHead.getLength();  //length from ByteDataAccess-management.
+      { int nrofBytesTelgInHead = telgHead.getLengthDatagram();
+        assert(nrofBytesTelgInHead == telgHead.getLengthTotal()); 
+      }
+      //int nrofBytesTelg = telgHead.getLength();  //length from ByteDataAccess-management.
       //telgHead.assertNotExpandable();
-      while(sError == null && currentPos + InspcDataExchangeAccess.Inspcitem.sizeofHead <= nrofBytesTelgInHead){
+      while(sError == null && telgHead.sufficingBytesForNextChild(InspcDataExchangeAccess.Inspcitem.sizeofHead)){
         telgHead.addChild(infoAccessRx);
         int nrofBytesInfo = infoAccessRx.getLenInfo();
-        if(nrofBytesInfo <8){
-          Debugutil.stop();
-        } else {
-          if(nrofBytesTelg < currentPos + nrofBytesInfo){
-            sError = "to less bytes in telg at " + currentPos + ": " 
-                   + nrofBytesInfo + " / " + (nrofBytesTelg - currentPos);
-          } else {
-            if(executer !=null){
-              executer.execInspcRxOrder(infoAccessRx, time, log, identLog);
-            } else {
-              int order = infoAccessRx.getOrder();
-              int cmd = infoAccessRx.getCmd();
-              if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerValueByIndex)
-                stop();
-              OrderWithTime timedOrder = ordersExpected.remove(order);
-              //
-              if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerFieldMethod){
-                //special case: The same order number is used for more items in the same sequence number.
-                if(timedOrder !=null){
-                  orderGetFields = timedOrder;
-                } else if(orderGetFields !=null && orderGetFields.order == order) {
-                  timedOrder = orderGetFields;
-                }
-              }
-              //
-              if(timedOrder !=null){
-                //remove timed order
-                InspcAccessExecRxOrder_ifc orderExec = timedOrder.exec;
-                if(orderExec !=null){
-                  orderExec.execInspcRxOrder(infoAccessRx, time, log, identLog);
-                } else {
-                  stop();  //should not 
-                }
-              }
-              //
-              //search the order whether it is expected:
-            }
-            infoAccessRx.setLengthElement(nrofBytesInfo);
-            //telgHead.setLengthCurrentChildElement(nrofBytesInfo); //to add the next.
-            currentPos += nrofBytesInfo;  //the same as stored in telgHead-access
-            
-          }
+        if(!infoAccessRx.checkLengthElement(nrofBytesInfo)) {
+          throw new IllegalArgumentException("nrofBytes in element faulty");
         }
+        if(executer !=null){
+          executer.execInspcRxOrder(infoAccessRx, time, log, identLog);
+        } else {
+          int order = infoAccessRx.getOrder();
+          int cmd = infoAccessRx.getCmd();
+          if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerValueByIndex)
+            stop();
+          OrderWithTime timedOrder = ordersExpected.remove(order);
+          //
+          if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerFieldMethod){
+            //special case: The same order number is used for more items in the same sequence number.
+            if(timedOrder !=null){
+              orderGetFields = timedOrder;
+            } else if(orderGetFields !=null && orderGetFields.order == order) {
+              timedOrder = orderGetFields;
+            }
+          }
+          //
+          if(timedOrder !=null){
+            //remove timed order
+            InspcAccessExecRxOrder_ifc orderExec = timedOrder.exec;
+            if(orderExec !=null){
+              orderExec.execInspcRxOrder(infoAccessRx, time, log, identLog);
+            } else {
+              stop();  //should not 
+            }
+          }
+          //
+          //search the order whether it is expected:
+        }
+        infoAccessRx.setLengthElement(nrofBytesInfo);
+        //telgHead.setLengthCurrentChildElement(nrofBytesInfo); //to add the next.
+        //currentPos += nrofBytesInfo;  //the same as stored in telgHead-access
+        
       }
     //}
     return sError;

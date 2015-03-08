@@ -510,6 +510,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       userOrder.run(); //maybe add some more requests to the current telegram.
     }
     if(nrofVarsReq >0){
+      /////
       //System.out.println("InspcMng.procComm - variables requested; " + nrofVarsReq + "; all=" + nrofVarsAll);
     }
     for(InspcTargetAccessor inspcAccessor: listTargetAccessor){

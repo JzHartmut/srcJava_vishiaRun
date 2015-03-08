@@ -66,11 +66,10 @@ public class CmdExecuter implements AnswerComm_ifc
   	datagramCmd.assignDatagram(buffer, nrofBytesReceived);
     int nEntrant = datagramCmd.getEntrant();
     boolean bOk = true;
-    int nrofBytesProcessed;
+    //int nrofBytesProcessed;
     int nrofBytesTelg;
     int partLength;
     int maxNrofBytesAnswerPart;
-    int nrofBytesAnswerPart;
     nrofBytesAnswer = 0;
     /**@java2c=dynamic-call. */
   	@Java4C.DynamicCall final CmdConsumer_ifc cmdConsumerMtbl = cmdConsumer;
@@ -80,7 +79,10 @@ public class CmdExecuter implements AnswerComm_ifc
     if(nEntrant < 0){
       //a negative number: It is an entrant, the telegram has the common head.
       nrofBytesTelg = datagramCmd.getLengthDatagram();
-      nrofBytesProcessed = datagramCmd.sizeofHead;
+      int nrofBytesAccess = datagramCmd.getLengthTotal();
+      assert(nrofBytesTelg == nrofBytesReceived);
+      assert(nrofBytesTelg == nrofBytesAccess);
+      //nrofBytesProcessed = datagramCmd.sizeofHead;
       useTelgHead = true;
       //
       //prepare the answer telg:
@@ -88,22 +90,23 @@ public class CmdExecuter implements AnswerComm_ifc
       int encryption = datagramCmd.getEncryption();
       myAnswerData.setHeadAnswer(nEntrant, seqNr, encryption);
       nrofBytesAnswer = InspcDataExchangeAccess.InspcDatagram.sizeofHead;
-      while(bOk && nrofBytesTelg >= (nrofBytesProcessed + InspcDataExchangeAccess.Inspcitem.sizeofHead)){
+      while(bOk && datagramCmd.sufficingBytesForNextChild(InspcDataExchangeAccess.Inspcitem.sizeofHead) ) { //nrofBytesTelg >= (nrofBytesProcessed + InspcDataExchangeAccess.Inspcitem.sizeofHead)){
         //The next telg Part will be found after the processed part.
       	datagramCmd.addChild(infoCmd);
       	partLength = infoCmd.getLenInfo();
       	if(  partLength >= InspcDataExchangeAccess.Inspcitem.sizeofHead
-      		&& partLength <= (nrofBytesTelg - nrofBytesProcessed)){
+      		&& infoCmd.checkLengthElement(partLength)) { //partLength <= (nrofBytesTelg - nrofBytesProcessed)){
       	  //valid head data.
-          boolean lastPart = (nrofBytesProcessed + partLength) == nrofBytesTelg;
+          infoCmd.setLengthElement(partLength);  //this child has the given length.
+          //boolean lastPart = (nrofBytesProcessed + partLength) == nrofBytesTelg;
           maxNrofBytesAnswerPart = maxNrofAnswerBytes - nrofBytesAnswer;
           //execute:
           try{ 
-          	nrofBytesAnswerPart = cmdConsumerMtbl.executeMonitorCmd(infoCmd, myAnswerData, maxNrofBytesAnswerPart);
+          	cmdConsumerMtbl.executeMonitorCmd(infoCmd, myAnswerData, maxNrofBytesAnswerPart);
           } catch(IllegalArgumentException exc){
-          	nrofBytesAnswerPart =0; //TODO send a nack
+          	//TODO send a nack
           }catch(UnsupportedEncodingException exc){
-          	nrofBytesAnswerPart =0; //TODO send a nack
+            //TODO send a nack
           }
           
       	} else { //invalid head data
@@ -111,7 +114,7 @@ public class CmdExecuter implements AnswerComm_ifc
           ctFailedTelgPart +=1;
         
       	}
-        nrofBytesProcessed += partLength;
+        //nrofBytesProcessed += partLength;
       }
       int nrofAnswer = myAnswerData.getLengthTotal();
       if(nrofAnswer > InspcDataExchangeAccess.InspcDatagram.sizeofHead){
@@ -129,11 +132,11 @@ public class CmdExecuter implements AnswerComm_ifc
       infoCmd.assign(buffer, nrofBytesReceived);
       infoCmd.setBigEndian(true);
       maxNrofBytesAnswerPart = 1400;
-      try{ nrofBytesAnswerPart = cmdConsumerMtbl.executeMonitorCmd(infoCmd, myAnswerData, maxNrofBytesAnswerPart);
+      try{ cmdConsumerMtbl.executeMonitorCmd(infoCmd, myAnswerData, maxNrofBytesAnswerPart);
       } catch(IllegalArgumentException exc){
-      	nrofBytesAnswerPart =0; //TODO send a nack
+      	//TODO send a nack
       }catch(UnsupportedEncodingException exc){
-      	nrofBytesAnswerPart =0; //TODO send a nack
+      	//TODO send a nack
       }
       int nrofAnswer = myAnswerData.getLengthTotal();
       if(nrofAnswer > InspcDataExchangeAccess.InspcDatagram.sizeofHead){

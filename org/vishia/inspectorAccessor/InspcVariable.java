@@ -125,7 +125,9 @@ public class InspcVariable implements VariableAccess_ifc
           System.err.println("InspcAccessEvaluatorRxTelg - failed path; " + ds.sPathInTarget);
           modeTarget = ModeHandleVariable.kIdTargetDisabled;
         } break;
-        
+        default: {
+          System.err.println("InspcAccessEvaluatorRxTelg - unknown answer ident; " + ds.sPathInTarget);
+        } break;
       }//switch
     }
     
