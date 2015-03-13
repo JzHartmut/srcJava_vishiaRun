@@ -37,7 +37,7 @@ public class TestAccessor
     String sPathInTarget = "workingThread.data.yCos.";
     
     Address_InterProcessComm addrTarget = targetCommPort.createTargetAddr(sIpTarget);
-    inspcAccessor = new InspcTargetAccessor(targetCommPort, addrTarget, null);
+    inspcAccessor = new InspcTargetAccessor("test", targetCommPort, addrTarget, null);
 
     //String sPathInTarget2 = "_DSP_.data1.bitField.bits-bit11."; 
     if(targetCommPort.open(sIpOwn))

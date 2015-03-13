@@ -3,6 +3,7 @@ package org.vishia.inspectorAccessor;
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.EventObject;
 import java.util.LinkedList;
 import java.util.List;
@@ -231,9 +232,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   private final Map<String, String> indexTargetIpcAddr;
 
   
-  private final Map<String, InspcTargetAccessor> indexTargetAccessor;
+  private final Map<String, InspcTargetAccessor> indexTargetAccessor = new TreeMap<String, InspcTargetAccessor>();
   
-  private final List<InspcTargetAccessor> listTargetAccessor;
+  private final List<InspcTargetAccessor> listTargetAccessor = new ArrayList<InspcTargetAccessor>();
   
   private Map<String, String> indexFaultDevice;
   
@@ -298,8 +299,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     //maybe more as one
     //this.inspcAccessor = new InspcTargetAccessor(commPort, new InspcAccessEvaluatorRxTelg());
     this.indexTargetIpcAddr = indexTargetIpcAddr;
-    this.indexTargetAccessor = new TreeMap<String, InspcTargetAccessor>();
-    this.listTargetAccessor = new LinkedList<InspcTargetAccessor>();
     this.sOwnIpcAddr = sOwnIpcAddr;
     this.bUseGetValueByHandle = bUseGetValueByIndex;
     this.user = user;
@@ -793,9 +792,10 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   void openComm(){
     commPort.open(sOwnIpcAddr);
     for(Map.Entry<String, String> e : indexTargetIpcAddr.entrySet()){
+      String name = e.getKey();
       Address_InterProcessComm addrTarget = commPort.createTargetAddr(e.getValue());
-      InspcTargetAccessor accessor = new InspcTargetAccessor(commPort, addrTarget, threadEvent);
-      indexTargetAccessor.put(e.getKey(), accessor);
+      InspcTargetAccessor accessor = new InspcTargetAccessor(name, commPort, addrTarget, threadEvent);
+      indexTargetAccessor.put(name, accessor);
       listTargetAccessor.add(accessor);
     }
   }

@@ -208,6 +208,11 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   }
   
 
+  /**Identifier especially for debugging. */
+  final String name;
+  
+  /**Free String to write, for debug stop. */
+  String dbgNameStopTx;
 
   /**If true then writes a log of all send and received telegrams. */
   LogMessage logTelg;
@@ -488,8 +493,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   private final InspcCommPort commPort;	
 	
-  public InspcTargetAccessor(InspcCommPort commPort, Address_InterProcessComm targetAddr, EventTimerThread threadEvents)
-  { this.commPort = commPort;
+  public InspcTargetAccessor(String name, InspcCommPort commPort, Address_InterProcessComm targetAddr, EventTimerThread threadEvents)
+  { this.name = name;
+    this.commPort = commPort;
     this.targetAddr = targetAddr;
     this.infoAccess = new InspcTelgInfoSet();
     for(int ix = 0; ix < tx.length; ++ix){
@@ -965,10 +971,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * @return true if anything to send, false if no cmd was given.
    */
   public boolean cmdFinit(){
-    txCmdGetValueByIdent();
     states.processEvent(evSend);
-    if(bFillTelg || ixTxFill >0){
+    if(!bTaskPending.get() && (bFillTelg || ixTxFill >0)){
       bTaskPending.set(true);
+      txCmdGetValueByIdent();
       if(bFillTelg) {
         completeDatagram(true);
       }
@@ -1017,26 +1023,35 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	/**Sends the prepared telegram.
 	 * @return
 	 */
-	private void send()
-	{
+  private void send()
+  {
     //send the telegram:
     //checkerRxTelg.setAwait(nSeqNumber);
+    if(name.equals(dbgNameStopTx)) {
+      Debugutil.stop();
+    }
     timeSend = System.currentTimeMillis();
     nSeqNumberTxRx = tx[ixTxSend].nSeq;
     //bSendPending = true;
     bIsSentTelg = true;
     int lengthDatagram = tx[ixTxSend].nrofBytesTelg;
-    int ok = commPort.send(this, tx[ixTxSend].buffer, lengthDatagram);
-    synchronized(this){
-      if(ok == 96)
-        Debugutil.stop();
-    }
-    if(logTelg !=null){ 
-      logTelg.sendMsg(identLogTelg +idLogTx, "send telg ix=%d, length= %d, ok = %d, seqn=%d", new Integer(ixTxSend), new Integer(lengthDatagram)
-      , new Integer(ok), new Integer(nSeqNumberTxRx)); 
+    //tx[ixTxSend].nrofBytesTelg = -1; //is sent
+    if(lengthDatagram >0) {
+      int ok = commPort.send(this, tx[ixTxSend].buffer, lengthDatagram);
+      synchronized(this){
+        if(ok == 96)
+          Debugutil.stop();
+      }
+      if(logTelg !=null){ 
+        logTelg.sendMsg(identLogTelg +idLogTx, "send telg ix=%d, length= %d, ok = %d, seqn=%d", new Integer(ixTxSend), new Integer(lengthDatagram)
+        , new Integer(ok), new Integer(nSeqNumberTxRx)); 
+      }
+    } else {
+      Debugutil.stop();
+      System.out.println("InspcTargetAccessor.send() - target does not response, too many telegr, " + targetAddr);
     }
     bShouldSend = false;
-	}
+  }
 	
 	
 	
@@ -1420,7 +1435,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
 	@Override public String toString(){
 	  
-	  return targetAddr.toString() + ":" + state;
+	  return name + ": " + targetAddr.toString() + ":" + state;
 	}
 	
 	
