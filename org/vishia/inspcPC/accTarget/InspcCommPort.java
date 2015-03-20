@@ -1,4 +1,4 @@
-package org.vishia.inspectorAccessor;
+package org.vishia.inspcPC.accTarget;
 
 import java.io.Closeable;
 import java.io.IOException;

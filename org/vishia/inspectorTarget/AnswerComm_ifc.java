@@ -1,4 +1,4 @@
-package org.vishia.inspector;
+package org.vishia.inspectorTarget;
 
 public interface AnswerComm_ifc
 {

@@ -1,4 +1,4 @@
-package org.vishia.inspectorAccessor;
+package org.vishia.inspcPC.mng;
 
 
 public interface InspcPlugUser_ifc// extends GralPlugUser_ifc

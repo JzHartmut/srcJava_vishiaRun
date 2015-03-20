@@ -1,4 +1,4 @@
-package org.vishia.inspectorAccessor;
+package org.vishia.inspcPC.accTarget;
 
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.msgDispatch.LogMessage;

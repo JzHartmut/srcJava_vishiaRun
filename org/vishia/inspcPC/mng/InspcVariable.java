@@ -1,4 +1,4 @@
-package org.vishia.inspectorAccessor;
+package org.vishia.inspcPC.mng;
 
 import java.text.ParseException;
 import java.util.Map;
@@ -8,6 +8,9 @@ import org.vishia.bridgeC.IllegalArgumentExceptionJc;
 import org.vishia.byteData.VariableAccessArray_ifc;
 import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.communication.InspcDataExchangeAccess;
+import org.vishia.inspcPC.accTarget.InspcAccessExecRxOrder_ifc;
+import org.vishia.inspcPC.accTarget.InspcTargetAccessData;
+import org.vishia.inspcPC.accTarget.InspcTargetAccessor;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartScan;
@@ -77,7 +80,7 @@ public class InspcVariable implements VariableAccess_ifc
      /**This method is called for any info block in the received telegram from target,
      * if this implementing instance is stored on the order.
      * It prepares the value presentation.
-     * @see org.vishia.inspectorAccessor.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem)
+     * @see org.vishia.inspcPC.accTarget.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem)
      */
     @Override public void execInspcRxOrder(InspcDataExchangeAccess.Inspcitem info, long time, LogMessage log, int identLog)
     {
@@ -140,7 +143,7 @@ public class InspcVariable implements VariableAccess_ifc
   
   /*package private*/ final VariableRxAction rxAction = new VariableRxAction();
   
-  public final InspcTargetAccess ds;
+  public final InspcTargetAccessData ds;
   
   /**It is is a structure, it maybe not null if it is requested.
    * null for a leaf variable, null if the structure was not requested till now.
@@ -199,7 +202,7 @@ public class InspcVariable implements VariableAccess_ifc
    * @param mng
    * @param sPathInTarget The access path.
    */
-  InspcVariable(InspcMng mng, InspcVariable parent, InspcTargetAccess data){
+  InspcVariable(InspcMng mng, InspcVariable parent, InspcTargetAccessData data){
     this.varMng = mng;
     this.ds = data;
     this.parent = parent;

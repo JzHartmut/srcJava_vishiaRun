@@ -4,7 +4,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.vishia.communication.InterProcessCommFactoryAccessor;
-import org.vishia.inspector.Inspector;
+import org.vishia.inspectorTarget.Inspector;
 import org.vishia.util.Java4C;
 
 public class ExampleInspector

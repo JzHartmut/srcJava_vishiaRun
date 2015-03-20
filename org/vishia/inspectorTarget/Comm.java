@@ -1,4 +1,4 @@
-package org.vishia.inspector;
+package org.vishia.inspectorTarget;
 
 import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InterProcessComm;

@@ -1,4 +1,5 @@
-package org.vishia.inspectorAccessor;
+package org.vishia.inspcPC.accTarget;
+
 
 public interface InspcAccess_ifc
 {

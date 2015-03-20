@@ -1,4 +1,4 @@
-package org.vishia.inspector;
+package org.vishia.inspectorTarget;
 
 import java.io.UnsupportedEncodingException;
 import org.vishia.bridgeC.MemSegmJc;
@@ -28,7 +28,7 @@ public final class ClassContent implements CmdConsumer_ifc
    * <li>2013-12-07 Hartmut requfix: Check of the Index for getValueByIndex: Don't start from 0, because a reseted target 
    *   starts by 0 always. Use 16 bit of seconds, about 18 h. Only a new restart in exactly 65536 seconds are faulty. 
    *   If the index is invalid, the {@link InspcDataExchangeAccess#kInvalidIndex} is returned for this value.
-   *   The requester should remove that index. It is implemented in {@link org.vishia.inspectorAccessor.InspcVariable}.
+   *   The requester should remove that index. It is implemented in {@link org.vishia.inspcPC.mng.InspcVariable}.
    * <li>2013-01-10 Hartmut bugfix: If the path fails in 
    *   {@link #getSetValueByPath(org.vishia.communication.InspcDataExchangeAccess.Inspcitem, org.vishia.communication.InspcDataExchangeAccess.InspcSetValue, org.vishia.communication.InspcDataExchangeAccess.InspcDatagram, String, int)},
    *   It should be returned a message anyway. If nothing is returned, the calling doesn't know that problem 

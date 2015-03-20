@@ -1,9 +1,9 @@
-package org.vishia.inspectorAccessor;
+package org.vishia.inspcPC.accTarget;
 
 import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InspcDataExchangeAccess.Inspcitem;
-import org.vishia.inspector.InspcTelgInfoSet;
+import org.vishia.inspectorTarget.InspcTelgInfoSet;
 import org.vishia.msgDispatch.LogMessage;
 
 public class TestAccessor

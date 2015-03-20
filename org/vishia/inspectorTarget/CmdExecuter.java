@@ -1,4 +1,4 @@
-package org.vishia.inspector;
+package org.vishia.inspectorTarget;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
@@ -151,7 +151,7 @@ public class CmdExecuter implements AnswerComm_ifc
   /**Send the current answer datagram as answer.
    * The length of the datagram is set to the head using {@link InspcDataExchangeAccess.InspcDatagram#setLengthDatagram(int)}
    * 
-   * @see org.vishia.inspector.AnswerComm_ifc#txAnswer(int, boolean)
+   * @see org.vishia.inspectorTarget.AnswerComm_ifc#txAnswer(int, boolean)
    */
   @Override public int txAnswer(int nrofAnswerBytesPart, boolean bLastTelg)
 	//int txAnswer_AnswerComm_Inspc(AnswerComm_Inspc* ythis, int nrofAnswerBytesPart, bool bLastTelg) 

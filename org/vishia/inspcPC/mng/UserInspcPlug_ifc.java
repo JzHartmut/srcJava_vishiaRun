@@ -1,4 +1,7 @@
-package org.vishia.inspectorAccessor;
+package org.vishia.inspcPC.mng;
+
+import org.vishia.inspcPC.accTarget.InspcTargetAccessData;
+import org.vishia.inspcPC.accTarget.InspcTargetAccessor;
 
 //import org.vishia.gral.ifc.GralPlugUser2Gral_ifc;
 
@@ -44,7 +47,7 @@ public interface UserInspcPlug_ifc // extends GralPlugUser2Gral_ifc
   /**Replaces the prefix of the path with a possible replacement. 
    * @param sDataPath the path given in scripts. It may have the form PREFIX:PATH or TARGET:PATH
    * @return structure with {@link InspcTargetAccessor} and the parts of the path. */
-  InspcTargetAccess getTargetFromPath(String sDataPath);
+  InspcTargetAccessData getTargetFromPath(String sDataPath);
 
   
 }

@@ -1,4 +1,4 @@
-package org.vishia.inspectorAccessor;
+package org.vishia.inspcPC.mng;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -25,7 +25,12 @@ import org.vishia.communication.InterProcessComm_SocketImpl;
 import org.vishia.event.EventCmdtype;
 import org.vishia.event.EventConsumer;
 import org.vishia.event.EventTimerThread;
-import org.vishia.inspector.SearchElement;
+import org.vishia.inspcPC.accTarget.InspcAccessExecRxOrder_ifc;
+import org.vishia.inspcPC.accTarget.InspcAccess_ifc;
+import org.vishia.inspcPC.accTarget.InspcCommPort;
+import org.vishia.inspcPC.accTarget.InspcTargetAccessData;
+import org.vishia.inspcPC.accTarget.InspcTargetAccessor;
+import org.vishia.inspectorTarget.SearchElement;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.FieldJc;
 import org.vishia.reflect.FieldJcVariableAccess;
@@ -396,7 +401,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   { if(recurs > 100) throw new IllegalArgumentException("too many recursion");
     InspcVariable var = idxAllVars.get(sDataPath);
     if(var == null){
-      InspcTargetAccess acc = getTargetAccessFromPath(sDataPath, false);
+      InspcTargetAccessData acc = getTargetAccessFromPath(sDataPath, false);
       //InspcVarPathStructAcc path1 = getTargetFromPath(sDataPathOfWidget);
       if(acc !=null && acc.targetAccessor !=null){
         InspcVariable parent = acc.sParentPath ==null ? null : getVariable(acc.sParentPath, recurs +1);
@@ -601,7 +606,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    * @param strict true then throws an error on faulty device, if false then returns null if faulty. 
    * @return structure which contains the device, path, name.
    */
-  public InspcTargetAccess getTargetAccessFromPath(String sDataPath, boolean strict){
+  public InspcTargetAccessData getTargetAccessFromPath(String sDataPath, boolean strict){
     final InspcTargetAccessor accessor;
     final String sPathInTarget;
     final String sName;
@@ -628,7 +633,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         sName = "";          //selects the root in the target.
       }
       sPathInTarget = sPathWithTarget.substring(posSepDevice +1);
-      return new InspcTargetAccess(accessor, sDataPath, sPathInTarget, sStructPath, sName);
+      return new InspcTargetAccessData(accessor, sDataPath, sPathInTarget, sStructPath, sName);
     } else {
       if(strict) throw new IllegalArgumentException("path should have the form \"device:internalPath\" or \"alias:subpath\", given: " + sDataPath);
       else return null;
@@ -868,14 +873,14 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   @Override
   public void cmdGetAddressByPath(String sDataPath, InspcAccessExecRxOrder_ifc actionOnRx)
-  { InspcTargetAccess acc = getTargetAccessFromPath(sDataPath, true);
+  { InspcTargetAccessData acc = getTargetAccessFromPath(sDataPath, true);
     acc.targetAccessor.cmdGetAddressByPath(acc.sPathInTarget, actionOnRx);
   }
 
 
   @Override
   public void cmdSetValueByPath(String sDataPath, long value, int typeofValue, InspcAccessExecRxOrder_ifc actionOnRx)
-  { InspcTargetAccess acc = getTargetAccessFromPath(sDataPath, true);
+  { InspcTargetAccessData acc = getTargetAccessFromPath(sDataPath, true);
     acc.targetAccessor.cmdSetValueByPath(acc.sPathInTarget, value, typeofValue, actionOnRx);
   }
 
@@ -890,14 +895,14 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   @Override
   public void cmdSetValueByPath(String sDataPath, float value, InspcAccessExecRxOrder_ifc actionOnRx)
-  { InspcTargetAccess acc = getTargetAccessFromPath(sDataPath, true);
+  { InspcTargetAccessData acc = getTargetAccessFromPath(sDataPath, true);
     acc.targetAccessor.cmdSetValueByPath(acc.sPathInTarget, value, actionOnRx);
   }
 
 
   @Override
   public void cmdSetValueByPath(String sDataPath, double value, InspcAccessExecRxOrder_ifc actionOnRx)
-  { InspcTargetAccess acc = getTargetAccessFromPath(sDataPath, true);
+  { InspcTargetAccessData acc = getTargetAccessFromPath(sDataPath, true);
     acc.targetAccessor.cmdSetValueByPath(acc.sPathInTarget, value, actionOnRx);
   }
   

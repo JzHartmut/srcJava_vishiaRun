@@ -1,4 +1,4 @@
-package org.vishia.inspectorAccessor;
+package org.vishia.inspcPC.accTarget;
 
 
 import java.io.UnsupportedEncodingException;
@@ -22,8 +22,8 @@ import org.vishia.communication.InterProcessComm;
 import org.vishia.event.EventCmdtypeWithBackEvent;
 import org.vishia.event.EventTimeout;
 import org.vishia.event.EventTimerThread;
-import org.vishia.inspector.InspcTelgInfoSet;
-import org.vishia.inspectorAccessor.InspcStruct.VariableRxAction;
+import org.vishia.inspcPC.mng.InspcStruct;
+import org.vishia.inspectorTarget.InspcTelgInfoSet;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.ClassJc;
 import org.vishia.states.StateComposite;
@@ -245,10 +245,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   
   /**If not null then cmdGetFields will be invoked . */
-  InspcTargetAccess requFields;
+  InspcTargetAccessData requFields;
   
   /**Action on receiving fields from target, only valid for the requFields. */
-  VariableRxAction rxActionGetFields;
+  InspcAccessExecRxOrder_ifc rxActionGetFields;
   
   /**If not null then this runnable will be called on end of requestFields. */
   Runnable runOnResponseFields;
@@ -675,7 +675,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   
   
-  public void requestFields(InspcTargetAccess data, VariableRxAction rxActionGetFields, Runnable runOnReceive){
+  public void requestFields(InspcTargetAccessData data, InspcAccessExecRxOrder_ifc rxActionGetFields, Runnable runOnReceive){
     this.requFields = data;
     this.rxActionGetFields = rxActionGetFields;
     this.runOnResponseFields = runOnReceive;
@@ -1444,7 +1444,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   }
   
   
-  int getStateInfo() {
+  public int getStateInfo() {
     if(stateIdle.isInState()) return 1;
     else if(stateWaitAnswer.isInState()) return 2;
     else return 0;
