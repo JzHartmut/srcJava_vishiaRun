@@ -20,6 +20,7 @@ public final class InspcStruct
   
   /**Version, history and license.
    * <ul>
+   * <li>2015-03-20 Hartmut {@link #varOfStruct} 
    * <li>2013-12-20 Hartmut created. 
    * </ul>
    * <br><br>
@@ -60,6 +61,7 @@ public final class InspcStruct
     
     private final InspcStruct substruct;
     
+    /**Maybe null if the field was not read until now. Not all fields creates variables. */
     InspcVariable var;
     
     FieldOfStruct(InspcStruct parent, String name, String type, boolean hasSubstruct){
@@ -74,7 +76,7 @@ public final class InspcStruct
         } else {
           pathsub = pathParent + "." + name;
         }
-        this.substruct = new InspcStruct(pathsub, parent.targetAccessor(), parent );
+        this.substruct = new InspcStruct(null, pathsub, parent.targetAccessor(), parent );
       } else {
         this.substruct = null;
       }
@@ -86,6 +88,10 @@ public final class InspcStruct
     
     public InspcStruct substruct(){ return substruct; }
   }
+  
+
+  private InspcVariable varOfStruct;
+
   
   
   private final String path;
@@ -112,15 +118,24 @@ public final class InspcStruct
   /**Callback for any request. */
   Runnable callback;
   
-  InspcStruct(String path, InspcTargetAccessor targetAccessor, InspcStruct parent){
+  InspcStruct(InspcVariable varOfStruct, String path, InspcTargetAccessor targetAccessor, InspcStruct parent){
     this.path = path;
     this.targetAccessor = targetAccessor; 
     this.parent = parent;
+    this.varOfStruct = varOfStruct;
   }
 
   public String path(){ return path; }
   
   public InspcStruct parent(){ return parent; }
+  
+  
+  public InspcVariable varOfStruct(InspcMng mng) {
+    if(varOfStruct ==null) {
+      varOfStruct = (InspcVariable)mng.getVariable(path);
+    }
+    return varOfStruct; 
+  }
   
   public InspcTargetAccessor targetAccessor(){ return targetAccessor; }
   
@@ -134,6 +149,8 @@ public final class InspcStruct
   
   
   public void requestFields(Runnable callbackP){ bRequFields = true; this.callback = callbackP; }
+  
+  public void requestFields(){ bRequFields = true; }
   
   boolean isRequestFields(){ if(bRequFields) { bRequFields = false; return true;} else { return false; } }
   

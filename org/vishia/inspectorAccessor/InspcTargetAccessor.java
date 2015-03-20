@@ -139,6 +139,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   /**The version history and license of this class.
    * <ul>
+   * <li>2015-03-20 Hartmut {@link #requestFields(InspcStruct, Runnable)} redesigned 
    * <li>2014-10-12 Hartmut State machine included, tested but not active used. 
    * <li>2014-09-21 Hartmut TODO use a state machine .
    * <li>2014-01-08 Hartmut chg: {@link #cmdSetValueByPath(String, int, InspcAccessExecRxOrder_ifc)},
@@ -211,6 +212,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   /**Identifier especially for debugging. */
   final String name;
   
+  private final InspcMng mng;
+  
   /**Free String to write, for debug stop. */
   String dbgNameStopTx;
 
@@ -241,6 +244,13 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   final Map<Integer, OrderWithTime> ordersExpected = new TreeMap<Integer, OrderWithTime>();
   
+  
+  /**If not null then cmdGetFields will be invoked . */
+  InspcStruct requestedFields;
+  
+  /**If not null then this runnable will be called on end of requestFields. */
+  Runnable runOnResponseFields;
+  
   /**The last order for Get Fields.
    * Special case: Only this telegram-info has more as one answer.
    * Only one request 'get fields' should be send in one time.
@@ -249,6 +259,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * which is stored here etc.
    */
   OrderWithTime orderGetFields;
+  
   
   final Deque<OrderWithTime> listTimedOrders = new LinkedList<OrderWithTime>();
   
@@ -493,8 +504,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   private final InspcCommPort commPort;	
 	
-  public InspcTargetAccessor(String name, InspcCommPort commPort, Address_InterProcessComm targetAddr, EventTimerThread threadEvents)
+  public InspcTargetAccessor(String name, InspcCommPort commPort, Address_InterProcessComm targetAddr, EventTimerThread threadEvents, InspcMng mng)
   { this.name = name;
+    this.mng = mng;
     this.commPort = commPort;
     this.targetAddr = targetAddr;
     this.infoAccess = new InspcTelgInfoSet();
@@ -614,10 +626,11 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	  else {
 	    if((timeExpired - timeSend) >=0){
 	      //forgot a pending request:
-        if(logTelg !=null) System.err.println("InspcTargetAccessor.isReady - recover after timeout target; " + toString());
-	      bRequestWhileTaskPending = false;
-	      synchronized(this){
-	        Debugutil.stop();
+          //if(logTelg !=null) 
+          System.err.println("InspcTargetAccessor.isReady - recover after timeout target; " + toString());
+          bRequestWhileTaskPending = false;
+          synchronized(this){
+            Debugutil.stop();
 	      }
 	      ixTxFill = 0;
 	      ixTxSend = 0;
@@ -629,7 +642,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	      bHasAnswered = false;
 	      bNoAnswer = true;
 	      ordersExpected.clear();  //after long waiting their is not any expected.
-        bTaskPending.set(false);
+          bTaskPending.set(false);
 	      return true;
 	    } else {
 	      if(!bRequestWhileTaskPending){ //it is the first one
@@ -643,7 +656,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
 	
 	
-  /**Sets a expected order in the index of orders and registers a callback after all telegrams was received if given.
+  /**Sets an expected order in the index of orders and registers a callback after all telegrams was received if given.
    * @param order The unique order number.
    * @param exec The execution for the answer. 
    */
@@ -661,9 +674,18 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   }
   
   
+  
+  public void requestFields(InspcStruct struct, Runnable runOnReceive){
+    this.requestedFields = struct;
+    this.runOnResponseFields = runOnReceive;
+  }
+
+  
+
 
   /**Adds the info block to send 'get value by path'
    * @param sPathInTarget
+   * @param actionOnRx this action will be executed on receiving the item.
    * @return The order number. 0 if the cmd can't be created.
    */
   public int cmdGetFields(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
@@ -964,6 +986,24 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       throw new IllegalArgumentException("InspcTargetAccessor - too much telegrams;");
     }
   }
+  
+  
+  public void requestStart(long timeCurr) {
+    if(this.requestedFields !=null){
+      String path = this.requestedFields.varOfStruct(mng).ds.sPathInTarget; //getTargetFromPath(this.requestedFields.path()); 
+      //InspcTargetAccessor targetAccessor = requestedFields.targetAccessor();
+      if(isOrSetReady(timeCurr-10000)){ //check whether the device is ready.
+        this.requestedFields.fields.clear();
+        callbacksOnAnswer.put(new Integer(runOnResponseFields.hashCode()), runOnResponseFields);  //register the same action only one time.
+        cmdGetFields(path, this.requestedFields.rxActionGetFields);
+        this.requestedFields = null;
+      } else {
+        System.err.println("InspcMng - request fields - target does not response. ");
+      }
+    }
+
+  }
+  
   
   
   /**This routine have to be called after the last cmd in one thread. It sends the last telg

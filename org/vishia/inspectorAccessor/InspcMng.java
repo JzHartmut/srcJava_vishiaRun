@@ -114,6 +114,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   /**Version, history and license.
    * <ul>
+   * <li>2015-03-20 Hartmut requestFields redesigned. now managed by the {@link InspcTargetAccessor} 
    * <li>2013-01-10 Hartmut bugfix: If a variable can't be requested in {@link #requestValueByPath(String, InspcAccessExecRxOrder_ifc)} because
    *   the telegram is full, the same variable should be requested repeatedly in the next telegram. It was forgotten.
    * <li>2012-06-09 Hartmut new: Now it knows java-internal variable too, the path for the argument of {@link #getVariable(String)}
@@ -205,9 +206,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   /**This container holds all variables which are created. */
   Map<String, InspcStruct> idxAllStruct = new TreeMap<String, InspcStruct>();
-  
-  /**If not null then cmdGetFields should be invoked. */
-  InspcStruct requestedFields;
   
   /**This container holds that variables which are currently used for communication. */
   Map<String, InspcVariable> XXXidxVarsInAccess = new TreeMap<String, InspcVariable>();
@@ -387,11 +385,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   }
   
   
-  public void requestFields(InspcStruct struct){
-    requestedFields = struct;
-  }
-
-  
+  /* (non-Javadoc)
+   * @see org.vishia.byteData.VariableContainer_ifc#getVariable(java.lang.String)
+   */
   @Override public VariableAccess_ifc getVariable(final String sDataPathP)
   { int posIndex = sDataPathP.lastIndexOf('.');
     final String sDataPathOfWidget;
@@ -452,6 +448,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     boolean bRequest = false;
     bUserCalled = false;
     long timeCurr = System.currentTimeMillis();
+    for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
+      inspcAccessor.requestStart(timeCurr);  //invokes getFields if requested.     
+    }
     /*
     boolean bPendingOrders = false;
     for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
@@ -468,13 +467,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     //System.out.println("InspcMng.ProcComm - step;");
     int nrofVarsReq = 0;
     int nrofVarsAll = 0;
-    if(requestedFields !=null){
-      requestedFields.fields.clear();
-      InspcVarPathStructAcc path1 = getTargetFromPath(requestedFields.path()); 
-      //InspcTargetAccessor targetAccessor = requestedFields.targetAccessor();
-      path1.targetAccessor.cmdGetFields(path1.sPathInTarget, requestedFields.rxActionGetFields);
-      requestedFields = null;
-    }
     for(Map.Entry<String,InspcVariable> entryVar: idxAllVars.entrySet()){ //check all variables of the system.
       VariableAccess_ifc var = entryVar.getValue();
       nrofVarsAll +=1;
@@ -646,18 +638,20 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         errorDevice(sDevice);
       }
       int posName = sPathWithTarget.lastIndexOf('.');
+      String sStructPath;
       if(posName >0){
-        String sStructPath = sPathWithTarget.substring(/*posSepDevice +1*/ 0, posName);
-        itsStruct = idxAllStruct.get(sStructPath);
-        if(itsStruct == null){
-          InspcStruct parent = getOrCreateParentStruct(sStructPath, accessor);
-          itsStruct = new InspcStruct(sStructPath, accessor, parent);
-          idxAllStruct.put(sStructPath, itsStruct);
-        }
+        sStructPath = sPathWithTarget.substring(/*posSepDevice +1*/ 0, posName);
         sName = sPathWithTarget.substring(posName +1);
       } else {
+        sStructPath = sPathWithTarget.substring(0, posSepDevice+1);
         sName = sPathWithTarget.substring(posSepDevice +1);
-        itsStruct = null;
+      }
+      itsStruct = idxAllStruct.get(sStructPath);
+      if(itsStruct == null){
+        //InspcStruct parent = getOrCreateParentStruct(sStructPath, accessor);
+        InspcVariable parentVar = getOrCreateParentVariable(sDataPath, accessor);
+        itsStruct = new InspcStruct(parentVar, sStructPath, accessor, null);
+        idxAllStruct.put(sStructPath, itsStruct);
       }
       sPathInTarget = sPathWithTarget.substring(posSepDevice +1);
       return new InspcVarPathStructAcc(accessor, sDataPath, sPathInTarget, sName, itsStruct);
@@ -682,7 +676,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   /**Gets or creates the parent for the given path. The parent is referenced in {@link #idxAllStruct}.
    * @param sPathChild
    * @return null if it is the root.
-   */
   private InspcStruct getOrCreateParentStruct(String sPathChild, InspcTargetAccessor accessor){
     if(sPathChild.endsWith(":")){
       return null;
@@ -692,6 +685,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         posLastDot = sPathChild.indexOf(':') +1;
       }
       final String sPath = sPathChild.substring(0, posLastDot);
+      InspcVariable parentVariable = (InspcVariable)getVariable(sPath);  //recursively call
       InspcStruct ret = idxAllStruct.get(sPath);
       if(ret == null){
         InspcStruct parent = getOrCreateParentStruct(sPath, accessor);
@@ -699,6 +693,28 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         idxAllStruct.put(sPath, ret);
       }
       return ret;
+    }
+  }
+   */
+  
+  
+  
+  
+  /**Gets or creates the parent for the given path. The parent is referenced in {@link #idxAllStruct}.
+   * @param sPathChild
+   * @return null if it is the root.
+   */
+  private InspcVariable getOrCreateParentVariable(String sPathChild, InspcTargetAccessor accessor){
+    if(sPathChild.endsWith(":")){
+      return null;
+    } else {
+      int posLastDot = sPathChild.lastIndexOf('.');
+      if(posLastDot <0) {
+        posLastDot = sPathChild.indexOf(':') +1;  //with device, with ':'
+      }
+      final String sPath = sPathChild.substring(0, posLastDot);
+      InspcVariable parentVariable = (InspcVariable)getVariable(sPath);  //recursively call
+      return parentVariable;
     }
   }
   
@@ -794,7 +810,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     for(Map.Entry<String, String> e : indexTargetIpcAddr.entrySet()){
       String name = e.getKey();
       Address_InterProcessComm addrTarget = commPort.createTargetAddr(e.getValue());
-      InspcTargetAccessor accessor = new InspcTargetAccessor(name, commPort, addrTarget, threadEvent);
+      InspcTargetAccessor accessor = new InspcTargetAccessor(name, commPort, addrTarget, threadEvent, this);
       indexTargetAccessor.put(name, accessor);
       listTargetAccessor.add(accessor);
     }
