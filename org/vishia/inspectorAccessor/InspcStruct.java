@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.vishia.byteData.VariableContainer_ifc;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.msgDispatch.LogMessage;
 
@@ -59,7 +60,7 @@ public final class InspcStruct
     
     public final boolean hasSubstruct;
     
-    private final InspcStruct substruct;
+    //private final InspcStruct substruct;
     
     /**Maybe null if the field was not read until now. Not all fields creates variables. */
     InspcVariable var;
@@ -68,25 +69,29 @@ public final class InspcStruct
       this.name = name;
       this.type = type;
       this.hasSubstruct = hasSubstruct;
-      if(hasSubstruct){
-        String pathsub;
-        String pathParent = parent.path();
-        if(pathParent.endsWith(":")){
-          pathsub = pathParent + name; 
-        } else {
-          pathsub = pathParent + "." + name;
-        }
-        this.substruct = new InspcStruct(null, pathsub, parent.targetAccessor(), parent );
-      } else {
-        this.substruct = null;
-      }
     }
     
-    public void setVariable(InspcVariable var){ this.var = var; }
     
-    public InspcVariable variable(){ return var; }
+    /**Returns the variable which is assigned to the given field. If the field has not a variable 
+     * then the variable will be created with the path of the parent (struct) variable and the name of the field.
+     * The concept is: create variable only if they are necessary. It is possible to view a structure 
+     * but don't have variable for all fields. This method creates the variable if it is necessary.
+     * 
+     * @param param the variable of the structure, same as {@link InspcStruct#varOfStruct}.
+     * @param container the container where all variables can be gotten with given path. It is the {@link InspcMng}
+     * 
+     * @return The variable associated to the field which allows communication with the target.
+     */
+    public InspcVariable variable(InspcVariable parent, VariableContainer_ifc container) {
+      if(var == null){
+        String sParentPath = parent.ds.sDataPath;
+        String sPathVar = sParentPath + (sParentPath.endsWith(":") ? "" : '.') + name;
+        var = (InspcVariable)container.getVariable(sPathVar);
+      }
+      return var; 
+    }
     
-    public InspcStruct substruct(){ return substruct; }
+    //public InspcStruct substruct(){ return substruct; }
   }
   
 
@@ -96,11 +101,15 @@ public final class InspcStruct
   
   private final String path;
   
-  private final InspcTargetAccessor targetAccessor;
+  //private final InspcTargetAccessor targetAccessor;
   
-  private final InspcStruct parent;
+  //private final InspcStruct parent;
   
-  /*package private*/ final VariableRxAction rxActionGetFields = new VariableRxAction();
+  /**Action on receiving getFields from target for each field for this structure variable.
+   * This instance invokes the {@link #rxActionGetFields(org.vishia.communication.InspcDataExchangeAccess.Inspcitem, long)}
+   * which fills the {@link #fields}.
+   */
+  public final VariableRxAction rxActionGetFields = new VariableRxAction();
   
 
   
@@ -112,22 +121,22 @@ public final class InspcStruct
   
   /**All variables which are associated to the fields of this struct. Not all fields have a variable on startup,
    * only on access a variable will be created. That variable is member of the {@link InspcMng#idxAllVars} too. */
-  Map<String, InspcVariable> vars = new TreeMap<String, InspcVariable>();
+  //Map<String, InspcVariable> vars = new TreeMap<String, InspcVariable>();
   
   
   /**Callback for any request. */
   Runnable callback;
   
-  InspcStruct(InspcVariable varOfStruct, String path, InspcTargetAccessor targetAccessor, InspcStruct parent){
+  InspcStruct(InspcVariable varOfStruct, String path){
     this.path = path;
-    this.targetAccessor = targetAccessor; 
-    this.parent = parent;
+    //this.targetAccessor = targetAccessor; 
+    //this.parent = varOfStruct == null ? null: varOfStruct.struct();
     this.varOfStruct = varOfStruct;
   }
 
   public String path(){ return path; }
   
-  public InspcStruct parent(){ return parent; }
+  //public InspcStruct parent(){ return parent; }
   
   
   public InspcVariable varOfStruct(InspcMng mng) {
@@ -137,20 +146,13 @@ public final class InspcStruct
     return varOfStruct; 
   }
   
-  public InspcTargetAccessor targetAccessor(){ return targetAccessor; }
-  
-  /**Invoked only in {@link InspcVariable#InspcVariable(InspcMng, InspcTargetAccessor, InspcStruct, String)}
-   * for a new variable.
-   * @param var
-   */
-  void registerVariable(InspcVariable var){
-    vars.put(var.ds.sName, var);
-  }
-  
   
   public void requestFields(Runnable callbackP){ bRequFields = true; this.callback = callbackP; }
   
-  public void requestFields(){ bRequFields = true; }
+  public void requestFields(){ 
+    fields.clear();
+    bRequFields = true; 
+  }
   
   boolean isRequestFields(){ if(bRequFields) { bRequFields = false; return true;} else { return false; } }
   

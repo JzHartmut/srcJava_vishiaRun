@@ -4,7 +4,6 @@ package org.vishia.inspectorAccessor;
 public interface InspcPlugUser_ifc// extends GralPlugUser_ifc
 {
   
-  //void XXXsetInspcComm(InspcGuiComm inspcCommP);
   
   void setInspcComm(InspcMng inspcMng);
   

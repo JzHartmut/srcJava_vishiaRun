@@ -42,14 +42,9 @@ public interface UserInspcPlug_ifc // extends GralPlugUser2Gral_ifc
   public static final int version = 20120409;
 
   /**Replaces the prefix of the path with a possible replacement. 
-   * @param path the path given in scripts. It may have the form PREFIX:PATH or TARGET:PATH
-   * @param target A String[1] to return the target part. 
-   * @return The path with dissolved prefix and dissolved target from path or prefix.
-   */
-  String XXXreplacePathPrefix(String path, String[] target); 
-  
-  
-  InspcVarPathStructAcc getTargetFromPath(String sDataPath);
+   * @param sDataPath the path given in scripts. It may have the form PREFIX:PATH or TARGET:PATH
+   * @return structure with {@link InspcTargetAccessor} and the parts of the path. */
+  InspcTargetAccess getTargetFromPath(String sDataPath);
 
   
 }

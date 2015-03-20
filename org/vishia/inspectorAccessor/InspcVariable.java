@@ -135,11 +135,19 @@ public class InspcVariable implements VariableAccess_ifc
 
   }
 
-  
+  /**The structure were this variable is member of. Not null if this is not the root variable in a device. */
+  public final InspcVariable parent;
   
   /*package private*/ final VariableRxAction rxAction = new VariableRxAction();
   
-  final InspcVarPathStructAcc ds;
+  public final InspcTargetAccess ds;
+  
+  /**It is is a structure, it maybe not null if it is requested.
+   * null for a leaf variable, null if the structure was not requested till now.
+   * See {@link #struct()}. It creates.
+   */
+  private InspcStruct itsStruct;
+
   
   /**Special designations as value of {@link #idTarget} 
    */
@@ -191,12 +199,13 @@ public class InspcVariable implements VariableAccess_ifc
    * @param mng
    * @param sPathInTarget The access path.
    */
-  InspcVariable(InspcMng mng, InspcVarPathStructAcc data){
+  InspcVariable(InspcMng mng, InspcVariable parent, InspcTargetAccess data){
     this.varMng = mng;
     this.ds = data;
-    if(data.itsStruct !=null) {
-      data.itsStruct.registerVariable(this);
-    }
+    this.parent = parent;
+    //if(data.itsStruct !=null) {
+    //  data.itsStruct.registerVariable(this);
+    //}
   }
   
   
@@ -356,7 +365,18 @@ public class InspcVariable implements VariableAccess_ifc
   
   
   
-  public InspcStruct struct() { return ds.itsStruct; }
+  /**Creates an {@link InspcStruct} if it is not created till now, returns it.
+   * This method should only be called for variable which are not leaf variables in the target device.
+   * If it is created for a leaf variable, the filling of the struct fails so that the structure has no fields. 
+   * 
+   * @return Instance for the structure information of this variable.
+   */
+  public InspcStruct struct() { 
+    if(itsStruct == null) {
+      itsStruct = new InspcStruct(this, ds.sParentPath);
+    }
+    return itsStruct; 
+  }
   
   
   @Override public void setRefreshed(long time){ timeRefreshed = time; }

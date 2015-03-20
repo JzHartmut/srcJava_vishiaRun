@@ -23,6 +23,7 @@ import org.vishia.event.EventCmdtypeWithBackEvent;
 import org.vishia.event.EventTimeout;
 import org.vishia.event.EventTimerThread;
 import org.vishia.inspector.InspcTelgInfoSet;
+import org.vishia.inspectorAccessor.InspcStruct.VariableRxAction;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.ClassJc;
 import org.vishia.states.StateComposite;
@@ -212,8 +213,6 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   /**Identifier especially for debugging. */
   final String name;
   
-  private final InspcMng mng;
-  
   /**Free String to write, for debug stop. */
   String dbgNameStopTx;
 
@@ -246,7 +245,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   
   /**If not null then cmdGetFields will be invoked . */
-  InspcStruct requestedFields;
+  InspcTargetAccess requFields;
+  
+  /**Action on receiving fields from target, only valid for the requFields. */
+  VariableRxAction rxActionGetFields;
   
   /**If not null then this runnable will be called on end of requestFields. */
   Runnable runOnResponseFields;
@@ -481,8 +483,6 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	 */
 	int nEntrant = -1;
 	
-	String XXXsTargetIpAddr;
-	
 	final Address_InterProcessComm targetAddr;
 	
 	/**The current used sequence number. It is never 0 if it is used the first time. */
@@ -504,9 +504,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   private final InspcCommPort commPort;	
 	
-  public InspcTargetAccessor(String name, InspcCommPort commPort, Address_InterProcessComm targetAddr, EventTimerThread threadEvents, InspcMng mng)
+  public InspcTargetAccessor(String name, InspcCommPort commPort, Address_InterProcessComm targetAddr, EventTimerThread threadEvents)
   { this.name = name;
-    this.mng = mng;
     this.commPort = commPort;
     this.targetAddr = targetAddr;
     this.infoAccess = new InspcTelgInfoSet();
@@ -675,8 +674,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   
   
-  public void requestFields(InspcStruct struct, Runnable runOnReceive){
-    this.requestedFields = struct;
+  
+  public void requestFields(InspcTargetAccess data, VariableRxAction rxActionGetFields, Runnable runOnReceive){
+    this.requFields = data;
+    this.rxActionGetFields = rxActionGetFields;
     this.runOnResponseFields = runOnReceive;
   }
 
@@ -989,14 +990,13 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   
   public void requestStart(long timeCurr) {
-    if(this.requestedFields !=null){
-      String path = this.requestedFields.varOfStruct(mng).ds.sPathInTarget; //getTargetFromPath(this.requestedFields.path()); 
+    if(this.requFields !=null){
+      String path = this.requFields.sPathInTarget; //getTargetFromPath(this.requestedFields.path()); 
       //InspcTargetAccessor targetAccessor = requestedFields.targetAccessor();
       if(isOrSetReady(timeCurr-10000)){ //check whether the device is ready.
-        this.requestedFields.fields.clear();
         callbacksOnAnswer.put(new Integer(runOnResponseFields.hashCode()), runOnResponseFields);  //register the same action only one time.
-        cmdGetFields(path, this.requestedFields.rxActionGetFields);
-        this.requestedFields = null;
+        cmdGetFields(path, this.rxActionGetFields);
+        this.requFields = null;
       } else {
         System.err.println("InspcMng - request fields - target does not response. ");
       }
