@@ -66,9 +66,17 @@ public final class InspcStruct
     /**Maybe null if the field was not read until now. Not all fields creates variables. */
     InspcVariable var;
     
-    FieldOfStruct(InspcStruct parent, String name, String type, boolean hasSubstruct){
+    public FieldOfStruct(InspcStruct parent, String name, String type, boolean hasSubstruct){
       this.name = name;
       this.type = type;
+      this.hasSubstruct = hasSubstruct;
+    }
+    
+    
+    public FieldOfStruct(InspcVariable var, String type, boolean hasSubstruct){
+      this.name = var.ds.sName;
+      this.type = type;
+      this.var = var;
       this.hasSubstruct = hasSubstruct;
     }
     

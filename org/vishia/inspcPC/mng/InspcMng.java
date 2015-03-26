@@ -430,10 +430,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     boolean bRequest = false;
     bUserCalled = false;
     long timeCurr = System.currentTimeMillis();
+    //getFields does not work on start:
+    /*
     for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
       inspcAccessor.requestStart(timeCurr);  //invokes getFields if requested.     
     }
-    /*
+    */
+    /* ???
     boolean bPendingOrders = false;
     for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
       int removedOrPendingOrders = inspcAccessor.checkAndRemoveOldOrders(timeCurr - 5000);
@@ -486,10 +489,14 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       /////
       //System.out.println("InspcMng.procComm - variables requested; " + nrofVarsReq + "; all=" + nrofVarsAll);
     }
+    //check getFields after value
+    for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
+      inspcAccessor.requestStart(timeCurr);  //invokes getFields if requested.     
+    }
+    
     for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
       inspcAccessor.cmdFinit();     
     }
-    
     if(user !=null){
       user.isSent(0);
     }

@@ -88,7 +88,7 @@ public class InspcVariable implements VariableAccess_ifc
       //int order = info.getOrder();
       int cmd = info.getCmd();
       //if(widgd instanceof GralLed){
-        
+      int lenItem = info.getLenInfo();  
       //}
       switch(cmd){
         case InspcDataExchangeAccess.Inspcitem.kAnswerRegisterRepeat: {

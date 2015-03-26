@@ -633,7 +633,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	      }
 	      ixTxFill = 0;
 	      ixTxSend = 0;
-	      state = 'R';
+	      Arrays.fill(bitsAnswerNrRx, 0);
+          state = 'R';
 	      bFillTelg = false;
 	      bShouldSend = false;
 	      bIsSentTelg = false;
@@ -676,9 +677,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   
   public void requestFields(InspcTargetAccessData data, InspcAccessExecRxOrder_ifc rxActionGetFields, Runnable runOnReceive){
-    this.requFields = data;
     this.rxActionGetFields = rxActionGetFields;
     this.runOnResponseFields = runOnReceive;
+    this.requFields = data;
   }
 
   
@@ -1090,7 +1091,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       Debugutil.stop();
       System.out.println("InspcTargetAccessor.send() - target does not response, too many telegr, " + targetAddr);
     }
-    bShouldSend = false;
+    bShouldSend = false; ////
   }
 	
 	
@@ -1116,14 +1117,14 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     dtimeReceive = timeReceive - timeSend;
     if(logTelg !=null){ 
       logTelg.sendMsg(identLogTelg+idLogRx, "recv telg after %d ms", new Long(dtimeReceive)); 
-    }
+    }////
     long time = System.currentTimeMillis();
     accessRxTelg.assign(rxBuffer, rxLength);
     int rxSeqnr = accessRxTelg.getSeqnr();
     //int rxAnswerNr = accessRxTelg.getAnswerNr();
     if(rxSeqnr == this.nSeqNumberTxRx){
       //the correct answer
-      int nAnswer = accessRxTelg.getAnswerNr();
+      int nAnswer = accessRxTelg.getAnswerNr();  ////
       int bitAnswer = 1 << (nAnswer & 0xf);
       int ixAnswer = nAnswer >> 4;
       if((bitsAnswerNrRx[ixAnswer] & bitAnswer) ==0){
@@ -1150,16 +1151,16 @@ public class InspcTargetAccessor implements InspcAccess_ifc
           }
         }
       } else {
-        //sendPending: rx is not an anwer, ignored, remain true
-        if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor - faulty answernr; " + rxSeqnr + "; expected " + this.nSeqNumberTxRx);
+        //faulty telegram order ?sendPending: rx is not an anwer, ignored, remain true
+        if(logTelg !=null || bWriteDebugSystemOut) System.out.println("InspcTargetAccessor - faulty answer in sequence, received= " + nAnswer + ", expected=0x" + Integer.toHexString(bitsAnswerNrRx[ixAnswer]));
         //faulty seqnr
         if(logTelg !=null){ 
           logTelg.sendMsg(identLogTelg+idLogRxRepeat, "recv repeated telg seqn=%d nAnswer=%d after %d ms", new Integer(rxSeqnr), new Integer(nAnswer), new Long(dtimeReceive)); 
         }
       }
     } else {
-      //sendPending: is false, unexpected rx
-      if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor - unexpected rx; ");
+      //faulty seqnr ?sendPending: is false, unexpected rx
+      if(logTelg !=null || bWriteDebugSystemOut) System.out.println("InspcTargetAccessor - unexpected seqnr, received=" + rxSeqnr + ", expected=" + this.nSeqNumberTxRx);
       if(logTelg !=null){ 
         logTelg.sendMsg(identLogTelg+idLogFailedSeq, "recv failed seqn=%d after %d ms", new Integer(rxSeqnr), new Long(dtimeReceive)); 
       }
@@ -1273,7 +1274,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
         telgHead.addChild(infoAccessRx);
         int nrofBytesInfo = infoAccessRx.getLenInfo();
         if(!infoAccessRx.checkLengthElement(nrofBytesInfo)) {
-          throw new IllegalArgumentException("nrofBytes in element faulty");
+          //throw new IllegalArgumentException("nrofBytes in element faulty");
         }
         if(executer !=null){
           executer.execInspcRxOrder(infoAccessRx, time, log, identLog);

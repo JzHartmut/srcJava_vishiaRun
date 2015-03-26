@@ -81,14 +81,7 @@ public class MsgItems_h
     }
     
 
-    //@Override
-    protected void specifyEmptyDefaultData()
-    {
-      for(int ii=ixBegin; ii < ixEnd; ii++)
-      { super.data[ii] = 0;
-      }
-    }
-
+ 
 
         
 	    public void set_timestamp(int val)
@@ -191,16 +184,7 @@ public class MsgItems_h
 
 
  
-    //@Override
-    protected void specifyEmptyDefaultData()
-    {
-      for(int ii=ixBegin; ii < ixEnd; ii++)
-      { super.data[ii] = 0;
-      }
-    }
-
-        
-        
+         
 	      //note: method to set fileHead, not able to generate.
 	        
       //note: method to set fileHead, not able to generate.
@@ -236,8 +220,8 @@ public class MsgItems_h
       {
       
         //NOTE: use super.data etc to prevent false using of a local element data. super is ByteDataAccess.    
-        int length = super.ixEnd - kIdxmsgItems;
-        msgItems.assign(super.data, length, super.ixBegin + kIdxmsgItems);  //embedded structure
+        int length = super.ixEnd() - kIdxmsgItems;
+        msgItems.assign(super.data, length, super.ixBegin() + kIdxmsgItems);  //embedded structure
         msgItems.setBigEndian(super.bBigEndian);
       }
 

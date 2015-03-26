@@ -431,11 +431,11 @@ public final class InspcDataExchangeAccess
         default: cmd = Integer.toHexString(cmd1);
       }
       String path = s >0 ? getString(s, z-s) : "";
-      u.addint(ixBegin, "33331")
-      .add("..").addint(ixBegin + sizeHead,"333331")
-      .add("..").addint(ixNextChild,"333331")
-      .add(bExpand ? '+' : ':').addint(ixEnd,"333331").add(":");
-      u.addHexLine(data, ixBegin, sizeofHead, StringFormatter.k4left).add(": ");
+      u.addint(ixBegin(), "33331")
+      .add("..").addint(ixBegin() + sizeHead,"333331")
+      .add("..").addint(ixNextChild(),"333331")
+      .add(bExpand ? '+' : ':').addint(ixEnd(),"333331").add(":");
+      u.addHexLine(data, ixBegin(), sizeofHead, StringFormatter.k4left).add(": ");
       u.add(cmd).add(path);
     }
     
