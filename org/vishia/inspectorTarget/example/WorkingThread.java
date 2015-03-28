@@ -1,4 +1,4 @@
-package org.vishia.inspector.example;
+package org.vishia.inspectorTarget.example;
 
 /**This is a class which does anything to display it with the reflectPro-target. 
  * It creates an own thread and calculates some sine-curve-values.

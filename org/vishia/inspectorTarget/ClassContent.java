@@ -22,6 +22,9 @@ public final class ClassContent implements CmdConsumer_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2015-03-28 Hartmut bugfix: The argument 'maxNrofAnswerBytes' of all cmd execution methods is not used furthermore. 
+   *   The current length in the answer is stored in the ByteDataAccess indices already. The algorithm to determine the length
+   *   in the answer datagram with extra count is erroneously. Don't use it. TODO remove this argument.
    * <li>2015-01-10 Hartmut chg: Now detects a superclass, provides a Field "super" which is regarded in @link {@link FieldJc} and @link {@link ClassJc#getSuperField()}. 
    * <li>2014-11-02 Hartmut chg: {@link #evaluateFieldGetFields(org.vishia.communication.InspcDataExchangeAccess.InspcDatagram, FieldJc, int, int)}:
    *   Problem with answer for long structures with second telegram. TODO: test it for C too!
@@ -81,16 +84,6 @@ public final class ClassContent implements CmdConsumer_ifc
    * @java2c=simpleRef, embeddedArrayElements,simpleArray. */
   //public final SearchTrc[] debugSearchTrc;
   
-  /**Current number while preparing a answer datagram. */
-  private int nrofAnswerBytes = 0; 
-  
-  ///**Max number as parameter of call. */
-  //private int maxNrofAnswerBytes;
-  
-  ///**Reference to the answer stored in class.  
-  // * @java2c=simpleRef. */
-  //private InspcDataExchangeAccess.Datagram answerP;
-  
   /**Access element for {@link ByteDataAccessBase} to the answer Item. 
    * It is reused whenever an info item is to be added. */
   private final InspcDataExchangeAccess.Inspcitem answerItem = new InspcDataExchangeAccess.Inspcitem();
@@ -140,7 +133,6 @@ public final class ClassContent implements CmdConsumer_ifc
   { /**Switch to the cmd execution. */
     int nOrder = cmd.getOrder();
     int nCmd = cmd.getCmd();
-    nrofAnswerBytes = InspcDataExchangeAccess.InspcDatagram.sizeofHead;
     switch(nCmd){
     case InspcDataExchangeAccess.Inspcitem.kGetFields:
       cmdGetFields(cmd, answer, maxNrofAnswerBytes);
@@ -164,13 +156,12 @@ public final class ClassContent implements CmdConsumer_ifc
     { /**Unknown command - answer is: kFailedCommand.
        * think over another variant: return 0 to use delegation pattern ...
        */
-      nrofAnswerBytes += InspcDataExchangeAccess.Inspcitem.sizeofHead;
       answer.addChild(answerItem);
       answerItem.setInfoHead(InspcDataExchangeAccess.Inspcitem.sizeofHead
         , InspcDataExchangeAccess.Inspcitem.kFailedCommand, nOrder);
     }   
     }//switch
-    return 0; //nrofAnswerBytes;
+    return 0;
   }
   
   
@@ -186,7 +177,6 @@ public final class ClassContent implements CmdConsumer_ifc
     //ObjectJc* obj = null; 
     ClassJc clazz;
     
-    nrofAnswerBytes = InspcDataExchangeAccess.InspcDatagram.sizeofHead; 
     boolean bQuestCollectionSize;
     int idxCollectionQuest;
     int nCmd;
@@ -228,7 +218,7 @@ public final class ClassContent implements CmdConsumer_ifc
         /**@java2c=stackInstance, simpleArray.  */
         final FieldJc[] fieldP = new FieldJc[1];
         /**Search the field in its object, the referenced instance of the field is requested: */
-        memObj.set(SearchElement.searchObject(sVariablePath, rootObj, fieldP, idxP));
+        memObj.set(SearchElement.searchObject(sVariablePath, rootObj, fieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
         idx = idxP[0];
         field = fieldP[0];
         found = memObj.obj() != null && field !=null;
@@ -258,7 +248,7 @@ public final class ClassContent implements CmdConsumer_ifc
         }
         
       }
-      if( found)
+      if(found)
       { /**The field describes the last found field, the obj is the associated instance 
          * which contains the field, 
          * obj is typeof getDeclaringClass_FieldJc().
@@ -267,6 +257,8 @@ public final class ClassContent implements CmdConsumer_ifc
         int nOrderNr =cmd.getOrder();
         if(bQuestCollectionSize)
         { //the size of an container is requested:
+          //NOTE: it is not the root instance, only for the root instance the field ==null
+          assert(field !=null);
           int nSize = field.getArraylength(memObj);  //obj is the object where field is member of.
           boolean hasSubstructure = (modifiers & ModifierJc.mPrimitiv) ==0; 
           uAnswer.setLength(0);
@@ -322,7 +314,6 @@ public final class ClassContent implements CmdConsumer_ifc
         //answerItem.setCmd(InspcDataExchangeAccess.Inspcitem.kFailedPath);
         int order = cmd.getOrder();
         answerItem.setInfoHead(InspcDataExchangeAccess.Inspcitem.sizeofHead, InspcDataExchangeAccess.Inspcitem.kFailedPath, order);
-        nrofAnswerBytes = answer.getLengthTotal();
       }
       
     } catch(Exception exc){
@@ -333,7 +324,6 @@ public final class ClassContent implements CmdConsumer_ifc
       //answerItem.setCmd(InspcDataExchangeAccess.Inspcitem.kFailedPath);
       int order = cmd.getOrder();
       answerItem.setInfoHead(InspcDataExchangeAccess.Inspcitem.sizeofHead, InspcDataExchangeAccess.Inspcitem.kFailedPath, order);
-      nrofAnswerBytes = answer.getLengthTotal();
     }
     return 0;
   }  
@@ -379,24 +369,7 @@ public final class ClassContent implements CmdConsumer_ifc
       uArray.append("[?]:TODO-containerType");
     }
     { uValue.setLength(0);
-      //int lengthArray = uArray.length();
-      int lengthValue = uValue.length();
-      /**calculate the length of the answer before writing. */
-      //int lengthAnswer = InspcDataExchangeAccess.Inspcitem.sizeofHead + lengthName + 1 + lengthType 
-      //                 + lengthArray + lengthValue + (hasSubstructure ? 3:0);
-      //int lengthAnswer4 = (lengthAnswer+3)/4 *4;  //aufgerundet durch 4 teilbar.
-      /*
-      if((nrofAnswerBytes + lengthAnswer4) > maxNrofAnswerBytes){
-      */
-        /**The information doesn't fit in the datagram: Send the last one and clear it. 
-         * @java2c=dynamic-call. */
-      /* @Java4C.DynamicCall final AnswerComm_ifc answerCommMtbl = answerComm;  //concession to Java2C_ build Mtbl-reference
-        answerCommMtbl.txAnswer(nrofAnswerBytes, false); 
-        nrofAnswerBytes = InspcDataExchangeAccess.InspcDatagram.sizeofHead; 
-        answer.removeChildren();
-        answer.incrAnswerNr();
-      }
-      */
+      int lengthValue = 0;
       { uAnswer.setLength(0);
         uAnswer.append(name);
         uAnswer.append(uArray);
@@ -425,8 +398,9 @@ public final class ClassContent implements CmdConsumer_ifc
           /**The information doesn't fit in the datagram: Send the last one and clear it. 
            * @java2c=dynamic-call. */
           @Java4C.DynamicCall final AnswerComm_ifc answerCommMtbl = answerComm;  //concession to Java2C_ build Mtbl-reference
-          answerCommMtbl.txAnswer(nrofAnswerBytes, false); 
-          nrofAnswerBytes = InspcDataExchangeAccess.InspcDatagram.sizeofHead; 
+          int nrofAnswer = answer.getLengthTotal();
+          answerCommMtbl.txAnswer(nrofAnswer, false); 
+          //for next usage, send is done:
           answer.removeChildren();
           answer.incrAnswerNr();
         }
@@ -437,7 +411,6 @@ public final class ClassContent implements CmdConsumer_ifc
         answerItem.addChildString(sAnswerAdd);
         //Prepare the answer item for this field:
         answerItem.setInfoHead(zChildAnswer, InspcDataExchangeAccess.Inspcitem.kAnswerFieldMethod, orderNr);
-        nrofAnswerBytes += zChildAnswer;
       }
     }
 
@@ -497,7 +470,7 @@ public final class ClassContent implements CmdConsumer_ifc
       int idx;
       /**@java2c=stackInstance, simpleArray.  */
       final int[] idxP = new int[1];
-      theObject.set(SearchElement.searchObject(sVariablePath, rootObj, theFieldP, idxP));
+      theObject.set(SearchElement.searchObject(sVariablePath, rootObj, theFieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
       theField = theFieldP[0];
       idx = idxP[0];
       if(theObject.obj() != null && theField !=null)
@@ -545,7 +518,8 @@ public final class ClassContent implements CmdConsumer_ifc
     String sValue = null;
     boolean bOk;
     int actLenTelg = answerItem.getLengthTotal();
-    int restLen = maxNrofAnswerBytes - actLenTelg;
+    int maxLen = answerItem.getData().length;
+    int restLen = maxLen - actLenTelg;
     int nType;
     //add the answer-item-head. The rest is specific for types.
     if(type.isPrimitive()){
@@ -759,7 +733,7 @@ public final class ClassContent implements CmdConsumer_ifc
     FieldJc theField = null;
     /**@java2c=stackInstance, simpleArray.  */
     final FieldJc[] theFieldP = new FieldJc[1];
-    final MemSegmJc theObject = new MemSegmJc();
+    final MemSegmJc theObject = new MemSegmJc();  //In C an embedded type.
     /**@java2c=nonPersistent.  */
     String sValue;
     int memSegment = 0;
@@ -769,7 +743,7 @@ public final class ClassContent implements CmdConsumer_ifc
       int idx;
       /**@java2c=stackInstance, simpleArray.  */
       final int[] idxP = new int[1];
-      theObject.set(SearchElement.searchObject(sVariablePath, rootObj, theFieldP, idxP));
+      theObject.set(SearchElement.searchObject(sVariablePath, rootObj, theFieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
       theField = theFieldP[0];
       idx = idxP[0];
       answer.addChild(answerItem);
@@ -819,7 +793,7 @@ public final class ClassContent implements CmdConsumer_ifc
       int idx;
       /**@java2c=stackInstance, simpleArray.  */
       final int[] idxP = new int[1];
-      theObject.set(SearchElement.searchObject(sVariablePath, rootObj, theFieldP, idxP));
+      theObject.set(SearchElement.searchObject(sVariablePath, rootObj, theFieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
       theField = theFieldP[0];
       idx = idxP[0];
       answer.addChild(answerItem);

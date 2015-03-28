@@ -29,9 +29,14 @@ public class CmdExecuter implements AnswerComm_ifc
   /**@java2c=simpleRef. */
 	private Comm comm;
   
+  /**Buffer for the answer telegram. It should be less then the max length of an UDP telegram.
+   * 
+   */
   @Java4C.SimpleArray
-  private final byte[] data_bufferAnswerData = new byte[1500]; 
+  private final byte[] data_bufferAnswerData = new byte[1400]; 
   
+  /**This reference is used to refer the answer buffer. It is for C usage with the PtrVal type which contains the address and the size
+   * in one struct. */
   @Java4C.PtrVal
   private final byte[] bufferAnswerData = data_bufferAnswerData; 
   

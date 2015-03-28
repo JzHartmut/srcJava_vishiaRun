@@ -160,6 +160,7 @@ public final class InspcStruct
   
   public void requestFields(){ 
     fields.clear();
+    bUpdated = false;
     bRequFields = true; 
   }
   

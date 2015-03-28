@@ -1,4 +1,4 @@
-package org.vishia.inspector.example;
+package org.vishia.inspectorTarget.example;
 
 import java.util.LinkedList;
 import java.util.List;
