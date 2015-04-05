@@ -21,7 +21,7 @@ import org.vishia.util.StringPartScan;
  * @author Hartmut Schorrig
  *
  */
-public class InspcVariable implements VariableAccess_ifc
+public class InspcVariable implements VariableAccessArray_ifc
 {
   
   /**Version, history and license.
@@ -269,7 +269,7 @@ public class InspcVariable implements VariableAccess_ifc
         }
       }
     } else if(modeTarget == ModeHandleVariable.kIdTargetDisabled){
-      if(retryDisabledVariable && this.ds.sPathInTarget.charAt(0) != '#'){
+      if(retryDisabledVariable && this.ds.sPathInTarget.length() >0 && this.ds.sPathInTarget.charAt(0) != '#'){
         modeTarget = ModeHandleVariable.kTargetNotSet;  //in the next step: register or get by path
       }
       return true;  //true because the variable is handled.
@@ -422,6 +422,83 @@ public class InspcVariable implements VariableAccess_ifc
     u.append(" m=").append(modeTarget)
       .append(" h=").append(Integer.toHexString(handleTarget));
     return u.toString();
+  }
+
+
+  @Override public int getInt(int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override public int setInt(int value, int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override public long getLong(int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override public long setLong(long value, int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override public float getFloat(int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override public float setFloat(float value, int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override public double getDouble(int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override public double setDouble(double value, int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+
+  @Override public String getString(int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+
+  @Override public String setString(String value, int... ixArray)
+  {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+
+  @Override public int getDimension(int dimension)
+  {
+    // TODO Auto-generated method stub
+    return 0;
   }
 
 

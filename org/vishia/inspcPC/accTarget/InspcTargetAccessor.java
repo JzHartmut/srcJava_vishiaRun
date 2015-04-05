@@ -1067,7 +1067,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   private void send()
   {
     //send the telegram:
-    //checkerRxTelg.setAwait(nSeqNumber);
+    //checkerRxTelg.setAwait(nSeqNumber);  ////d
     if(name.equals(dbgNameStopTx)) {
       Debugutil.stop();
     }
@@ -1114,7 +1114,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   public void evaluateRxTelg(byte[] rxBuffer, int rxLength){
     timeReceive = System.currentTimeMillis();
-    dtimeReceive = timeReceive - timeSend;
+    dtimeReceive = timeReceive - timeSend;       ////d
     if(logTelg !=null){ 
       logTelg.sendMsg(identLogTelg+idLogRx, "recv telg after %d ms", new Long(dtimeReceive)); 
     }////
@@ -1124,7 +1124,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     //int rxAnswerNr = accessRxTelg.getAnswerNr();
     if(rxSeqnr == this.nSeqNumberTxRx){
       //the correct answer
-      int nAnswer = accessRxTelg.getAnswerNr();  ////
+      int nAnswer = accessRxTelg.getAnswerNr();  ////d
       int bitAnswer = 1 << (nAnswer & 0xf);
       int ixAnswer = nAnswer >> 4;
       if((bitsAnswerNrRx[ixAnswer] & bitAnswer) ==0){
@@ -1265,7 +1265,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   { String sError = null;
     //int currentPos = InspcDataExchangeAccess.InspcDatagram.sizeofHead;
     //for(InspcDataExchangeAccess.ReflDatagram telgHead: telgHeads){
-      { int nrofBytesTelgInHead = telgHead.getLengthDatagram();
+      { int nrofBytesTelgInHead = telgHead.getLengthDatagram();           ////d
         assert(nrofBytesTelgInHead == telgHead.getLengthTotal()); 
       }
       //int nrofBytesTelg = telgHead.getLength();  //length from ByteDataAccess-management.

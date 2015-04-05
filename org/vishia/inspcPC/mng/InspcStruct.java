@@ -6,9 +6,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.vishia.byteData.VariableAccessWithIdx;
 import org.vishia.byteData.VariableContainer_ifc;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.inspcPC.accTarget.InspcAccessExecRxOrder_ifc;
+import org.vishia.inspcPC.accTarget.InspcTargetAccessor;
 import org.vishia.msgDispatch.LogMessage;
 
 /**This class presents a structure in a target system with some fields and methods
@@ -53,30 +55,70 @@ public final class InspcStruct
   public static final int version = 20131224;
 
   
+  /**This class contains all data which describes a field formally used or not used for access yet.
+   * If the field should be used for access the {@link #var} should be gotten respectively created.
+   * A field is created as answer of 'cmdGetFields' from a target. In that time the field is not accessed already,
+   * only its name and type is known. Only this information are stored here.
+   * A field can be created for a known type of struct without access to the target too.
+   * A field is more lightweight than a variable.
+   */
   public final static class FieldOfStruct {
     
-    public final String name;
+    
+    public final InspcStruct struct;
+    
+    public final String nameShow;
+    
+    public final String identifier;
     
     public final String type;
     
     public final boolean hasSubstruct;
+    
+    public final int nrofArrayElements;
     
     //private final InspcStruct substruct;
     
     /**Maybe null if the field was not read until now. Not all fields creates variables. */
     InspcVariable var;
     
-    public FieldOfStruct(InspcStruct parent, String name, String type, boolean hasSubstruct){
-      this.name = name;
+    /**Creates a field in a given parent struct. This ctor is used after response to 'getFields' 
+     * or if the name of fields are known, especially for standard types.
+     * @param parent The struct which contains this field.
+     * @param nameShow The name to show in the table.
+     * @param identifier The name to use for creating a variable.
+     * @param type The type to show in table.
+     * @param nrofArrayElements >0 then it is an array type.
+     * @param hasSubstruct true then it describes a variable which is a struct. 
+     *   The {@link InspcStruct} instance of this field which contains the sub fields will be referenced
+     *   if an variable was created with {@link #var}. {@link InspcVariable#itsStruct}. 
+     */
+    public FieldOfStruct(InspcStruct parent, String nameShow, String identifier, String type, int nrofArrayElements, boolean hasSubstruct){
+      this.struct = parent;
+      this.nameShow = nameShow;
+      this.identifier = identifier;
       this.type = type;
+      this.nrofArrayElements = nrofArrayElements;
       this.hasSubstruct = hasSubstruct;
     }
     
     
-    public FieldOfStruct(InspcVariable var, String type, boolean hasSubstruct){
-      this.name = var.ds.sName;
+    /**Creates a field for a given variable. This ctor is used if a field is necessary where a variable is given.
+     * TODO store the one time created field in the variable if the variable exists already.
+     * @param var
+     * @param type The type to show in table.
+     * @param nrofArrayElements >0 then it is an array type.
+     * @param hasSubstruct true then it describes a variable which is a struct. 
+     *   The {@link InspcStruct} instance of this field which contains the sub fields will be referenced
+     *   if an variable was created with {@link #var}. {@link InspcVariable#itsStruct}. 
+     */
+    public FieldOfStruct(InspcVariable var, String type, int nrofArrayElements, boolean hasSubstruct){
+      this.struct = var.struct();
+      this.identifier = var.ds.sName;
+      this.nameShow = identifier;
       this.type = type;
       this.var = var;
+      this.nrofArrayElements = nrofArrayElements;
       this.hasSubstruct = hasSubstruct;
     }
     
@@ -94,8 +136,16 @@ public final class InspcStruct
     public InspcVariable variable(InspcVariable parent, VariableContainer_ifc container) {
       if(var == null){
         String sParentPath = parent.ds.sDataPath;
-        String sPathVar = sParentPath + (sParentPath.endsWith(":") ? "" : '.') + name;
+        String sPathVar = sParentPath + (sParentPath.endsWith(":") ? "" : '.') + identifier;
         var = (InspcVariable)container.getVariable(sPathVar);
+        
+        if(nrofArrayElements >0) {
+        /*
+          int[] idx = new int[1];
+          idx[0] = nrofArrayElements;
+          var = new VariableAccessWithIdx(var, idx);
+          */
+        }
       }
       return var; 
     }
@@ -172,7 +222,7 @@ public final class InspcStruct
   public Iterable<FieldOfStruct> fieldIter(){ return fields; }
   
   
-  void rxActionGetFields(InspcDataExchangeAccess.Inspcitem info, long time){
+  void rxActionGetFields(InspcDataExchangeAccess.Inspcitem info, long time, LogMessage log, int identLog){
     //String sShow;
     //int order = info.getOrder();
     int cmd = info.getCmd();
@@ -183,11 +233,30 @@ public final class InspcStruct
       case InspcDataExchangeAccess.Inspcitem.kAnswerFieldMethod: {
         int zString = info.getLenInfo() - 8;
         String sField = info.getChildString(zString); 
-        int posSep = sField.indexOf(':');
+        if(log !=null) {
+          log.sendMsg(identLog + InspcTargetAccessor.idLogGetFields, "recv getFields %s", sField); 
+        }
+        int posSepNameType = sField.indexOf(':');
         int posTypeEnd = sField.indexOf("...");
-        String name = sField.substring(0, posSep);
-        String type = sField.substring(posSep+1, posTypeEnd > posSep ? posTypeEnd : sField.length());
-        FieldOfStruct field = new FieldOfStruct(this, name, type, posTypeEnd >0);
+        String nameShow = sField.substring(0, posSepNameType);
+        int posSepContainer = nameShow.indexOf('[');
+        String name;
+        int nrofArrayElements;
+        if(posSepContainer >=0) {
+          String identContainer = nameShow.substring(posSepContainer+1, nameShow.length()-1);  //without ending ]
+          if(identContainer.equals("?")){
+            nrofArrayElements = -1;
+          } else {
+            try{ nrofArrayElements = Integer.parseInt(identContainer); }
+            catch(NumberFormatException exc){ nrofArrayElements = 9; }
+          }
+          name = nameShow.substring(0, posSepContainer);
+        } else {
+          name = nameShow;
+          nrofArrayElements = 0;
+        }
+        String type = sField.substring(posSepNameType+1, posTypeEnd > posSepNameType ? posTypeEnd : sField.length());
+        FieldOfStruct field = new FieldOfStruct(this, nameShow, name, type, nrofArrayElements, posTypeEnd >0);
         fields.add(field);
         bUpdated = true;
         //build all variables   
@@ -216,7 +285,7 @@ public final class InspcStruct
      * @see org.vishia.inspcPC.accTarget.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem)
      */
     @Override public void execInspcRxOrder(InspcDataExchangeAccess.Inspcitem info, long time, LogMessage log, int identLog)
-    { rxActionGetFields(info, time);
+    { rxActionGetFields(info, time, log, identLog);
     }
     
     @Override public Runnable callbackOnAnswer(){ return this; }
