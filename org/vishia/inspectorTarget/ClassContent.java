@@ -443,6 +443,7 @@ public final class ClassContent implements CmdConsumer_ifc
     /**@java2c=nonPersistent.  */
     String sVariablePath = cmd.getChildString(nrofBytesPath);
     getSetValueByPath(cmd, setValue, answer, sVariablePath, maxNrofAnswerBytes);
+    setValue.detach(); //because it is a stack instance.
     return 0;
   }
   

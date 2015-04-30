@@ -265,7 +265,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   boolean bAllReceived;
   
   public InspcMng(String sOwnIpcAddr, Map<String, String> indexTargetIpcAddr, boolean bUseGetValueByIndex, InspcPlugUser_ifc user){
-    this.threadReqFromTarget = new ThreadRun("InspcMng", step, 100);
+    this.threadReqFromTarget = new ThreadRun("InspcMng", step, 300);
     this.commPort = new InspcCommPort();  //maybe more as one
     //maybe more as one
     //this.inspcAccessor = new InspcTargetAccessor(commPort, new InspcAccessEvaluatorRxTelg());

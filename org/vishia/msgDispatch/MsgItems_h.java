@@ -42,6 +42,30 @@ public class MsgItems_h
 
 
 
+  /**Read one message item form a byte[] data. A message item consist of 28 Byte, which is:
+   * <pre>
+   * 0                4        6       8             12         16         20         24         28
+   * +----------------+--------+-------+-------------+----------+----------+----------+----------+
+   * | timeStamp      | millis |modeVal|   ident     | value1   | value2   | value3   | value4   |
+   * +----------------+--------+-------+-------------+----------+----------+----------+----------+
+   * </pre>
+   * <ul>
+   * <li>The timeStamp is the seconds after 1970 UTC. 
+   * <li>The millis is the milliseconds-value in the second.
+   * <li>The modeVal contains 2 bits for each value for up to 8 values whereby 4 values are used with this type of datagram.
+   *   It means only the 8 lo-bits were used.
+   *   <ul>
+   *   <li>0 integer value 4 byte
+   *   <li>1 reserve
+   *   <li>2 reserve
+   *   <li>3 float value
+   *   </ul>
+   * <li>The ident is the message ident which determines the message text (associated in the mesage presentation system)
+   *   and the possibility for dispatching with the {@link org.vishia.msgDispatch.MsgDispatcherCore}.
+   * <li>Up to 4 values given with the message or 8 values with 16 bit. Not used values are left empty.    
+   * @author Hartmut Schorrig
+   *
+   */
   public static class MsgItem extends ByteDataAccessBase
   {
     
@@ -55,7 +79,7 @@ public class MsgItems_h
       , kIdxmode_typeVal = 0 + 4 + 2
       , kIdxident = 0 + 4 + 2 + 2
       , kIdxvalues = 0 + 4 + 2 + 2 + 4
-      , kIdxAfterLast = 0 + 4 + 2 + 2 + 4 + 4 * 4;
+      , kIdxAfterLast = 0 + 4 + 2 + 2 + 4 + 4 * 4; //28
     ; /*xsl: all Data from struct in headerfile converted to position indices */
 
     
@@ -143,6 +167,18 @@ public class MsgItems_h
 
 
 
+  /**This is the whole datagram for all message items.
+   * <ul>
+   * <li>Byte 0...31 contains a head which is not defined here.
+   * <li>Byte 32+2: Number of message in this datagram. 0 to 19
+   * <li>Byte 34+2: reserve
+   * <li>Byte 36+28: First message item
+   * <li>Byte 64 ... next message item
+   * <li>Byte 596 end of datagram
+   * </ul>
+   * @author Hartmut Schorrig
+   *
+   */
   public static class MsgItems extends ByteDataAccessBase
   {
     
