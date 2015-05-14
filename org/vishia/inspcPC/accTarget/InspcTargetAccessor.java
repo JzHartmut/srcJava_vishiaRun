@@ -623,7 +623,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	    return true;
 	  }
 	  else {
-	    if((timeExpired - timeSend) >=0){
+	    if((timeExpired - timeSend) >=0) { //not ready for a longer time: 
 	      //forgot a pending request:
           //if(logTelg !=null) 
           System.err.println("InspcTargetAccessor.isReady - recover after timeout target; " + toString());
@@ -643,13 +643,13 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	      bNoAnswer = true;
 	      ordersExpected.clear();  //after long waiting their is not any expected.
           bTaskPending.set(false);
-	      return true;
+	      return true;  //is setted ready.
 	    } else {
 	      if(!bRequestWhileTaskPending){ //it is the first one
 	        bRequestWhileTaskPending = true;
 	        if(logTelg !=null) System.err.println("InspcTargetAccessor.isReady - not ready for requests; " + toString());
 	      }
-	      return false;
+	      return false; //not ready
 	    }
 	  }
 	}

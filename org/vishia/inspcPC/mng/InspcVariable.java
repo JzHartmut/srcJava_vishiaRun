@@ -409,7 +409,7 @@ public class InspcVariable implements VariableAccessArray_ifc
     if(modeTarget == ModeHandleVariable.kIdTargetDisabled && !retryFaultyVariables) 
       return false;
     long timeNew = timeRequested - timeRefreshed;
-    return timeNew >0;
+    return timeNew >=0;
   }
   
   @Override public boolean isRefreshed(){ return timeRefreshed != 0 && (timeRefreshed - timeRequested ) >=0; }

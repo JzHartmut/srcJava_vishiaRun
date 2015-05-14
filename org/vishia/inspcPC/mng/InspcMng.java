@@ -457,6 +457,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       nrofVarsAll +=1;
       if(var instanceof InspcVariable){
         InspcVariable varInspc = (InspcVariable)var;
+        if(varInspc.ds.sPathInTarget.equals("this$0.inspcMng"))
+          Assert.stop();
         if(   var.isRequestedValue(retryDisabledVariable) ){              //but handle only variable which are requested
           nrofVarsReq +=1;
           int dtimeRequested = (int)(timeCurr - varInspc.timeRequested);
@@ -464,8 +466,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
             var.requestValue(0);  //old request set to 0
           }
           if(varInspc.ds.sPathInTarget.startsWith("#"))
-            Assert.stop();
-          if(varInspc.ds.sPathInTarget.contains("vUAp"))
             Assert.stop();
           bRequest = true;
           if(varInspc.ds.targetAccessor.isOrSetReady(timeCurr-10000)){ //check whether the device is ready.
@@ -475,7 +475,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
             //System.out.println("Device Not ready");
             //The variable is not able to get, remove the request.
             //The request will be repeat if the variable is newly requested.
-            var.requestValue(0, null);
+            var.requestValue(0, null);   //remove this request.
           }
           
         }
