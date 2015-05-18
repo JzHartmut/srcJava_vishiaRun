@@ -41,7 +41,7 @@ import org.vishia.util.ReplaceAlias_ifc;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.ThreadRun;
 
-/**This class supports the communication via the inspector reflex access. 
+/**This class supports the communication via the inspector for example with reflection access. 
  * <img src="../../../img/InspcMng.png"><br>Object model diagram
  * <br><br>
  * This class is a {@link VariableContainer_ifc}. It means the application can handle with variables, which's values
@@ -430,6 +430,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     boolean bRequest = false;
     bUserCalled = false;
     long timeCurr = System.currentTimeMillis();
+    //check received telegrams
+    for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
+      //evaluate all targets generally independent of the state of receiving 
+      //because several targets have its own behavior.
+      inspcAccessor.evaluateRxTelgInspcThread(); //it sets isReady()
+      
+    }
     //getFields does not work on start:
     /*
     for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
