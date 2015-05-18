@@ -50,7 +50,7 @@ public class TestAccessor
         InspcDataExchangeAccess.InspcDatagram[] answer = inspcAccessor.awaitAnswer(1000);
         if(answer !=null){
           long time = System.currentTimeMillis();
-          String sError = inspcAccessor.evaluate(answer[0], testExec, time, null, 0);
+          String sError = inspcAccessor.evaluateOneDatagram(answer[0], testExec, time, null, 0, null);
         }
         try{ Thread.sleep(300);} catch(InterruptedException exc){}
       }
