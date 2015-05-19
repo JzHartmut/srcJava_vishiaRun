@@ -475,7 +475,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
           if(varInspc.ds.sPathInTarget.startsWith("#"))
             Assert.stop();
           bRequest = true;
-          if(varInspc.ds.targetAccessor.isOrSetReady(timeCurr-10000)){ //check whether the device is ready.
+          if(varInspc.ds.targetAccessor.isOrSetReady(timeCurr-5000)){ //check whether the device is ready.
             varInspc.requestValueFromTarget(timeCurr, retryDisabledVariable);
           } else {
             
@@ -888,14 +888,18 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   @Override
   public void cmdGetAddressByPath(String sDataPath, InspcAccessExecRxOrder_ifc actionOnRx)
   { InspcTargetAccessData acc = getTargetAccessFromPath(sDataPath, true);
-    acc.targetAccessor.cmdGetAddressByPath(acc.sPathInTarget, actionOnRx);
+    if(acc.targetAccessor.isOrSetReady(System.currentTimeMillis() - 5000)) {
+      acc.targetAccessor.cmdGetAddressByPath(acc.sPathInTarget, actionOnRx);
+    }
   }
 
 
   @Override
   public void cmdSetValueByPath(String sDataPath, long value, int typeofValue, InspcAccessExecRxOrder_ifc actionOnRx)
   { InspcTargetAccessData acc = getTargetAccessFromPath(sDataPath, true);
-    acc.targetAccessor.cmdSetValueByPath(acc.sPathInTarget, value, typeofValue, actionOnRx);
+    if(acc.targetAccessor.isOrSetReady(System.currentTimeMillis() - 5000)) {
+      acc.targetAccessor.cmdSetValueByPath(acc.sPathInTarget, value, typeofValue, actionOnRx);
+    }
   }
 
 
