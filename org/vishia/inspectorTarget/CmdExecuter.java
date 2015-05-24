@@ -163,6 +163,7 @@ public class CmdExecuter implements AnswerComm_ifc
 	{
 	  int ret;
 	  if(useTelgHead){
+      myAnswerData.incrAnswerNr();  //start answer from 1
 	  	myAnswerData.setLengthDatagram(nrofAnswerBytesPart);
 	  }
 	  //ythis->answer.nrofSentBytes = txAnswerRawData_Comm_Inspc(ythis, &ythis->answer.myAnswerData, ythis->answer.nrofAnswerBytes, &ythis->myAnswerAddress);
@@ -180,7 +181,6 @@ public class CmdExecuter implements AnswerComm_ifc
 				ret = 0;
 			} else {
 				//prepare the next telg:
-				myAnswerData.incrAnswerNr();
 				nrofBytesAnswer = InspcDataExchangeAccess.InspcDatagram.sizeofHead;
         ret = InspcDataExchangeAccess.InspcDatagram.sizeofHead - nrofBytesAnswer;
 			}

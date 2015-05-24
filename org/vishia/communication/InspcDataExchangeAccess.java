@@ -128,7 +128,7 @@ public final class InspcDataExchangeAccess
     
     @Java4C.Inline public final int getLengthDatagram(){ return getInt16(0); }
     
-    /**Sets the head for an answer telegram. Sets the answer number to 1. 
+    /**Sets the head for an answer telegram. Sets the answer number to 0. 
      * Therefore it is for the first answer. All following answers uses {@link #incrAnswerNr()}
      * and {@link #markAnswerNrLast()} to change the answer nr.
      * @param entrant
@@ -418,7 +418,7 @@ public final class InspcDataExchangeAccess
       int z = getLenInfo();
       int s = -1;  //start of string
       switch( cmd1 ) {
-        case kGetFields:    cmd = "getValueByPath "; s = 8; break;
+        case kGetFields:         cmd = "getFields "; s = 8; break;
         case kGetValueByPath:    cmd = "getValueByPath "; s = 8; break;
         case kGetAddressByPath:  cmd = "getAddressByPath ";  s = 8; break;
         case kSetValueByPath:    cmd = "setValueByPath "; break;

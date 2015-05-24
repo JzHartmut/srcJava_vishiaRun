@@ -21,11 +21,12 @@ import org.vishia.communication.InterProcessComm;
 import org.vishia.event.EventCmdtypeWithBackEvent;
 import org.vishia.event.EventTimeout;
 import org.vishia.event.EventTimerThread;
+import org.vishia.inspcPC.mng.InspcStruct;
 import org.vishia.inspectorTarget.InspcTelgInfoSet;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.ClassJc;
-import org.vishia.states.StateSimple;
 import org.vishia.states.StateMachine;
+import org.vishia.states.StateSimple;
 import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
 
@@ -542,6 +543,11 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	 */
 	int nEntrant = -1;
 	
+	/**The start answer number is 1 for newer datagrams but 0 for older ones. If an answer with 0 is received one time, 
+	 * it is set to 0 for that target for ever because it is an old one.
+	 */
+	int startAnswerNr = 1;
+	
 	final Address_InterProcessComm targetAddr;
 	
 	/**The current used sequence number. It is never 0 if it is used the first time. */
@@ -700,7 +706,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	    bReady = true;
 	  }
 	  else {
-	    if((timeExpired - timeSend) >=0 && !bRunInRxThread) { //not ready for a longer time: 
+	    if(  timeSend !=0  //a telegram sent, but not all received 
+	      && (timeExpired - timeSend) >=0 && !bRunInRxThread
+	      
+	      ) { //not ready for a longer time: 
 	      //forgot a pending request:
           //if(logTelg !=null) 
         System.err.println("InspcTargetAccessor.isReady - recover after timeout target; " + toString());
@@ -1133,11 +1142,11 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   public boolean cmdFinit(){
     states.processEvent(evSend);
     if(!bTaskPending.get() && (bFillTelg || tlg.ixTxFill >0)){
-      bTaskPending.set(true);
       txCmdGetValueByIdent();
       if(bFillTelg) {
         completeDatagram(true);
       }
+      bTaskPending.set(true);
       send();   //send the first telegramm now
       return true;
     } else {
@@ -1246,11 +1255,11 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       //int rxAnswerNr = accessRxTelg.getAnswerNr();
       if(rxSeqnr == this.nSeqNumberTxRx){
         //the correct answer
-        int nAnswer = accessRxTelg.getAnswerNr() -1;  ////d
+        int nAnswer = accessRxTelg.getAnswerNr() - startAnswerNr;  ////d
         if(nAnswer == -1) {
-          Assert.stop();  //target has sent 0
+          nAnswer = 0;
+          startAnswerNr = 0;  //target has sent 0
         }
-        
         int bitAnswer = 1 << (nAnswer & 0x3f);
         int ixAnswer = nAnswer >> 4;
         if((bitsAnswerNrRx & bitAnswer) ==0) { //this answer not processed yet?
@@ -1265,6 +1274,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
             //TODO check whether all are received.
             nrofRxDatagrams = nAnswer +1;  //signal for evaluating in InspcMng-thread
             bitsAnswerMask = (1 << nrofRxDatagrams) -1;
+            if(bitsAnswerMask != bitsAnswerNrRx) {
+              Debugutil.stop();  //last telegram received before antecedent ones.
+            }
             //ttt states.processEvent(evLastAnswer);
             //bSendPending = false;
             if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Rcv last answer; " + rxSeqnr);
@@ -1286,6 +1298,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
             if(logTelg !=null){ 
               logTelg.sendMsg(identLogTelg+idLogRx, "recv ok not last telg seqn=%d nAnswer=%d after %d ms", new Integer(rxSeqnr), new Integer(nAnswer), new Long(dtimeReceive)); 
             }
+          }
+          if(nrofRxDatagrams >0 && bitsAnswerMask == bitsAnswerNrRx) {
+            //all expected telegrams are received:
+            timeSend = 0;  //don't wait for receive
           }
         } else {
           //duplicate answer for this sequence:
