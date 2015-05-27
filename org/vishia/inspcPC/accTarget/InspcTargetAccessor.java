@@ -280,12 +280,16 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   private static class GetFieldsData
   {
 
-    /**If not null then cmdGetFields will be invoked . */
+    /**If not null then cmdGetFields will be invoked in the next {@link InspcTargetAccessor#cmdFinit()} invocation.
+     * After them this field will be set to null again. */
     InspcTargetAccessData requFields;
+    
     /**Action on receiving fields from target, only valid for the requFields. */
     InspcAccessExecRxOrder_ifc rxActionGetFields;
+    
     /**If not null then this runnable will be called on end of requestFields. */
     Runnable runOnResponseFields;
+    
     /**The last order for Get Fields.
      * Special case: Only this telegram-info has more as one answer.
      * Only one request 'get fields' should be send in one time.
@@ -1147,15 +1151,6 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   
   public void requestStart(long timeCurr) {
-    if(getFieldsData.requFields !=null){
-      String path = this.getFieldsData.requFields.sPathInTarget; //getTargetFromPath(this.requestedFields.path()); 
-      //InspcTargetAccessor targetAccessor = requestedFields.targetAccessor();
-      if(isOrSetReady(timeCurr-10000)){ //check whether the device is ready. Wait if a communication cycle runs.
-        callbacksOnAnswer.put(new Integer(getFieldsData.runOnResponseFields.hashCode()), getFieldsData.runOnResponseFields);  //register the same action only one time.
-        cmdGetFields(path, this.getFieldsData.rxActionGetFields);
-        this.getFieldsData.requFields = null;
-      }
-    }
 
   }
   
@@ -1171,6 +1166,14 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       Runnable userTxOrder;
       while( (userTxOrder = userTxOrders.poll()) !=null){
         userTxOrder.run(); //maybe add some more requests to the current telegram.
+      }
+      if(getFieldsData.requFields !=null){
+        System.out.println("SetHSIMapping - send mapping;");
+        String path = this.getFieldsData.requFields.sPathInTarget; //getTargetFromPath(this.requestedFields.path()); 
+        //InspcTargetAccessor targetAccessor = requestedFields.targetAccessor();
+        callbacksOnAnswer.put(new Integer(getFieldsData.runOnResponseFields.hashCode()), getFieldsData.runOnResponseFields);  //register the same action only one time.
+        cmdGetFields(path, this.getFieldsData.rxActionGetFields);
+        this.getFieldsData.requFields = null;
       }
       if(bFillTelg || tlg.ixTxFill >0){
         txCmdGetValueByIdent();
