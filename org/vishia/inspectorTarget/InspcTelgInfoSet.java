@@ -56,6 +56,13 @@ public class InspcTelgInfoSet extends InspcDataExchangeAccess.Inspcitem
     this.setInfoHead(zInfo, InspcDataExchangeAccess.Inspcitem.kGetFields, order);
   }
   
+  public static int lengthCmdGetFields(int pathLength){
+    int restChars = (- pathLength) & 0x3;  //complete to a 4-aligned length
+    int l = InspcDataExchangeAccess.Inspcitem.sizeofHead+ pathLength + restChars;
+    return l;
+  }
+
+  
   public void setCmdGetValueByPath(String path, int order)
   {
     int zPath = path.length();
@@ -65,6 +72,13 @@ public class InspcTelgInfoSet extends InspcDataExchangeAccess.Inspcitem
     int zInfo = getLength();
     this.setInfoHead(zInfo, InspcDataExchangeAccess.Inspcitem.kGetValueByPath, order);
   }
+  
+  public static int lengthCmdGetValueByPath(int pathLength){
+    int restChars = (- pathLength) & 0x3;  //complete to a 4-aligned length
+    int l = InspcDataExchangeAccess.Inspcitem.sizeofHead+ pathLength + restChars;
+   return l;
+  }
+
   
   /**Adds the info block to send 'get value by path'
    * @param path
@@ -148,6 +162,14 @@ public class InspcTelgInfoSet extends InspcDataExchangeAccess.Inspcitem
     this.setInfoHead(zInfo, InspcDataExchangeAccess.Inspcitem.kSetValueByPath, order);
   }
   
+  
+  public static int lengthCmdSetValueByPath(int pathLength){
+    int restChars = (- pathLength) & 0x3;  //complete to a 4-aligned length
+    int l = InspcDataExchangeAccess.Inspcitem.sizeofHead+ pathLength + InspcDataExchangeAccess.InspcSetValue.sizeofElement + pathLength  + restChars;
+    return l;
+  }
+  
+  
   public void setCmdGetAddressByPath(String path, int order)
   {
     int zPath = path.length();
@@ -156,6 +178,12 @@ public class InspcTelgInfoSet extends InspcDataExchangeAccess.Inspcitem
     if(restChars >0) { addChildInteger(restChars, 0); }
     int zInfo = getLength();
     this.setInfoHead(zInfo, InspcDataExchangeAccess.Inspcitem.kGetAddressByPath, order);
+  }
+  
+  public static int lengthCmdGetAddressByPath(int pathLength){
+    int restChars = (- pathLength) & 0x3;  //complete to a 4-aligned length
+    int l = InspcDataExchangeAccess.Inspcitem.sizeofHead+ pathLength + restChars;
+    return l;
   }
   
 	

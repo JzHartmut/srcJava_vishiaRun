@@ -5,6 +5,8 @@ public interface InspcAccess_ifc
 {
   /**Version, history and license.
    * <ul>
+   * <li>2014-04-24 Hartmut Methods should all return boolean for success or not, for differenz reasons.
+   *   It is fatal if a command was not sent and it is not known. Implemented only on {@link #cmdGetAddressByPath(String, InspcAccessExecRxOrder_ifc)} yet. 
    * <li>2014-04-24 Hartmut created: Methods from {@link InspcTargetAccessor}
    * </ul>
    * 
@@ -119,7 +121,7 @@ public interface InspcAccess_ifc
    * @throws IllegalArgumentException if too many requests are done without answer. 
    *   Hint: Write all activities in try-catch with a common error log.  
    */
-  public void cmdGetAddressByPath(String sPath, InspcAccessExecRxOrder_ifc actionOnRx);
+  public boolean cmdGetAddressByPath(String sPath, InspcAccessExecRxOrder_ifc actionOnRx);
 
 
 

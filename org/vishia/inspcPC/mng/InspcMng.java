@@ -252,7 +252,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   boolean bUserCalled;
 
   /**Some orders from any application which should be run in the {@link #inspcThread}. */
-  public ConcurrentLinkedQueue<Runnable> userOrders = new ConcurrentLinkedQueue<Runnable>();
+  private ConcurrentLinkedQueue<Runnable> userOrders = new ConcurrentLinkedQueue<Runnable>();
   
   
   protected final InspcCommPort commPort; 
@@ -886,11 +886,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
 
   @Override
-  public void cmdGetAddressByPath(String sDataPath, InspcAccessExecRxOrder_ifc actionOnRx)
+  public boolean cmdGetAddressByPath(String sDataPath, InspcAccessExecRxOrder_ifc actionOnRx)
   { InspcTargetAccessData acc = getTargetAccessFromPath(sDataPath, true);
     if(acc.targetAccessor.isOrSetReady(System.currentTimeMillis() - 5000)) {
       acc.targetAccessor.cmdGetAddressByPath(acc.sPathInTarget, actionOnRx);
+      return true;
     }
+    else return false;
   }
 
 

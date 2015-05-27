@@ -21,6 +21,7 @@ import org.vishia.communication.InterProcessComm;
 import org.vishia.event.EventCmdtypeWithBackEvent;
 import org.vishia.event.EventTimeout;
 import org.vishia.event.EventTimerThread;
+import org.vishia.inspcPC.mng.InspcMng;
 import org.vishia.inspcPC.mng.InspcStruct;
 import org.vishia.inspectorTarget.InspcTelgInfoSet;
 import org.vishia.msgDispatch.LogMessage;
@@ -140,7 +141,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   /**The version history and license of this class.
    * <ul>
-   * <li>2015-05-20 Hartmut {@link DebugTxRx}, data in sub classes 
+   * <li>2015-05-28 Hartmut new {@link #addUserTxOrder(Runnable)} not only for the whole {@link InspcMng}.
+   * <li>2015-05-28 Hartmut bugfix length of item was faulty for #cmdSetValueByPath(...). 
+   *   Check length in {@link InspcTelgInfoSet#lengthCmdSetValueByPath(int)}. For all commands.
+   * <li>2015-05-20 Hartmut new {@link DebugTxRx}, data in sub classes 
    * <li>2015-03-20 Hartmut {@link #requestFields(InspcStruct, Runnable)} redesigned 
    * <li>2014-10-12 Hartmut State machine included, tested but not active used. 
    * <li>2014-09-21 Hartmut TODO use a state machine .
@@ -320,6 +324,11 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   
   final Deque<OrderWithTime> listTimedOrders = new LinkedList<OrderWithTime>();
+  
+  /**Some orders from any application which should be run in the {@link #inspcThread}. */
+  private final ConcurrentLinkedQueue<Runnable> userTxOrders = new ConcurrentLinkedQueue<Runnable>();
+  
+
   
   /**Reused instance to evaluate any info blocks.
    * 
@@ -626,7 +635,16 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	}
 	
 	
+  /**Adds any program snippet which is executed while preparing the telegram for data request from target.
+   * After execution the order will be removed.
+   * @param order the program snippet.
+   */
+  public void addUserTxOrder(Runnable order)
+  {
+    userTxOrders.add(order);
+  }
   
+
   
   /**Checks whether the head of the datagram should be created and the telegram has place for the current data.
    * This routine is called at begin of all cmd...() routines of this class. 
@@ -706,8 +724,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	    bReady = true;
 	  }
 	  else {
-	    if(  timeSend !=0  //a telegram sent, but not all received 
-	      && (timeExpired - timeSend) >=0 && !bRunInRxThread
+	    if(  timeSend ==0  //a telegram is not sent, faulty bTaskPending 
+	      || (timeExpired - timeSend) >=0 && !bRunInRxThread
 	      
 	      ) { //not ready for a longer time: 
 	      //forgot a pending request:
@@ -815,7 +833,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     //states.applyEvent(evFill);
     //if(states.isInState(stateFilling))
       stop();
-    if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + sPathInTarget.length() + 3 )){
+    int lengthItem = InspcTelgInfoSet.lengthCmdGetFields(sPathInTarget.length());
+    if(prepareTelg(lengthItem)) {
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       InspcTelgInfoSet infoAccess = newTxitem();
       txAccess.addChild(infoAccess);
@@ -840,7 +859,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   public int cmdGetValueByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order = 5;
-    if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + sPathInTarget.length() + 3 )){
+    int lengthItem = InspcTelgInfoSet.lengthCmdGetValueByPath(sPathInTarget.length());
+    if(prepareTelg(lengthItem)) {
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       InspcTelgInfoSet infoAccess = newTxitem();
       txAccess.addChild(infoAccess);
@@ -887,7 +907,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   
   
-  /**Adds the info block to send 'register by path'
+  /**Adds the info block to send 'get value by ident'
    * @param sPathInTarget
    * @return The order number. 0 if the cmd can't be created because the telegram is full.
    */
@@ -1017,7 +1037,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   public int cmdSetValueByPath(String sPathInTarget, int value)
   { int order;
-    if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + 8 + sPathInTarget.length() + 3 )){
+    int lengthItem = InspcTelgInfoSet.lengthCmdSetValueByPath(sPathInTarget.length());
+    if(prepareTelg(lengthItem)) {
       InspcTelgInfoSet infoAccess = newTxitem();
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
@@ -1039,7 +1060,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   public void cmdSetValueByPath(String sPathInTarget, int value, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
-    if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + 8 + sPathInTarget.length() + 3 )){
+    int lengthItem = InspcTelgInfoSet.lengthCmdSetValueByPath(sPathInTarget.length());
+    if(prepareTelg(lengthItem)) {
       InspcTelgInfoSet infoAccess = newTxitem();
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
@@ -1061,7 +1083,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   public void cmdSetValueByPath(String sPathInTarget, float value, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
-    if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + 8 + sPathInTarget.length() + 3 )){
+    int lengthItem = InspcTelgInfoSet.lengthCmdSetValueByPath(sPathInTarget.length());
+    if(prepareTelg(lengthItem)) {
       InspcTelgInfoSet infoAccess = newTxitem();
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
@@ -1083,7 +1106,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   public void cmdSetValueByPath(String sPathInTarget, double value, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
-    if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + 8 + sPathInTarget.length() + 3 )){
+    int lengthItem = InspcTelgInfoSet.lengthCmdSetValueByPath(sPathInTarget.length());
+    if(prepareTelg(lengthItem)) {
       InspcTelgInfoSet infoAccess = newTxitem();
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
@@ -1101,9 +1125,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * @return The order number. 0 if the cmd can't be created.
    * @since 2014-04-28 new form
    */
-  public void cmdGetAddressByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
+  @Override public boolean cmdGetAddressByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
-    if(prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + sPathInTarget.length() + 3 )){
+    int lengthItem = InspcTelgInfoSet.lengthCmdGetAddressByPath(sPathInTarget.length());
+    if(prepareTelg(lengthItem)) {
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       InspcTelgInfoSet infoAccess = newTxitem();
       txAccess.addChild(infoAccess);
@@ -1117,6 +1142,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       //too much telegrams
       throw new IllegalArgumentException("InspcTargetAccessor - too much telegrams;");
     }
+    return true;
   }
   
   
@@ -1141,17 +1167,23 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   public boolean cmdFinit(){
     states.processEvent(evSend);
-    if(!bTaskPending.get() && (bFillTelg || tlg.ixTxFill >0)){
-      txCmdGetValueByIdent();
-      if(bFillTelg) {
-        completeDatagram(true);
+    if(!bTaskPending.get()) {
+      Runnable userTxOrder;
+      while( (userTxOrder = userTxOrders.poll()) !=null){
+        userTxOrder.run(); //maybe add some more requests to the current telegram.
       }
-      bTaskPending.set(true);
-      send();   //send the first telegramm now
-      return true;
-    } else {
-      return false;  //nothing to do
-    }
+      if(bFillTelg || tlg.ixTxFill >0){
+        txCmdGetValueByIdent();
+        if(bFillTelg) {
+          completeDatagram(true);
+        }
+        bTaskPending.set(true);
+        send();   //send the first telegramm now
+        return true;
+      }
+      else return false;
+    } 
+    else return false;  //nothing to do
   }
   
   /**Returns whether a tx telegram is filled with any info blocks.
