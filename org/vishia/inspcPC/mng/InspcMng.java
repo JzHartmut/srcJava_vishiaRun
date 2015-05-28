@@ -469,20 +469,29 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         if(   var.isRequestedValue(retryDisabledVariable) ){              //but handle only variable which are requested
           nrofVarsReq +=1;
           int dtimeRequested = (int)(timeCurr - varInspc.timeRequested);
+          if(varInspc.ds.sDataPath.equals("CCS:_DSP_.ccs_1P.ccs_IB_priv.ictrl.pire_p.out.YD")) {
+            System.out.println("InspcMng.procComm - test request InspcVar, "  + dtimeRequested/1000.0f + ", "+  varInspc.ds.sDataPath);
+            ///Debugutil.stop();
+          }  
           if(dtimeRequested > 10000){
+            System.out.println("InspcMng.procComm - remove old request - device may not ready, " + varInspc.ds.sDataPath);
+            //The variable is not able to get, remove the request.
+            //The request will be repeat if the variable is newly requested.
             var.requestValue(0);  //old request set to 0
           }
           if(varInspc.ds.sPathInTarget.startsWith("#"))
             Assert.stop();
           bRequest = true;
           if(varInspc.ds.targetAccessor.isOrSetReady(timeCurr-5000)){ //check whether the device is ready.
+            if(varInspc.ds.sDataPath.equals("CCS:_DSP_.ccs_1P.ccs_IB_priv.ictrl.pire_p.out.YD")) {
+              System.out.println("InspcMng.procComm - exec request InspcVar, "  + dtimeRequested/1000.0f + ", "+  varInspc.ds.sDataPath);
+              ///Debugutil.stop();
+            }  
             varInspc.requestValueFromTarget(timeCurr, retryDisabledVariable);
           } else {
-            
-            //System.out.println("Device Not ready");
-            //The variable is not able to get, remove the request.
-            //The request will be repeat if the variable is newly requested.
-            var.requestValue(0, null);   //remove this request.
+            //It is usual that the target is slower than the request. Let the request active.
+            //The request will be removed if it is older than the expired time. 
+            //it is strong faulty: var.requestValue(0, null);   //remove this request.
           }
           
         }

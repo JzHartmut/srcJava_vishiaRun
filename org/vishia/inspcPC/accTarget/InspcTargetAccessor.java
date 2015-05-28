@@ -864,12 +864,21 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   public int cmdGetValueByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order = 5;
     int lengthItem = InspcTelgInfoSet.lengthCmdGetValueByPath(sPathInTarget.length());
+    if(sPathInTarget.equals("_DSP_.ccs_1P.ccs_IB_priv.ictrl.pire_p.out.YD.")) {
+      System.out.println("InspcTargetAccessor.cmdGetValueByPath - check1, " +  sPathInTarget);
+      ///Debugutil.stop();
+    }  
     if(prepareTelg(lengthItem)) {
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       InspcTelgInfoSet infoAccess = newTxitem();
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
       infoAccess.setCmdGetValueByPath(sPathInTarget, order);
+      if(sPathInTarget.equals("_DSP_.ccs_1P.ccs_IB_priv.ictrl.pire_p.out.YD.")) {
+        System.out.println("InspcTargetAccessor.cmdGetValueByPath - check, " +  sPathInTarget + ", " + infoAccess.toString());
+        ///Debugutil.stop();
+      }  
+
       if(logTelg !=null){ 
         logTelg.sendMsg(identLogTelg+idLogGetValueByPath, "add cmdGetValueByPath %s, order = %d", sPathInTarget, new Integer(order)); 
       }

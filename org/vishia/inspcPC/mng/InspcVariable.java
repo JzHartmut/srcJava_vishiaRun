@@ -12,6 +12,7 @@ import org.vishia.inspcPC.accTarget.InspcAccessExecRxOrder_ifc;
 import org.vishia.inspcPC.accTarget.InspcTargetAccessData;
 import org.vishia.inspcPC.accTarget.InspcTargetAccessor;
 import org.vishia.msgDispatch.LogMessage;
+import org.vishia.util.Debugutil;
 import org.vishia.util.StringPart;
 import org.vishia.util.StringPartScan;
 
@@ -121,6 +122,7 @@ public class InspcVariable implements VariableAccessArray_ifc
           timeRefreshed = time;
           Runnable runReceived;
           while((runReceived = runOnRecv.poll())!=null){
+            System.out.println("InspcVariable.execInspcRxOrder - runOnRecv, " + ds.sDataPath);
             runReceived.run();
           }
         } break;
@@ -219,6 +221,11 @@ public class InspcVariable implements VariableAccessArray_ifc
   public boolean requestValueFromTarget(long timeCurrent, boolean retryDisabledVariable)  
   { //check whether the widget has an comm action already. 
     //First time a widgets gets its WidgetCommAction. Then for ever the action is kept.
+    if(ds.sDataPath.equals("CCS:_DSP_.ccs_1P.ccs_IB_priv.ictrl.pire_p.out.YD")) {
+      System.out.println("InspcTargetAccessor.cmdGetValueByPath - check1, " +  ds.sDataPath);
+      ///Debugutil.stop();
+    }  
+
     if(sValueToTarget !=null) { //thread safety: atomic operation set the reference.
       String sPathComm = this.ds.sPathInTarget  + ".";
       try{
@@ -389,7 +396,7 @@ public class InspcVariable implements VariableAccessArray_ifc
   @Override public void requestValue(long time){ this.timeRequested = time; }
   
   @Override public void requestValue(long time, Runnable run)
-  {
+  { ///
     this.timeRequested = time;
     if(run !=null){
       int catastrophicCount = 10;
@@ -397,6 +404,10 @@ public class InspcVariable implements VariableAccessArray_ifc
         if(--catastrophicCount <0){ throw new IllegalArgumentExceptionJc("InspcVariable - requestValue catastrophicalCount", run.hashCode()); }
       }
       boolean offerOk = this.runOnRecv.offer(run);
+      if(ds.sDataPath.equals("CCS:_DSP_.ccs_1P.ccs_IB_priv.ictrl.pire_p.out.YD")) {
+        System.out.println("InspcVariable.execInspcRxOrder - requestValue, " + (time-System.currentTimeMillis())/1000.0f + ", " + ds.sDataPath);
+        Debugutil.stop();
+      }  
       if(!offerOk){ throw new IllegalArgumentExceptionJc("InspcVariable - requestValue run cannot be added", run.hashCode()); }
     }
   }
@@ -409,6 +420,12 @@ public class InspcVariable implements VariableAccessArray_ifc
     if(modeTarget == ModeHandleVariable.kIdTargetDisabled && !retryFaultyVariables) 
       return false;
     long timeNew = timeRequested - timeRefreshed;
+    if(timeNew >=0 && ds.sDataPath.equals("CCS:_DSP_.ccs_1P.ccs_IB_priv.ictrl.pire_p.out.YD")) {
+      System.out.println("InspcVariable.execInspcRxOrder - isRequested, " + timeNew/1000.0f + ", " + ds.sDataPath);
+      Debugutil.stop();
+    }  
+    if(timeNew < 0) 
+      Debugutil.stop();
     return timeNew >=0;
   }
   
