@@ -724,41 +724,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
 
   
-  public void cmdSetValueOfField(InspcVariable parent, InspcStruct.FieldOfStruct field, String value){
-    String valueTrimmed = value.trim();
-    InspcVariable var = field.variable(parent, this);
-    if(var !=null){
-      try{
-        switch(var.cType){
-          case 'D':
-          case 'F': {
-            double val = Double.parseDouble(valueTrimmed); 
-            var.ds.targetAccessor.cmdSetValueByPath(var.ds.sPathInTarget, val, null); 
-          } break;
-          case 'S':
-          case 'B':
-          case 'I': {
-            int val;
-            if(valueTrimmed.startsWith("0x")){
-              val = Integer.parseInt(valueTrimmed.substring(2),16); 
-            } else {
-              val = Integer.parseInt(valueTrimmed); 
-            }
-            var.ds.targetAccessor.cmdSetValueByPath(var.ds.sPathInTarget, val, null); 
-          } break;
-          case 's': {  //empty yet
-            
-          } break;
-        }
-      } catch(Exception exc){
-        //usual number format exception
-        System.err.println("InspcMng.cmdSetValueOfField - exception" + exc.getMessage() + "; ");
-      }
-    }
-
-  }
-  
-  
+   
   public String translateDeviceToAddrIp(String sDevice)
   {
     String ret = indexTargetIpcAddr.get(sDevice);

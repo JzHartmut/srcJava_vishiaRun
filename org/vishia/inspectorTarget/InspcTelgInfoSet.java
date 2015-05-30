@@ -165,7 +165,7 @@ public class InspcTelgInfoSet extends InspcDataExchangeAccess.Inspcitem
   
   public static int lengthCmdSetValueByPath(int pathLength){
     int restChars = (- pathLength) & 0x3;  //complete to a 4-aligned length
-    int l = InspcDataExchangeAccess.Inspcitem.sizeofHead+ pathLength + InspcDataExchangeAccess.InspcSetValue.sizeofElement + pathLength  + restChars;
+    int l = InspcDataExchangeAccess.InspcSetValue.sizeofElement + pathLength  + restChars;
     return l;
   }
   

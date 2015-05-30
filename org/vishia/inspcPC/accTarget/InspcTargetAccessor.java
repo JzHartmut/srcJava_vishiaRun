@@ -23,6 +23,7 @@ import org.vishia.event.EventTimeout;
 import org.vishia.event.EventTimerThread;
 import org.vishia.inspcPC.mng.InspcMng;
 import org.vishia.inspcPC.mng.InspcStruct;
+import org.vishia.inspcPC.mng.InspcVariable;
 import org.vishia.inspectorTarget.InspcTelgInfoSet;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.ClassJc;
@@ -1039,6 +1040,41 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     } while(order == 0);  
     return sent;
   }
+  
+  
+  public void cmdSetValueByPath(InspcVariable var, String value){
+    String valueTrimmed = value.trim();
+    assert(var.ds.targetAccessor == this);
+    try{
+        switch(var.getType()){
+          case 'D':
+          case 'F': {
+            double val = Double.parseDouble(valueTrimmed); 
+            cmdSetValueByPath(var.ds.sPathInTarget, val, null); 
+          } break;
+          case 'S':
+          case 'B':
+          case 'I': {
+            int val;
+            if(valueTrimmed.startsWith("0x")){
+              val = Integer.parseInt(valueTrimmed.substring(2),16); 
+            } else {
+              val = Integer.parseInt(valueTrimmed); 
+            }
+            cmdSetValueByPath(var.ds.sPathInTarget, val, null); 
+          } break;
+          case 's': {  //empty yet
+            
+          } break;
+        }
+      } catch(Exception exc){
+        //usual number format exception
+        System.err.println("InspcTargetAccessor.cmdSetValueByPath - exception" + exc.getMessage() + "; ");
+      }
+ 
+  }
+  
+
   
   
   /**Adds the info block to send 'set value by path'
