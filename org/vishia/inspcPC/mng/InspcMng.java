@@ -2,39 +2,25 @@ package org.vishia.inspcPC.mng;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EventObject;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
-import org.vishia.bridgeC.MemSegmJc;
-import org.vishia.byteData.VariableAccessArray_ifc;
 import org.vishia.byteData.VariableAccessWithBitmask;
-import org.vishia.byteData.VariableAccessWithIdx;
 import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.byteData.VariableContainer_ifc;
 import org.vishia.communication.Address_InterProcessComm;
-import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessComm_SocketImpl;
-import org.vishia.event.EventCmdtype;
-import org.vishia.event.EventConsumer;
 import org.vishia.event.EventTimerThread;
 import org.vishia.inspcPC.accTarget.InspcAccessExecRxOrder_ifc;
 import org.vishia.inspcPC.accTarget.InspcAccess_ifc;
 import org.vishia.inspcPC.accTarget.InspcCommPort;
 import org.vishia.inspcPC.accTarget.InspcTargetAccessData;
 import org.vishia.inspcPC.accTarget.InspcTargetAccessor;
-import org.vishia.inspectorTarget.SearchElement;
 import org.vishia.msgDispatch.LogMessage;
-import org.vishia.reflect.FieldJc;
-import org.vishia.reflect.FieldJcVariableAccess;
-import org.vishia.reflect.FieldVariableAccess;
 import org.vishia.util.Assert;
 import org.vishia.util.CompleteConstructionAndStart;
 import org.vishia.util.ReplaceAlias_ifc;
@@ -119,6 +105,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   /**Version, history and license.
    * <ul>
+   * <li>2015-06-02 Hartmut The addUserOrder(Runnable) method is removed from here. It is replaced by 
+   *   the {@link InspcTargetAccessor#addUserTxOrder(Runnable)}. Any target has its own timing. Only the target
+   *   access can determine when to send to a target. Some gardening furthermore.
    * <li>2015-03-20 Hartmut requestFields redesigned. now managed by the {@link InspcTargetAccessor} 
    * <li>2013-01-10 Hartmut bugfix: If a variable can't be requested in {@link #requestValueByPath(String, InspcAccessExecRxOrder_ifc)} because
    *   the telegram is full, the same variable should be requested repeatedly in the next telegram. It was forgotten.
@@ -212,16 +201,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   /**This container holds all structures which are created. */
   Map<String, InspcStruct> idxAllStruct = new TreeMap<String, InspcStruct>();
   
-  /**This index should be empty if all requested variables are received.
-   * If a variable is requested, it is registered here. If the answer is received, it is deleted.
-   * If all variable values have its response, it is empty then.
-   * On timeout this index is deleted too.
-   */
-  Map<String, InspcVariable> idxRequestedVarFromTarget = new TreeMap<String, InspcVariable>();
-  
-  /**Instance for the inspector access to the target. */
-  //public final InspcTargetAccessor inspcAccessor;
-  
   /**Own address string for the communication. */
   private final String sOwnIpcAddr;
   
@@ -251,10 +230,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   boolean bUserCalled;
 
-  /**Some orders from any application which should be run in the {@link #inspcThread}. */
-  private ConcurrentLinkedQueue<Runnable> userOrders = new ConcurrentLinkedQueue<Runnable>();
-  
-  
   protected final InspcCommPort commPort; 
   
 
@@ -265,7 +240,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   boolean bAllReceived;
   
   public InspcMng(String sOwnIpcAddr, Map<String, String> indexTargetIpcAddr, boolean bUseGetValueByIndex, InspcPlugUser_ifc user){
-    this.threadReqFromTarget = new ThreadRun("InspcMng", step, 300);
+    this.threadReqFromTarget = new ThreadRun("InspcMng", step, 100);
     this.commPort = new InspcCommPort();  //maybe more as one
     //maybe more as one
     //this.inspcAccessor = new InspcTargetAccessor(commPort, new InspcAccessEvaluatorRxTelg());
@@ -348,15 +323,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   }
   
   
-  /**Adds any program snippet which is executed while preparing the telegram for data request from target.
-   * After execution the order will be removed.
-   * @param order the program snippet.
-   */
-  public void addUserOrder(Runnable order)
-  {
-    userOrders.add(order);
-  }
-  
   
   /* (non-Javadoc)
    * @see org.vishia.byteData.VariableContainer_ifc#getVariable(java.lang.String)
@@ -437,28 +403,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       inspcAccessor.evaluateRxTelgInspcThread(); //it sets isReady()
       
     }
-    //getFields does not work on start:
-    /*
     for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
-      inspcAccessor.requestStart(timeCurr);  //invokes getFields if requested.     
+      //invokes userTxOrders and cmdGetFields but only if isOrSetReady() of this target.
+      inspcAccessor.checkExecuteSendUserOrder(); //invokes getFields if requested.     
     }
-    */
-    /* ???
-    boolean bPendingOrders = false;
-    for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
-      int removedOrPendingOrders = inspcAccessor.checkAndRemoveOldOrders(timeCurr - 5000);
-      if(removedOrPendingOrders >0){
-        System.err.println("InspcMng - Communication problem, removed Orders; " + removedOrPendingOrders);
-      }
-      if(removedOrPendingOrders !=0){
-        bPendingOrders = true;
-      }
-    }
-    */
-    idxRequestedVarFromTarget.clear();  //clear it, only new requests are pending then.
     //System.out.println("InspcMng.ProcComm - step;");
     int nrofVarsReq = 0;
-    int nrofVarsAll = 0;
+    @SuppressWarnings("unused") int nrofVarsAll = 0;
     for(Map.Entry<String,InspcVariable> entryVar: idxAllVars.entrySet()){ //check all variables of the system.
       VariableAccess_ifc var = entryVar.getValue();
       nrofVarsAll +=1;
@@ -497,21 +448,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         }
       }
     }
-    Runnable userOrder;
-    while( (userOrder = userOrders.poll()) !=null){
-      userOrder.run(); //maybe add some more requests to the current telegram.
-    }
     if(nrofVarsReq >0){
       /////
       //System.out.println("InspcMng.procComm - variables requested; " + nrofVarsReq + "; all=" + nrofVarsAll);
     }
-    //check getFields after value
-    for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
-      inspcAccessor.requestStart(timeCurr);  //invokes getFields if requested.     
-    }
     
     for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
-      inspcAccessor.cmdFinit();     
+      inspcAccessor.cmdFinit();  //finit tx telegrams and send the first if in this state.     
     }
     if(user !=null){
       user.isSent(0);
@@ -675,52 +618,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   
   
-  /**Gets or creates the parent for the given path. The parent is referenced in {@link #idxAllStruct}.
-   * @param sPathChild
-   * @return null if it is the root.
-  private InspcStruct getOrCreateParentStruct(String sPathChild, InspcTargetAccessor accessor){
-    if(sPathChild.endsWith(":")){
-      return null;
-    } else {
-      int posLastDot = sPathChild.lastIndexOf('.');
-      if(posLastDot <0) {
-        posLastDot = sPathChild.indexOf(':') +1;
-      }
-      final String sPath = sPathChild.substring(0, posLastDot);
-      InspcVariable parentVariable = (InspcVariable)getVariable(sPath);  //recursively call
-      InspcStruct ret = idxAllStruct.get(sPath);
-      if(ret == null){
-        InspcStruct parent = getOrCreateParentStruct(sPath, accessor);
-        ret = new InspcStruct(sPath, accessor, parent);
-        idxAllStruct.put(sPath, ret);
-      }
-      return ret;
-    }
-  }
-   */
-  
-  
-  
-  
-  /**Gets or creates the parent for the given path. The parent is referenced in {@link #idxAllStruct}.
-   * @param sPathChild
-   * @return null if it is the root.
-   */
-  private InspcVariable getOrCreateParentVariable(String sPathChild, InspcTargetAccessor accessor){
-    if(sPathChild.endsWith(":")){
-      return null;
-    } else {
-      int posLastDot = sPathChild.lastIndexOf('.');
-      if(posLastDot <0) {
-        posLastDot = sPathChild.indexOf(':') +1;  //with device, with ':'
-      }
-      final String sPath = sPathChild.substring(0, posLastDot);
-      InspcVariable parentVariable = (InspcVariable)getVariable(sPath);  //recursively call
-      return parentVariable;
-    }
-  }
-  
-  
   
 
   
@@ -741,14 +638,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   }
   
   
-  
-  /*package private*/ void variableIsReceived(InspcVariable var){
-    idxRequestedVarFromTarget.remove(var.ds.sPathInTarget);
-    if(idxRequestedVarFromTarget.isEmpty()){ //all variables are received:
-      threadReqFromTarget.forceStep(false);
-    }
-  }
-
   
   
   
@@ -863,20 +752,15 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   @Override
   public boolean cmdGetAddressByPath(String sDataPath, InspcAccessExecRxOrder_ifc actionOnRx)
   { InspcTargetAccessData acc = getTargetAccessFromPath(sDataPath, true);
-    if(acc.targetAccessor.isOrSetReady(System.currentTimeMillis() - 5000)) {
-      acc.targetAccessor.cmdGetAddressByPath(acc.sPathInTarget, actionOnRx);
-      return true;
-    }
-    else return false;
+    acc.targetAccessor.cmdGetAddressByPath(acc.sPathInTarget, actionOnRx);
+    return true;
   }
 
 
   @Override
   public void cmdSetValueByPath(String sDataPath, long value, int typeofValue, InspcAccessExecRxOrder_ifc actionOnRx)
   { InspcTargetAccessData acc = getTargetAccessFromPath(sDataPath, true);
-    if(acc.targetAccessor.isOrSetReady(System.currentTimeMillis() - 5000)) {
-      acc.targetAccessor.cmdSetValueByPath(acc.sPathInTarget, value, typeofValue, actionOnRx);
-    }
+    acc.targetAccessor.cmdSetValueByPath(acc.sPathInTarget, value, typeofValue, actionOnRx);
   }
 
 

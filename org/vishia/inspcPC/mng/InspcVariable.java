@@ -1,7 +1,6 @@
 package org.vishia.inspcPC.mng;
 
 import java.text.ParseException;
-import java.util.Map;
 
 import org.vishia.bridgeC.ConcurrentLinkedQueue;
 import org.vishia.bridgeC.IllegalArgumentExceptionJc;
@@ -13,7 +12,6 @@ import org.vishia.inspcPC.accTarget.InspcTargetAccessData;
 import org.vishia.inspcPC.accTarget.InspcTargetAccessor;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.Debugutil;
-import org.vishia.util.StringPart;
 import org.vishia.util.StringPartScan;
 
 /**This class presents a variable, which is accessed by a {@link InspcTargetAccessor} to get or set its value.
@@ -68,7 +66,6 @@ public class InspcVariable implements VariableAccessArray_ifc
    * a second license subscribing a special contract with the author. 
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
-   * 
    */
   public static final int version = 20150127;
 
@@ -118,7 +115,6 @@ public class InspcVariable implements VariableAccessArray_ifc
           if(log !=null){
             log.sendMsg(identLog, "InspcVariable - receive; variable=%s, type=%c, val = %8X = %d = %f", ds.sPathInTarget, cType, valueI, valueI, valueF);
           }
-          varMng.variableIsReceived(InspcVariable.this);
           timeRefreshed = time;
           Runnable runReceived;
           while((runReceived = runOnRecv.poll())!=null){
@@ -270,8 +266,6 @@ public class InspcVariable implements VariableAccessArray_ifc
         //register the variable in the target system:
         String sPathComm = this.ds.sPathInTarget  + ".";
         if(sPathComm.charAt(0) != '#'){
-          Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
-          idx.put(this.ds.sPathInTarget, this);
           return  ds.targetAccessor.cmdRegisterByPath(sPathComm, this.rxAction) !=0;
         }
       }
@@ -285,8 +279,6 @@ public class InspcVariable implements VariableAccessArray_ifc
       String sPathComm = this.ds.sPathInTarget  + ".";
       if(sPathComm.charAt(0) != '#'){
         modeTarget = ModeHandleVariable.kIdTargetUsePerPath;
-        Map<String, InspcVariable> idx = varMng.idxRequestedVarFromTarget; 
-        idx.put(this.ds.sPathInTarget, this);
         return ds.targetAccessor.cmdGetValueByPath(sPathComm, this.rxAction) !=0;
         //return varMng.requestValueByPath(sPathComm, this.rxAction);
       } else { 

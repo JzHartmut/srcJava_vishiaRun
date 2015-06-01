@@ -22,6 +22,8 @@ public final class ClassContent implements CmdConsumer_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2015-06-02 Hartmut bugfix: {@link #evaluateFieldGetFields(org.vishia.communication.InspcDataExchangeAccess.InspcDatagram, String, ClassJc, int, int, int, int)}:
+   *   The incrAnswerNr() was called twice because it is called on {@link CmdExecuter#txAnswer(int, boolean)} too. 
    * <li>2015-03-28 Hartmut bugfix: The argument 'maxNrofAnswerBytes' of all cmd execution methods is not used furthermore. 
    *   The current length in the answer is stored in the ByteDataAccess indices already. The algorithm to determine the length
    *   in the answer datagram with extra count is erroneously. Don't use it. TODO remove this argument.
@@ -402,7 +404,7 @@ public final class ClassContent implements CmdConsumer_ifc
           answerCommMtbl.txAnswer(nrofAnswer, false); 
           //for next usage, send is done:
           answer.removeChildren();
-          answer.incrAnswerNr();
+          //Note: txAnswer increments already: answer.incrAnswerNr();
         }
         answer.addChild(answerItem);
         /**sAnswer contains one entry for the telegram. Builds a String to add,
