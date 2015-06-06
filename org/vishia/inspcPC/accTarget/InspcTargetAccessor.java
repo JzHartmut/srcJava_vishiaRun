@@ -575,7 +575,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	/**Number of idents to get values per ident. It determines the length of an info block,
 	 * see {@link #dataInfoDataGetValueByIdent}. An info block has to be no longer than a UDP-telegram.
 	 */
-	private final static int zIdent4GetValueByIdent = 400;
+	private final static int zIdent4GetValueByIdent = 300;  //1200 Byte
 	
 	private int ixIdent5GetValueByIdent;
 	
@@ -973,7 +973,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   final void execRx4ValueByIdent(InspcDataExchangeAccess.Inspcitem info, long time, LogMessage log, int identLog){
     //int lenInfo = info.getLength();
-    int ixVal = (int)info.getChildInteger(4);  //first index of variable in this answer item
+    final int ixValStart = (int)info.getChildInteger(4);  //first index of variable in this answer item
+    int ixVal = ixValStart;  //the suggested index of the action, proper to tx
     while(info.sufficingBytesForNextChild(1)){  //at least one byte in info, 
       InspcAccessExecRxOrder_ifc action = actionRx4GetValueByIdent[ixVal];
       ixVal +=1;
