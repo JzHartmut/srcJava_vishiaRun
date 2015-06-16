@@ -4,9 +4,52 @@ import org.vishia.util.Assert;
 import org.vishia.util.Java4C;
 
 
+/**This class provides a bundle with InterProcessCommuniation and a receive thread for it.
+ * On received telegrams it invokes the {@link InterProcessCommRx_ifc#execRxData(byte[], int)}
+ * which's instance is given by construction. The InterProcessComm can be used to send telegrams too,
+ * using this{@link #ipc}.
+ * 
+ * @author Hartmut Schorrig
+ *
+ */
 public class InterProcessCommRxThread
 {
-    /**@java2c=simpleRef. */
+  
+  /**Version, history and license.
+   * <ul>
+   * <li>2015-06-13 Hartmut: Created especially for C-usage of InterProcessCommunication.
+   *   It is derived from {@link org.vishia.inspectorTarget.Comm} which uses this class as super class yet.
+   * </ul>
+   * <br><br>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL is not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   */
+  public static final String version = "2015-06-13";
+
+  
+  /**Reference to the execute routine on receiving data. */
+  @Java4C.SimpleRef
   private final InterProcessCommRx_ifc execRxData;
   /**State of function.
    * <ul>
@@ -50,7 +93,7 @@ public class InterProcessCommRxThread
    * It means, the communication is not determined from this implementation, it depends
    * on the parameter of the ownAddrIpc and the possibilities. 
    * @param ownAddrIpc The address String
-   * @param cmdExecuter aggregation of executer of all commands.
+   * @param execRxData aggregation of executer of all commands.
    */
   public InterProcessCommRxThread(String ownAddrIpc, InterProcessCommRx_ifc execRxData)
   { 
