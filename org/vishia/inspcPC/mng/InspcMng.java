@@ -392,7 +392,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    * @returns true if at least one variable was requested, false if nothing is requested.
    * @see org.vishia.byteData.VariableContainer_ifc#refreshValues()
    */
-  protected boolean procComm(){
+  protected void procComm(){
     boolean bRequest = false;
     bUserCalled = false;
     long timeCurr = System.currentTimeMillis();
@@ -455,6 +455,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     
     for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
       inspcAccessor.cmdFinit();  //finit tx telegrams and send the first if in this state.     
+      //show the state to the user plug ifc.
+      inspcAccessor.setStateToUser(user);
     }
     if(user !=null){
       user.isSent(0);
@@ -470,8 +472,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         }
       }
     }
-
-    return bRequest;
   }
 
 

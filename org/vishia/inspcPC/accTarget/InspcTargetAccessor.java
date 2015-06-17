@@ -22,6 +22,7 @@ import org.vishia.event.EventCmdtypeWithBackEvent;
 import org.vishia.event.EventTimeout;
 import org.vishia.event.EventTimerThread;
 import org.vishia.inspcPC.mng.InspcMng;
+import org.vishia.inspcPC.mng.InspcPlugUser_ifc;
 import org.vishia.inspcPC.mng.InspcStruct;
 import org.vishia.inspcPC.mng.InspcVariable;
 import org.vishia.inspectorTarget.InspcTelgInfoSet;
@@ -1227,6 +1228,16 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     else return false;  //nothing to do
   }
   
+  
+  public void setStateToUser(InspcPlugUser_ifc user) {
+    if(user !=null){
+      InspcPlugUser_ifc.TargetState stateUser;
+      if(bTaskPending.get()){ stateUser = InspcPlugUser_ifc.TargetState.waitReceive; }
+      else { stateUser = InspcPlugUser_ifc.TargetState.idle; }
+      user.showStateInfo(name, stateUser);
+    }
+  }
+  
   /**Returns whether a tx telegram is filled with any info blocks.
    * The user can check it. The user needn't store itself whether any call of cmd...() is done.
    * It helps in management info blocks.
@@ -1448,9 +1459,6 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   public void checkExecuteSendUserOrder(){
     if(isOrSetReady(System.currentTimeMillis() - 5000)) {
       Runnable userTxOrder;
-      while( (userTxOrder = userTxOrders.poll()) !=null){
-        userTxOrder.run(); //maybe add some more requests to the current telegram.
-      }
       if(getFieldsData.requFields !=null){
         System.out.println("InspcTargetAccessor - send getFields;");
         String path = this.getFieldsData.requFields.sPathInTarget; //getTargetFromPath(this.requestedFields.path()); 
@@ -1458,6 +1466,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
         callbacksOnAnswer.put(new Integer(getFieldsData.runOnResponseFields.hashCode()), getFieldsData.runOnResponseFields);  //register the same action only one time.
         cmdGetFields(path, this.getFieldsData.rxActionGetFields);
         this.getFieldsData.requFields = null;
+      }
+      //
+      while( (userTxOrder = userTxOrders.poll()) !=null){
+        userTxOrder.run(); //maybe add some more requests to the current telegram.
       }
       txCmdGetValueByIdent();
     }    

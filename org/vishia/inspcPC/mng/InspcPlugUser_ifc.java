@@ -1,9 +1,18 @@
 package org.vishia.inspcPC.mng;
 
 
+/**This is a callback or plug interface to inform a plugged instance about some things from the {@link InspcMng}.
+ * @author Hartmut Schorrig
+ *
+ */
 public interface InspcPlugUser_ifc// extends GralPlugUser_ifc
 {
   
+  /**One of the state which should be shown in the application. */
+  enum TargetState{ inactive, idle, waitReceive, receive}; 
+  
+  /**Show the state of target communication. */
+  void showStateInfo(String key, TargetState state);
   
   void setInspcComm(InspcMng inspcMng);
   
