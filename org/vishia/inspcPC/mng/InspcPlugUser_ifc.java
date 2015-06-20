@@ -12,7 +12,7 @@ public interface InspcPlugUser_ifc// extends GralPlugUser_ifc
   enum TargetState{ inactive, idle, waitReceive, receive}; 
   
   /**Show the state of target communication. */
-  void showStateInfo(String key, TargetState state);
+  void showStateInfo(String key, TargetState state, int count);
   
   void setInspcComm(InspcMng inspcMng);
   

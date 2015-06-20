@@ -149,6 +149,11 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   /**The version history and license of this class.
    * <ul>
+   * <li>2015-06-21 Hartmut chg: Now getFields set the {@link GetFieldsData#bGetFieldsPending} and prohibits further telegrams
+   *   via {@link #isOrSetReady(long)} false-return: Reason: The target does not regard a new telegram
+   *   for further get-value requests if the telegram has less free space. The target crashes instead. 
+   *   On getFields more as one answer telegram is regarded. But the rest of the telegram for getValueByPath does not work. 
+   *   An older non fixed target should be accepted because it runs in field - no update possibility!   
    * <li>2015-05-28 Hartmut new {@link #addUserTxOrder(Runnable)} not only for the whole {@link InspcMng}.
    * <li>2015-05-28 Hartmut bugfix length of item was faulty for #cmdSetValueByPath(...). 
    *   Check length in {@link InspcTelgInfoSet#lengthCmdSetValueByPath(int)}. For all commands.
@@ -327,7 +332,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     
   }
   
-  TelgData tlg = new TelgData();
+  TelgData _tdata = new TelgData();
   
   private static class GetFieldsData
   {
@@ -350,6 +355,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
      * which is stored here etc.
      */
     OrderWithTime orderGetFields;
+
+    private boolean bGetFieldsPending;
     
   } GetFieldsData getFieldsData = new GetFieldsData();
   
@@ -559,7 +566,6 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   /**Set if the {@link #cmdFinit()} is given. set false on last received answer for the task. */
   private final AtomicBoolean bTaskPending = new AtomicBoolean();
   
-  
   private boolean bRequestWhileTaskPending;
   
 	long timeSend, timeReceive, dtimeReceive, dtimeWeakup;
@@ -611,13 +617,13 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     this.commPort = commPort;
     this.targetAddr = targetAddr;
     //this.infoAccess = new InspcTelgInfoSet();
-    for(int ix = 0; ix < tlg.tx.length; ++ix){
-      tlg.tx[ix] = new TxBuffer();
-      tlg.tx[ix].buffer = new byte[1400];
+    for(int ix = 0; ix < _tdata.tx.length; ++ix){
+      _tdata.tx[ix] = new TxBuffer();
+      _tdata.tx[ix].buffer = new byte[1400];
       //tx[ix].stateOfTxTelg.set(0);
     }
-    for(int ix1 = 0; ix1 < tlg.debugTxRx.length; ++ix1) {
-        DebugTxRx debugData = tlg.debugTxRx[ix1] = new DebugTxRx(); //only initially.
+    for(int ix1 = 0; ix1 < _tdata.debugTxRx.length; ++ix1) {
+        DebugTxRx debugData = _tdata.debugTxRx[ix1] = new DebugTxRx(); //only initially.
         //Arrays.fill(debugData.posTelgItems, -1);  
         debugData.clearAll();
     }
@@ -686,35 +692,35 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     if(!states.isInState(States.StateFilling.class)){
       stop();
     }
-    if(tlg.txixFill >= tlg.tx.length ){ //check more as one datagram
+    if(_tdata.txixFill >= _tdata.tx.length ){ //check more as one datagram
       System.err.println("InspcTargetAccessor - Too many telegram requests;");
       return false;
     }
-    if(bFillTelg && (txAccess.getLengthTotal() + lengthNewInfo) > tlg.tx[tlg.txixFill].buffer.length){
+    if(bFillTelg && (txAccess.getLengthTotal() + lengthNewInfo) > _tdata.tx[_tdata.txixFill].buffer.length){
       //the next requested info does not fit in the current telg. 
       //Therefore send the telg but only if the other telgs are received already!
       completeDatagram(false);
-      if((tlg.txixFill) >= tlg.tx.length){
+      if((_tdata.txixFill) >= _tdata.tx.length){
         return false;   //not enough space for communication. 
       }
     }
     if(!bFillTelg){
       //assert(tx[ixTxFill].stateOfTxTelg.compareAndSet(0, 'f'));
       //prepare a new telegram to send with ByteDataAccess, new head.
-      Arrays.fill(tlg.tx[tlg.txixFill].buffer, (byte)0);
+      Arrays.fill(_tdata.tx[_tdata.txixFill].buffer, (byte)0);
       txAccess = new InspcDataExchangeAccess.InspcDatagram();
-      tlg.debugTxRx[tlg.txixFill].txTelgHead = txAccess;   //register in debug.
-      txAccess.assignClear(tlg.tx[tlg.txixFill].buffer);
-      if(++tlg.nSeqNumber == 0){ tlg.nSeqNumber = 1; }
-      txAccess.setHeadRequest(nEntrant, tlg.nSeqNumber, nEncryption);
+      _tdata.debugTxRx[_tdata.txixFill].txTelgHead = txAccess;   //register in debug.
+      txAccess.assignClear(_tdata.tx[_tdata.txixFill].buffer);
+      if(++_tdata.nSeqNumber == 0){ _tdata.nSeqNumber = 1; }
+      txAccess.setHeadRequest(nEntrant, _tdata.nSeqNumber, nEncryption);
       bFillTelg = true;
-      if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Prepare head; " + tlg.txixFill + "; seq=" + tlg.nSeqNumber);
-      int nRestBytes = tlg.tx[tlg.txixFill].buffer.length - txAccess.getLengthHead();
+      if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Prepare head; " + _tdata.txixFill + "; seq=" + _tdata.nSeqNumber);
+      int nRestBytes = _tdata.tx[_tdata.txixFill].buffer.length - txAccess.getLengthHead();
       return true;
     }
     int lengthDatagram = txAccess.getLengthTotal();
     
-    int nRestBytes = tlg.tx[tlg.txixFill].buffer.length - lengthDatagram;
+    int nRestBytes = _tdata.tx[_tdata.txixFill].buffer.length - lengthDatagram;
     return true;
   }
   
@@ -729,8 +735,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	}
 	
 	
-	/**Checks readiness of communication cycle. Returns true if a communication cycle is not pending (finished). 
-	 * Returns false if not all answer telegrams were received from the last request. 
+	/**Checks readiness of communication cycle. Returns true if a communication cycle is not pending (finished).
+	 * It is in state {@link States.StateIdle} or {@link States.StateFilling}
+	 * Returns false if not all answer telegrams were received from the last request.
+	 * It is in all other states of {@link States}. 
 	 * If the time of the last send request was before timeLastTxWaitFor 
 	 * then it is assumed that the communication was faulty. Therefore all older pending requests are removed.
 	 * @param timeLastTxWaitFor The timestamp where the last tx request was send which's answer is expected yet.
@@ -739,7 +747,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	public boolean isOrSetReady(long timeLastTxWaitFor){ 
 	  boolean bReady;
 	  if(!bTaskPending.get()){
-	    bReady = true;
+	    bReady = !getFieldsData.bGetFieldsPending; //true;
 	  }
 	  else {
 	    long dtimeExpired = timeLastTxWaitFor - timeSend;  //timeExpired is the timeLast - wait time 
@@ -774,22 +782,22 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	 */
 	private void setReady()
 	{
-    for(int ixRx = 0; ixRx < tlg.rxNrofDatagramsForOneSend; ++ixRx) {
-      tlg.rxDatagram [ixRx] = null;  //garbage it.
+    for(int ixRx = 0; ixRx < _tdata.rxNrofDatagramsForOneSend; ++ixRx) {
+      _tdata.rxDatagram [ixRx] = null;  //garbage it.
     }
-    tlg.rxNrofDatagramsForOneSend = 0;
-    tlg.rxBitsAnswerNr = tlg.rxBitsAnswerMask = 0;
+    _tdata.rxNrofDatagramsForOneSend = 0;
+    _tdata.rxBitsAnswerNr = _tdata.rxBitsAnswerMask = 0;
     state = 'R';
-    tlg.txixSend = 0;
-    tlg.txixFill = 0;   //if the last one was received, the tx-buffer is free for new requests. 
-    tlg.nSeqNumberTxRx = 0;
-
+    _tdata.txixSend = 0;
+    _tdata.txixFill = 0;   //if the last one was received, the tx-buffer is free for new requests. 
+    _tdata.nSeqNumberTxRx = 0;
+    getFieldsData.bGetFieldsPending = false;
     bFillTelg = false;
     bShouldSend = false;
     bIsSentTelg = false;
     //bSendPending.set(false);
     ordersExpected.clear();  //after long waiting their is not any expected.
-    for(DebugTxRx debugData1: tlg.debugTxRx) {
+    for(DebugTxRx debugData1: _tdata.debugTxRx) {
       debugData1.clearAll();
     }
     bTaskPending.set(false);
@@ -834,7 +842,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   InspcTelgInfoSet newTxitem(){
     InspcTelgInfoSet item = new InspcTelgInfoSet();
     //register it in the debug struct
-    tlg.debugTxRx[tlg.txixFill].txItems.add(item);
+    _tdata.debugTxRx[_tdata.txixFill].txItems.add(item);
     return item;
   }
   
@@ -1215,7 +1223,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   public boolean cmdFinit(){
     states.processEvent(evSend);
     if(!bTaskPending.get()) {
-      if(bFillTelg || tlg.txixFill >0){
+      if(bFillTelg || _tdata.txixFill >0){
         if(bFillTelg) {
           completeDatagram(true);
         }
@@ -1234,7 +1242,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       InspcPlugUser_ifc.TargetState stateUser;
       if(bTaskPending.get()){ stateUser = InspcPlugUser_ifc.TargetState.waitReceive; }
       else { stateUser = InspcPlugUser_ifc.TargetState.idle; }
-      user.showStateInfo(name, stateUser);
+      user.showStateInfo(name, stateUser, _tdata.nSeqNumber);
     }
   }
   
@@ -1257,16 +1265,16 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   private void completeDatagram(boolean lastTelg){
     assert(bFillTelg);
     int lengthDatagram = txAccess.getLength();
-    if(tlg.txixFill < tlg.tx.length) {
-      assert(lengthDatagram <= tlg.tx[tlg.txixFill].buffer.length);
-      tlg.tx[tlg.txixFill].nrofBytesTelg = lengthDatagram;
+    if(_tdata.txixFill < _tdata.tx.length) {
+      assert(lengthDatagram <= _tdata.tx[_tdata.txixFill].buffer.length);
+      _tdata.tx[_tdata.txixFill].nrofBytesTelg = lengthDatagram;
       txAccess.setLengthDatagram(lengthDatagram);
-      tlg.tx[tlg.txixFill].nSeq = tlg.nSeqNumber;
-      tlg.tx[tlg.txixFill].lastTelg = lastTelg;
+      _tdata.tx[_tdata.txixFill].nSeq = _tdata.nSeqNumber;
+      _tdata.tx[_tdata.txixFill].lastTelg = lastTelg;
       bFillTelg = false;
       state = 's';
-      if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - complete Datagram; " + lastTelg + "; " + tlg.txixFill + "; seqnr " + tlg.nSeqNumber);
-      tlg.txixFill +=1;
+      if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - complete Datagram; " + lastTelg + "; " + _tdata.txixFill + "; seqnr " + _tdata.nSeqNumber);
+      _tdata.txixFill +=1;
     }
   }
   
@@ -1284,20 +1292,20 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       Debugutil.stop();
     }
     timeSend = System.currentTimeMillis();
-    tlg.nSeqNumberTxRx = tlg.tx[tlg.txixSend].nSeq;
+    _tdata.nSeqNumberTxRx = _tdata.tx[_tdata.txixSend].nSeq;
     //bSendPending = true;
     bIsSentTelg = true;
-    int lengthDatagram = tlg.tx[tlg.txixSend].nrofBytesTelg;
+    int lengthDatagram = _tdata.tx[_tdata.txixSend].nrofBytesTelg;
     //tx[ixTxSend].nrofBytesTelg = -1; //is sent
     if(lengthDatagram >0) {
-      int ok = commPort.send(this, tlg.tx[tlg.txixSend].buffer, lengthDatagram);
+      int ok = commPort.send(this, _tdata.tx[_tdata.txixSend].buffer, lengthDatagram);
       synchronized(this){
         if(ok == 96)
           Debugutil.stop();
       }
       if(logTelg !=null){ 
-        logTelg.sendMsg(identLogTelg +idLogTx, "send telg ix=%d, length= %d, ok = %d, seqn=%d", new Integer(tlg.txixSend), new Integer(lengthDatagram)
-        , new Integer(ok), new Integer(tlg.nSeqNumberTxRx)); 
+        logTelg.sendMsg(identLogTelg +idLogTx, "send telg ix=%d, length= %d, ok = %d, seqn=%d", new Integer(_tdata.txixSend), new Integer(lengthDatagram)
+        , new Integer(ok), new Integer(_tdata.nSeqNumberTxRx)); 
       }
     } else {
       Debugutil.stop();
@@ -1337,26 +1345,26 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       accessRxTelg.assign(rxBuffer, rxLength);
       int rxSeqnr = accessRxTelg.getSeqnr();
       //int rxAnswerNr = accessRxTelg.getAnswerNr();
-      if(rxSeqnr == this.tlg.nSeqNumberTxRx){
+      if(rxSeqnr == this._tdata.nSeqNumberTxRx){
         //the correct answer
         int nAnswer = accessRxTelg.getAnswerNr() - 1;  ////d
         if(nAnswer == -1) { //has sent 0, old Target
           nAnswer = 0;
-          tlg.oldTarget = true;  //target has sent 0, old target, store for ever.
-        } else if(tlg.oldTarget) {
+          _tdata.oldTarget = true;  //target has sent 0, old target, store for ever.
+        } else if(_tdata.oldTarget) {
           nAnswer = (nAnswer +1) >>1;  //add 1 because it starts with 0, shift because 2. telegram has 2 etc.
         }
         int bitAnswer = 1 << (nAnswer & 0x3f);
-        if((tlg.rxBitsAnswerNr & bitAnswer) ==0) { //this answer is not processed yet?
+        if((_tdata.rxBitsAnswerNr & bitAnswer) ==0) { //this answer is not processed yet?
           //a new answer, not processed
-          tlg.rxBitsAnswerNr |= bitAnswer;
+          _tdata.rxBitsAnswerNr |= bitAnswer;
           //
-          tlg.rxDatagram[nAnswer] = accessRxTelg;  //store the telegram to evaluate in the inspector thread. ////
+          _tdata.rxDatagram[nAnswer] = accessRxTelg;  //store the telegram to evaluate in the inspector thread. ////
           //
           if(accessRxTelg.lastAnswer()) {
-            tlg.rxNrofDatagramsForOneSend = nAnswer +1;  //signal for evaluating in InspcMng-thread
-            tlg.rxBitsAnswerMask = (1 << tlg.rxNrofDatagramsForOneSend) -1;  //for all this bits an anwer should be received.
-            if(tlg.rxBitsAnswerMask != tlg.rxBitsAnswerNr) {
+            _tdata.rxNrofDatagramsForOneSend = nAnswer +1;  //signal for evaluating in InspcMng-thread
+            _tdata.rxBitsAnswerMask = (1 << _tdata.rxNrofDatagramsForOneSend) -1;  //for all this bits an anwer should be received.
+            if(_tdata.rxBitsAnswerMask != _tdata.rxBitsAnswerNr) {
               Debugutil.stop();  //last telegram received before antecedent ones.
             }
             //All received telegrams for this send telegram will be evaluated together if bitsAnswerMask == bitsAnswerNrRx
@@ -1383,7 +1391,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
           }
         } else {
           //duplicate answer for this sequence:
-          if(logTelg !=null || bWriteDebugSystemOut) System.out.println("InspcTargetAccessor - faulty answer in sequence, received= " + nAnswer + ", expected=0x" + Long.toHexString(tlg.rxBitsAnswerNr));
+          if(logTelg !=null || bWriteDebugSystemOut) System.out.println("InspcTargetAccessor - faulty answer in sequence, received= " + nAnswer + ", expected=0x" + Long.toHexString(_tdata.rxBitsAnswerNr));
           //faulty seqnr
           if(logTelg !=null){ 
             logTelg.sendMsg(identLogTelg+idLogRxRepeat, "recv repeated telg seqn=%d nAnswer=%d after %d ms", new Integer(rxSeqnr), new Integer(nAnswer), new Long(dtimeReceive)); 
@@ -1391,7 +1399,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
         }
       } else {
         //faulty seqnr ?sendPending: is false, unexpected rx
-        if(logTelg !=null || bWriteDebugSystemOut) System.out.println("InspcTargetAccessor - unexpected seqnr, received=" + rxSeqnr + ", expected=" + tlg.nSeqNumberTxRx);
+        if(logTelg !=null || bWriteDebugSystemOut) System.out.println("InspcTargetAccessor - unexpected seqnr, received=" + rxSeqnr + ", expected=" + _tdata.nSeqNumberTxRx);
         if(logTelg !=null){ 
           logTelg.sendMsg(identLogTelg+idLogFailedSeq, "recv failed seqn=%d after %d ms", new Integer(rxSeqnr), new Long(dtimeReceive)); 
         }
@@ -1409,12 +1417,12 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    */
   public void evaluateRxTelgInspcThread(){
     long time = System.currentTimeMillis();
-    if(tlg.rxBitsAnswerNr >0 && tlg.rxBitsAnswerNr == tlg.rxBitsAnswerMask) { //only somewhat to do if received telegrams exists.
+    if(_tdata.rxBitsAnswerNr >0 && _tdata.rxBitsAnswerNr == _tdata.rxBitsAnswerMask) { //only somewhat to do if received telegrams exists.
       //all telegrams from one send telegram are received. Usual it is only one telegram.
       try { 
-        for(int ixRx = 0; ixRx < tlg.rxNrofDatagramsForOneSend; ++ixRx) {
-          DebugTxRx dbgRx = tlg.debugTxRx [tlg.txixSend];
-          evaluateOneDatagram(tlg.rxDatagram[ixRx], null, time, logTelg, identLogTelg +idLogRxItem, dbgRx, ixRx);  ////
+        for(int ixRx = 0; ixRx < _tdata.rxNrofDatagramsForOneSend; ++ixRx) {
+          DebugTxRx dbgRx = _tdata.debugTxRx [_tdata.txixSend];
+          evaluateOneDatagram(_tdata.rxDatagram[ixRx], null, time, logTelg, identLogTelg +idLogRxItem, dbgRx, ixRx);  ////
           //evaluateRx1TelgInspcThread(rxDatagram[ixRx]);
         }
       } catch(Exception exc) {
@@ -1428,14 +1436,14 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       //check whether it is the last telegram:
       //
       //boolean wasLastTxTelg = tlg.tx[tlg.ixTxSend].lastTelg;  //the ixTxSend is the index of send still.
-      for(int ixRx = 0; ixRx < tlg.rxNrofDatagramsForOneSend; ++ixRx) {
-        tlg.rxDatagram [ixRx] = null;  //garbage it.
+      for(int ixRx = 0; ixRx < _tdata.rxNrofDatagramsForOneSend; ++ixRx) {
+        _tdata.rxDatagram [ixRx] = null;  //garbage it.
       }
       //debugData ... not cleared here, cleared for txData lastly.
-      tlg.rxNrofDatagramsForOneSend = 0;
-      tlg.rxBitsAnswerNr = tlg.rxBitsAnswerMask = 0;
-      if(++tlg.txixSend < tlg.txixFill){
-        if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Send next telg; seqnr=" + tlg.tx[tlg.txixSend].nSeq + "; ixTxSend= " + tlg.txixSend);
+      _tdata.rxNrofDatagramsForOneSend = 0;
+      _tdata.rxBitsAnswerNr = _tdata.rxBitsAnswerMask = 0;
+      if(++_tdata.txixSend < _tdata.txixFill){
+        if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - Send next telg; seqnr=" + _tdata.tx[_tdata.txixSend].nSeq + "; ixTxSend= " + _tdata.txixSend);
         //Note: sendPending remain set. For this next telegram.
         send();
       } else { //if(wasLastTxTelg){  //last is reached.
@@ -1465,6 +1473,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
         //InspcTargetAccessor targetAccessor = requestedFields.targetAccessor();
         callbacksOnAnswer.put(new Integer(getFieldsData.runOnResponseFields.hashCode()), getFieldsData.runOnResponseFields);  //register the same action only one time.
         cmdGetFields(path, this.getFieldsData.rxActionGetFields);
+        getFieldsData.bGetFieldsPending = true;  //prevents request some more, isOrSetReady returns false after them.
         this.getFieldsData.requFields = null;
       }
       //
@@ -1584,8 +1593,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
         if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerFieldMethod){
           //special case: The same order number is used for more items in the same sequence number.
           if(timedOrder !=null){
-            getFieldsData.orderGetFields = timedOrder;
+            getFieldsData.orderGetFields = timedOrder; //store the found order to the oder number. It is the first item of getfields.
           } else if(getFieldsData.orderGetFields !=null && getFieldsData.orderGetFields.order == order) {
+            //the same order number: use the order for the next item, it is a next field.
             timedOrder = getFieldsData.orderGetFields;
           }
         }
@@ -1762,6 +1772,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     } catch(Exception exc){
       System.err.println("InspcTargetAccessor - lastTelg wrong callback; " + exc.getMessage());
     }
+    getFieldsData.bGetFieldsPending = false;  //maybe was true.
     callbacksOnAnswer.clear();
   }
   

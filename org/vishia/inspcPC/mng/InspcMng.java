@@ -105,6 +105,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   /**Version, history and license.
    * <ul>
+   * <li>2015-06-21 Hartmut new. invokes {@link InspcTargetAccessor#setStateToUser(InspcPlugUser_ifc)}. 
    * <li>2015-06-02 Hartmut The addUserOrder(Runnable) method is removed from here. It is replaced by 
    *   the {@link InspcTargetAccessor#addUserTxOrder(Runnable)}. Any target has its own timing. Only the target
    *   access can determine when to send to a target. Some gardening furthermore.
@@ -403,6 +404,13 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       inspcAccessor.evaluateRxTelgInspcThread(); //it sets isReady()
       
     }
+    //All received telegrams may be evaluated, this is the only one position where a target communication may be in idle state
+    //because after them some new variables were requested.
+    //Therefore show the state here:
+    for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
+      //show the state to the user plug ifc.
+      inspcAccessor.setStateToUser(user);
+    }
     for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
       //invokes userTxOrders and cmdGetFields but only if isOrSetReady() of this target.
       inspcAccessor.checkExecuteSendUserOrder(); //invokes getFields if requested.     
@@ -449,14 +457,11 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       }
     }
     if(nrofVarsReq >0){
-      /////
       //System.out.println("InspcMng.procComm - variables requested; " + nrofVarsReq + "; all=" + nrofVarsAll);
     }
     
     for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
       inspcAccessor.cmdFinit();  //finit tx telegrams and send the first if in this state.     
-      //show the state to the user plug ifc.
-      inspcAccessor.setStateToUser(user);
     }
     if(user !=null){
       user.isSent(0);

@@ -140,10 +140,10 @@ public final class ClassContent implements CmdConsumer_ifc
       cmdGetFields(cmd, answer, maxNrofAnswerBytes);
       break;
     case InspcDataExchangeAccess.Inspcitem.kGetValueByPath:
-      cmdGetValueByPath(cmd, answer, maxNrofAnswerBytes);
+      cmdGetValueByPath(cmd, answer);
       break;
     case InspcDataExchangeAccess.Inspcitem.kSetValueByPath:
-      cmdSetValueByPath(cmd, answer, maxNrofAnswerBytes);
+      cmdSetValueByPath(cmd, answer);
       break;
     case InspcDataExchangeAccess.Inspcitem.kGetAddressByPath:
       cmdGetAddressByPath(cmd, answer, maxNrofAnswerBytes);
@@ -422,18 +422,18 @@ public final class ClassContent implements CmdConsumer_ifc
    
    
   private final int cmdGetValueByPath(InspcDataExchangeAccess.Inspcitem cmd
-    , InspcDataExchangeAccess.InspcDatagram answer, int maxNrofAnswerBytes) 
+    , InspcDataExchangeAccess.InspcDatagram answer) 
   throws IllegalArgumentException, UnsupportedEncodingException 
   {
     int nrofBytesCmd = cmd.getLenInfo();
     /**@java2c=nonPersistent.  */
     String sVariablePath = cmd.getChildString(nrofBytesCmd - InspcDataExchangeAccess.Inspcitem.sizeofHead);
-    getSetValueByPath(cmd, null, answer, sVariablePath, maxNrofAnswerBytes);
+    getSetValueByPath(cmd, null, answer, sVariablePath);
     return 0;
   }
   
   private final int cmdSetValueByPath(InspcDataExchangeAccess.Inspcitem cmd
-    , InspcDataExchangeAccess.InspcDatagram answer, int maxNrofAnswerBytes) 
+    , InspcDataExchangeAccess.InspcDatagram answer) 
   throws IllegalArgumentException, UnsupportedEncodingException 
   {
     int nrofBytesCmd = cmd.getLenInfo();
@@ -444,19 +444,29 @@ public final class ClassContent implements CmdConsumer_ifc
                                      - InspcDataExchangeAccess.InspcSetValue.sizeofElement;
     /**@java2c=nonPersistent.  */
     String sVariablePath = cmd.getChildString(nrofBytesPath);
-    getSetValueByPath(cmd, setValue, answer, sVariablePath, maxNrofAnswerBytes);
+    getSetValueByPath(cmd, setValue, answer, sVariablePath);
     setValue.detach(); //because it is a stack instance.
     return 0;
   }
   
 
-  
+  /**Combination of get and set value by path. Both requests answers the current value. Therefore the functionality is similar.
+   * 
+   * @param cmd request item
+   * @param accSetValue if null then get, if not null, the value to set
+   * @param answer response datagram for answer.
+   * @param sVariablePath variablepath like it is found in cmd
+   * @param maxNrofAnswerBytes deprecated
+   * @return
+   * @throws IllegalArgumentException
+   * @throws UnsupportedEncodingException
+   */
   private final int getSetValueByPath(
     InspcDataExchangeAccess.Inspcitem cmd
     , InspcDataExchangeAccess.InspcSetValue accSetValue
     , InspcDataExchangeAccess.InspcDatagram answer
     , String sVariablePath
-    , int maxNrofAnswerBytes) 
+  ) 
   throws IllegalArgumentException, UnsupportedEncodingException 
   {
     int nOrderNr =cmd.getOrder();
@@ -479,7 +489,7 @@ public final class ClassContent implements CmdConsumer_ifc
       if(theObject.obj() != null && theField !=null)
       { 
         answer.addChild(answerItem);
-        getSetValue(theField, idx, theObject, accSetValue, maxNrofAnswerBytes);
+        getSetValue(theField, idx, theObject, accSetValue);
         int nBytesItem = answerItem.getLength();
         answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Inspcitem.kAnswerValue, nOrderNr);
       } else {
@@ -513,7 +523,6 @@ public final class ClassContent implements CmdConsumer_ifc
    */
   private boolean getSetValue(final FieldJc theField, int idx, final MemSegmJc theObject
      , InspcDataExchangeAccess.InspcSetValue accSetValue
-     , int maxNrofAnswerBytes
   ) throws IllegalArgumentException, IllegalAccessException
   {
     ClassJc type = theField.getType();
@@ -841,7 +850,7 @@ public final class ClassContent implements CmdConsumer_ifc
         freeOrder.check = currentTime & 0xfffff;
         int ixAnswer = ixReg | (freeOrder.check <<12);
         answerItem.addChildInteger(4, ixAnswer); 
-        getSetValue(theField, idx, theObject, null, maxNrofAnswerBytes);
+        getSetValue(theField, idx, theObject, null);
         answerItem.setLength(answerItem.getLength());  //the length of the answerItems in byte.
       } else { 
         answerItem.setCmd(InspcDataExchangeAccess.Inspcitem.kFailedPath);
@@ -879,7 +888,7 @@ public final class ClassContent implements CmdConsumer_ifc
         InspcDataInfo order = registeredDataAccess[idxDataAccess];
         //TODO check if it matches in space of telegram!
         if(check == order.check && order.reflectionField !=null){
-          getSetValue(order.reflectionField, 0, order.addr, null, maxNrofAnswerBytes);
+          getSetValue(order.reflectionField, 0, order.addr, null);
         } else {
           //The ident is faulty. Any ident request should have its answer.
           answerItem.addChildInteger(1, InspcDataExchangeAccess.kInvalidIndex);
