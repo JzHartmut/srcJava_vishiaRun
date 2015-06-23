@@ -149,6 +149,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   /**The version history and license of this class.
    * <ul>
+   * <li>2015-06-24 Hartmut chg: Writing debug info for all tx and rx items is able to disable. 
    * <li>2015-06-21 Hartmut chg: Now getFields set the {@link GetFieldsData#bGetFieldsPending} and prohibits further telegrams
    *   via {@link #isOrSetReady(long)} false-return: Reason: The target does not regard a new telegram
    *   for further get-value requests if the telegram has less free space. The target crashes instead. 
@@ -286,6 +287,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   private static class TelgData
   {
+    boolean bDebugTelg;
+    
     /**Position of all received items.
      * 
      */
@@ -330,6 +333,13 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     int rxNrofDatagramsForOneSend; 
     
     
+    final InspcDataExchangeAccess.InspcDatagram accTxTelgStatic = new InspcDataExchangeAccess.InspcDatagram();
+    
+    final InspcTelgInfoSet accTxItemStatic = new InspcTelgInfoSet();
+    
+    final InspcDataExchangeAccess.InspcDatagram accRxTelgStatic = new InspcDataExchangeAccess.InspcDatagram();
+    
+    final InspcDataExchangeAccess.Inspcitem accRxItemStatic = new InspcDataExchangeAccess.Inspcitem();
   }
   
   TelgData _tdata = new TelgData();
@@ -708,8 +718,12 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       //assert(tx[ixTxFill].stateOfTxTelg.compareAndSet(0, 'f'));
       //prepare a new telegram to send with ByteDataAccess, new head.
       Arrays.fill(_tdata.tx[_tdata.txixFill].buffer, (byte)0);
-      txAccess = new InspcDataExchangeAccess.InspcDatagram();
-      _tdata.debugTxRx[_tdata.txixFill].txTelgHead = txAccess;   //register in debug.
+      if(_tdata.bDebugTelg) {
+        txAccess = new InspcDataExchangeAccess.InspcDatagram();
+        _tdata.debugTxRx[_tdata.txixFill].txTelgHead = txAccess;   //register in debug.
+      } else {
+        txAccess = _tdata.accTxTelgStatic;
+      }
       txAccess.assignClear(_tdata.tx[_tdata.txixFill].buffer);
       if(++_tdata.nSeqNumber == 0){ _tdata.nSeqNumber = 1; }
       txAccess.setHeadRequest(nEntrant, _tdata.nSeqNumber, nEncryption);
@@ -840,10 +854,15 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
 
   InspcTelgInfoSet newTxitem(){
-    InspcTelgInfoSet item = new InspcTelgInfoSet();
-    //register it in the debug struct
-    _tdata.debugTxRx[_tdata.txixFill].txItems.add(item);
-    return item;
+    if(_tdata.bDebugTelg) {
+      InspcTelgInfoSet item = new InspcTelgInfoSet();
+      //register it in the debug struct
+      _tdata.debugTxRx[_tdata.txixFill].txItems.add(item);
+      return item;
+    } else {
+      _tdata.accRxItemStatic.detach();  //if it was used.
+      return _tdata.accTxItemStatic;
+    }
   }
   
 
@@ -1336,10 +1355,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     bRunInRxThread = true;
     try{ 
       timeReceive = System.currentTimeMillis();
-      dtimeReceive = timeReceive - timeSend;       ////
+      dtimeReceive = timeReceive - timeSend;       
       if(logTelg !=null){ 
         logTelg.sendMsg(identLogTelg+idLogRx, "recv telg after %d ms", new Long(dtimeReceive)); 
-      }////
+      }
       long time = System.currentTimeMillis();
       final InspcDataExchangeAccess.InspcDatagram accessRxTelg = new InspcDataExchangeAccess.InspcDatagram();
       accessRxTelg.assign(rxBuffer, rxLength);
@@ -1347,7 +1366,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       //int rxAnswerNr = accessRxTelg.getAnswerNr();
       if(rxSeqnr == this._tdata.nSeqNumberTxRx){
         //the correct answer
-        int nAnswer = accessRxTelg.getAnswerNr() - 1;  ////d
+        int nAnswer = accessRxTelg.getAnswerNr() - 1;  
         if(nAnswer == -1) { //has sent 0, old Target
           nAnswer = 0;
           _tdata.oldTarget = true;  //target has sent 0, old target, store for ever.
@@ -1359,7 +1378,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
           //a new answer, not processed
           _tdata.rxBitsAnswerNr |= bitAnswer;
           //
-          _tdata.rxDatagram[nAnswer] = accessRxTelg;  //store the telegram to evaluate in the inspector thread. ////
+          _tdata.rxDatagram[nAnswer] = accessRxTelg;  //store the telegram to evaluate in the inspector thread. 
           //
           if(accessRxTelg.lastAnswer()) {
             _tdata.rxNrofDatagramsForOneSend = nAnswer +1;  //signal for evaluating in InspcMng-thread
@@ -1421,7 +1440,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       //all telegrams from one send telegram are received. Usual it is only one telegram.
       try { 
         for(int ixRx = 0; ixRx < _tdata.rxNrofDatagramsForOneSend; ++ixRx) {
-          DebugTxRx dbgRx = _tdata.debugTxRx [_tdata.txixSend];
+          DebugTxRx dbgRx = _tdata.bDebugTelg ? _tdata.debugTxRx [_tdata.txixSend] : null;
           evaluateOneDatagram(_tdata.rxDatagram[ixRx], null, time, logTelg, identLogTelg +idLogRxItem, dbgRx, ixRx);  ////
           //evaluateRx1TelgInspcThread(rxDatagram[ixRx]);
         }
@@ -1449,7 +1468,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       } else { //if(wasLastTxTelg){  //last is reached.
         lastTelg();  //action after receiving the last telegram from the last send telegram.
                      //invoke callbacksOnAnswer if stored. 
-        setReady();  ////  
+        setReady();    
         //Now new send telegrams can be prepared. Firstly it would check whether there are 
         bRequestWhileTaskPending = false;
         if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - All received; ");
@@ -1571,12 +1590,16 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     //int nrofBytesTelg = telgHead.getLength();  //length from ByteDataAccess-management.
     //telgHead.assertNotExpandable();
     while(sError == null && telgHead.sufficingBytesForNextChild(InspcDataExchangeAccess.Inspcitem.sizeofHead)){
-      InspcDataExchangeAccess.Inspcitem infoAccessRx = new InspcDataExchangeAccess.Inspcitem();
       ////
-      telgHead.addChild(infoAccessRx);
-      if(dbgRx !=null) {
+      final InspcDataExchangeAccess.Inspcitem infoAccessRx;
+      if(dbgRx ==null) {
+        _tdata.accRxItemStatic.detach();
+        infoAccessRx = _tdata.accRxItemStatic;
+      } else {
+        infoAccessRx = new InspcDataExchangeAccess.Inspcitem();
         dbgRx.rxItems[dbgixAnswer].add(infoAccessRx); 
       }
+      telgHead.addChild(infoAccessRx);
       int nrofBytesInfo = infoAccessRx.getLenInfo();
       if(!infoAccessRx.checkLengthElement(nrofBytesInfo)) {
         //throw new IllegalArgumentException("nrofBytes in element faulty");
