@@ -404,6 +404,16 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       inspcAccessor.evaluateRxTelgInspcThread(); //it sets isReady()
       
     }
+    if(callbackShowingTargetCommState !=null) {
+      callbackShowingTargetCommState.run();
+    }
+    if(callbackOnRxData !=null){
+      callbackOnRxData.run();         //show the received values.
+      //In the callback the next requests for variables will be set to show in the GUI.
+      //It may be the same, it may be other.
+    }
+  
+  
     //All received telegrams may be evaluated, this is the only one position where a target communication may be in idle state
     //because after them some new variables were requested.
     //Therefore show the state here:
@@ -690,17 +700,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
      */
     @Override public final int step(int cycletime, int cycletimelast, int calctimelast, long timesecondsAbs){
       //bThreadRuns = true;
-      if(callbackShowingTargetCommState !=null) {
-        callbackShowingTargetCommState.run();
-      }
-      if(callbackOnRxData !=null){
-        callbackOnRxData.run();         //show the received values.
-        //the next requests for variables will be set.
-        //It may be the same, it may be other.
-      }
-  
       bAllReceived = false;
-        procComm();
+        InspcMng.this.procComm();  //Core-Communication-method.
         if(!bAllReceived){
           stop();
         }
