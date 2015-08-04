@@ -8,6 +8,38 @@ import org.vishia.util.Java4C;
 
 public class CmdExecuter implements AnswerComm_ifc
 {
+  /**Version, history and license.
+   * <ul>
+   * <li>2011-02-00 Hartmut created, converted from the C implementation.
+   * <li>2006-00-00 Hartmut created for C/C++
+   * </ul>
+   * <br><br>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL is not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   */
+  public static final String version = "2015-08-05";
+
 
 	/**@ java2c=simpleRef. */
 	final InspcDataExchangeAccess.InspcDatagram datagramCmd = new InspcDataExchangeAccess.InspcDatagram(); 
@@ -153,7 +185,9 @@ public class CmdExecuter implements AnswerComm_ifc
   }
 
 	
-  /**Send the current answer datagram as answer.
+  /**Send the current answer datagram as answer. Firstly the {@link InspcDataExchangeAccess.InspcDatagram#incrAnswerNr()}
+   * was invoked, therewith an answer starts with 1. That increment is important for more as one answer datagrams. 
+   * The head is initialized only one time with the data from the request telegram, the answerNr is incremented always. 
    * The length of the datagram is set to the head using {@link InspcDataExchangeAccess.InspcDatagram#setLengthDatagram(int)}
    * 
    * @see org.vishia.inspectorTarget.AnswerComm_ifc#txAnswer(int, boolean)

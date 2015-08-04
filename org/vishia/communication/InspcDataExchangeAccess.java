@@ -39,6 +39,8 @@ public final class InspcDataExchangeAccess
   
   /**Version, history and license.
    * <ul>
+   * <li>2015-08-05 Hartmut adapt: {@link InspcDatagram#setHeadAnswer(int, int, int)}: Because the nAnswerNr for the first 
+   *   answer datagram will be incremented, the head need 0 as start value.  
    * <li>2013-12-08 Hartmut chg: Rename Datagram to {@link InspcDatagram} and Info to {@link Inspcitem}, better to associate.
    * <li>2013-12-08 Hartmut new: {@link InspcSetValueData} 
    * <li>2013-12-07 Hartmut chg:
@@ -85,7 +87,7 @@ public final class InspcDataExchangeAccess
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20120409;
+  public static final String version = "2015-08-05";
   
   
   
@@ -128,7 +130,7 @@ public final class InspcDataExchangeAccess
     
     @Java4C.Inline public final int getLengthDatagram(){ return getInt16(0); }
     
-    /**Sets the head for an answer telegram. Sets the answer number to 0. 
+    /**Sets the head for an request telegram. Sets the answer number to 0. 
      * Therefore it is for the first answer. All following answers uses {@link #incrAnswerNr()}
      * and {@link #markAnswerNrLast()} to change the answer nr.
      * @param entrant
@@ -146,7 +148,7 @@ public final class InspcDataExchangeAccess
       setInt32(kencryption, encryption);
     }
     
-    /**Sets the head for an request telegram. Sets the answer number to 0. 
+    /**Sets the head for an answer telegram. Sets the answer number initially to 1. 
      * @param entrant
      * @param seqNr
      * @param encryption
@@ -155,7 +157,7 @@ public final class InspcDataExchangeAccess
       setInt16(knrofBytes, sizeofHead);
       setInt16(knEntrant, entrant);
       setInt32(kseqnr,seqNr);
-      setInt8(kanswerNr, 0x1);
+      setInt8(kanswerNr, 0x0);  //initializes 0 because it will be incremented the first time.
       setInt8(kspare13, 0x0);
       setInt16(kspare14, 0x0);
       //int encryption = (int)(((0x10000 * Math.random())-0x8000) * 0x10000);
