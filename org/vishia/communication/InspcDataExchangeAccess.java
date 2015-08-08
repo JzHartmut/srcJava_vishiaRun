@@ -39,6 +39,9 @@ public final class InspcDataExchangeAccess
   
   /**Version, history and license.
    * <ul>
+   * <li>2015-08-08 Hartmut new: {@link #nrofBytesForType(short)}, {@link InspcAnswerValueByHandle}. 
+   *   The getValueByHandle is improved and tested. It is changed in communication yet.
+   * <li>2015-08-08 Hartmut new: {@link #getFloatChild(short, ByteDataAccessBase)} 
    * <li>2015-08-05 Hartmut adapt: {@link InspcDatagram#setHeadAnswer(int, int, int)}: Because the nAnswerNr for the first 
    *   answer datagram will be incremented, the head need 0 as start value.  
    * <li>2013-12-08 Hartmut chg: Rename Datagram to {@link InspcDatagram} and Info to {@link Inspcitem}, better to associate.
@@ -50,9 +53,9 @@ public final class InspcDataExchangeAccess
    *   <li>Some {@link InspcDatagram#knrofBytes} etc. now private. Any application uses the access methods.
    *   <li>new {@link InspcDatagram#getAnswerNr()} and {@link InspcDatagram#lastAnswer()}  
    *   <li>new {@link Inspcitem#kSetvaluedata}, {@link Inspcitem#kAnswervaluedata} as a new kind of request.
-   *   <li>new {@link #kInvalidIndex} to distinguish an index error from a value error.
+   *   <li>new {@link #kInvalidHandle} to distinguish an index error from a value error.
    *   </ul> 
-   * <li>2012-04-09 Hartmut new: Some enhancements, especially {@link Inspcitem#kGetValueByIndex} 
+   * <li>2012-04-09 Hartmut new: Some enhancements, especially {@link Inspcitem#kGetValueByHandle} 
    *   The {@link Inspcitem#setInfoHead(int, int, int)} and {@link Inspcitem#setLength(int)} now adjusts the
    *   length of the element and parent in the {@link ByteDataAccessBase} data with the same.
    *   Set this information at end of filling variable data in an Info item, then all is correct.
@@ -270,37 +273,88 @@ public final class InspcDataExchangeAccess
     
     public final static int kAnswerFieldMethod = 0x14;
     
-    public final static int kRegisterRepeat = 0x23;
+    public final static int kRegisterHandle = 0x23;
     
-    public final static int kAnswerRegisterRepeat = 0x123;
-    
-    public final static int kFailedRegisterRepeat = 0x124;
-    
-    public final static int kGetValueByIndex = 0x25;
-    
-    /**
+    /**Answer cmd to {@link #kRegisterHandle}.
      * <pre>
-        ,  answer:
-        ,  +------head-8---------+-int-4-+-int-4-+---n-------+-int-4-+---n-------+
-        ,  |kAnswerValueByIndex  | ixVal | types | values    | types | values    |
-        ,  +---------------------+-------+-------+-----------+-------+-----------+
-     * <ul>
-     * <li>First byte after head is the start index of variable for answer. It is 0 for the first answer
-     *   info block. If the info block cannot contain all answers, a second info block in a second telegram
-     *   will be send which starts with its start index.
-     * <li>After them a block with up to 4 values follows. The first word of that block ///
-     *   contains 4 types of values, see {@link InspcDataExchangeAccess#kScalarTypes}. Especially the 
+     *  +------head-8---------+-int-4--+-byte-+-int 4-+--------+
+     *  |kAnswerRegisterHandle| handle | type | value | 0 0 0  |
+     *  +---------------------+--------+------+-------+--------+
+     * </pre>   
+     * The handle can be used now. The type is the type byte with encoding see {@link InspcDataExchangeAccess#kScalarTypes}.
+     * The type determines the number of bytes used by the value in the answer {@value #kAnswerValueByHandle}. It should be stored
+     * to help evaluating the answer correctly. The current value is sent additionally. 
+     * Type and value are stored in the same way like {@link #kAnswerValue}. 
      */
-    public final static int kAnswerValueByIndex = 0x125;
+    public final static int kAnswerRegisterHandle = 0x23;
     
+    public final static int kFailedRegisterRepeat = 0x24;
+    
+    public final static int kGetValueByHandle = 0x25;
+    
+    /**Answer cmd to {@link #kGetValueByHandle}.
+     * <pre>
+     *  +------head-8---------+-int2-+----------n---------------+
+     *  |kAnswerValueByHandle | ixVal|     values ...........   |
+     *  +---------------------+------+--------------------------+
+     * </pre>   
+     * <ul>
+     * <li>First int16 after head is the start index of the handle in the request item for that values. 
+     *   It is 0 for the first answer item. If the item cannot contain all answers, a second item in a second telegram
+     *   will be send which starts with its start index.
+     * <li>After them a block with all values follows. The length (bytes) for each value was returned
+     *   with the {@link #kAnswerValueByHandle} with the type information.
+     * </ul>  
+     */
+    public final static int kAnswerValueByHandle = 0x25;
+    
+    /**Answer cmd to {@link #kGetValueByPath}.
+     * <pre>
+     *  +------head-8---------+-byte-+-int 4-+--------+
+     *  |kAnswerValue         | type | value | 0 0 0  |
+     *  +---------------------+------+-------+--------+
+     * </pre>
+     * The child after the item contains the type byte and the value following immediately. 
+     * The rest to 4-byte-Alignment may be filled with 0 for newer telegrams or the length of the item may be not 4-aligned (older implementations).  
+     */
     public final static int kAnswerValue = 0x26;
     
     public final static int kFailedValue = 0x27;
+    
+    /**Answer cmd for a {@link #kGetValueByHandle} which is a faulty handle.
+     * <pre>
+     *  +------head-8---------+-int-2---+-int-2-+
+     *  |kFailedHandle        |ixHandle | ixEnd |
+     *  +---------------------+---------+-------+
+     * </pre>   
+     * The ixHandle is the index of the handle in the request. The ixEnd is the index of the next correct handle
+     * or the length of the handle array in request if all handles till end are faulty. 
+     * If only one handle is faulty, ixEnd is ixHandle +1.
+     * 
+     */
+    public final static int kFailedHandle = 0x28;
     
     public final static int kGetValueByPath = 0x30;
     
     public final static int kGetAddressByPath = 0x32;
     
+    /**Sets a value with given path. The item consists of:
+     * <pre>
+     * setValueByPath::=<@SIZE=head.nrofBytesItem>
+     *           <@ReflitemHead !cmdItem=0x35 ?head>
+     *           <@8-(SIZE-17):String04?!accesspath> <@(SIZE-16)?InspcSetValue> .
+     * </pre>
+     * Example: <pre>
++---------+---------+---------'---------+----+----+----+----+----+----+----+----+
+|   0x1c  |  0x30   |      order        |  r    o    o    t    .    a    c    c |
++----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+
+|  e    s    s    .    p    a    t    h    .    0    0    0 |     password      |
++---------+----+----+-------------------+-------------------+-------------------|
+|password |    | e4 |  0    0    0    0 | int32 big endian  |
++---------+----+----+-------------------+-------------------+
+     * </pre>
+     * see {@link InspcSetValue}.
+     */
     public final static int kSetValueByPath = 0x35;
     
     /**Sets a string value.
@@ -367,8 +421,11 @@ public final class InspcDataExchangeAccess
     
     //public static final int kSpecialValueStart = 0x7000, kSpecialValueLast = 0x7fff;
     
-    public Inspcitem(int sizeData){
-      super(sizeofHead, sizeData);
+    /**Constructor for derived items with other head size.
+     * @param sizeHeadDerived 
+     */
+    protected Inspcitem(int sizeHeadDerived){
+      super(sizeHeadDerived);
     }
     
     public Inspcitem(){
@@ -413,6 +470,9 @@ public final class InspcDataExchangeAccess
     @Java4C.Inline public final int getOrder(){ return getInt32(kbyteOrder); }
     
     
+    
+    
+    
     @Java4C.Exclude
     @Override public void infoFormattedAppend(StringFormatter u) {
       String cmd;
@@ -445,22 +505,31 @@ public final class InspcDataExchangeAccess
   //{
   /**Values between 0..199 determines the length of string.
    * A String item contains maximal 200 Bytes. */
-  public static final int maxNrOfChars = 0xc8;
+  public static final short maxNrOfChars = 0xc8;
+
+  /**The value is a string uptp 200 character which's length is stored in the first byte. */
+  public static final short kLengthAndString = 0xc9;
   
-  /**A reference is the memory-address of an element in C-language
-   * or a significant numeric Identifier of an object (instance) in Java.
+  
+  /**A memory-address of an element in C-language
+   * or a significant numeric Identifier of an object (instance) in Java. It is 8 Byte, 64 Bit.
    */
-  public static final int kReferenceAddr = 0xdf;
-  
-  
-  /**This type identification designates that the value is not available.
-   */
-  public static final int kTypeNoValue = 0xde;
+  public static final short kReferenceAddr64 = 0xdc;
   
   
   /**This type identification designates that the index to access by index is invalid.
    */
-  public static final int kInvalidIndex = 0xdd;
+  public static final short kInvalidHandle = 0xdd;
+  
+  
+  /**This type identification designates that the value is not available.
+   */
+  public static final short kTypeNoValue = 0xde;
+  
+  /**A reference is the memory-address of an element in C-language
+   * or a significant numeric Identifier of an object (instance) in Java. It is 4 Byte.
+   */
+  public static final short kReferenceAddr = 0xdf;
   
   
   
@@ -468,12 +537,91 @@ public final class InspcDataExchangeAccess
    * see {@link org.vishia.reflect.ClassJc#REFLECTION_int32} etc.
    * 
    */
-  public static final int kScalarTypes = 0xe0;
+  public static final short kScalarTypes = 0xe0;
+  
+  private static final int[] nrofBytesSpecialTypes = { 
+    0,0,0,0,0,0,0,0  //c8..d0
+  , 0,0,0,0,0,0,0,0,0,0,0,0
+  , 8           //dc: kReferenceAddr64
+  , 0           //dd: kInvalidIndex        
+  , 0           //de: ktypeNoValue
+  , 4           //df: kReferenceAddr, 4 Bytes
+  };
+  
+  /**Returns the number of bytes for any value which is designated 
+   * with 0.. {@link #maxNrOfChars} .. {@link #kScalarTypes} + {@link ClassJc#REFLECTION_int} etc. 
+   * @param type
+   * @return
+   */
+  public static int nrofBytesForType(short type){
+    int lengthTEST;
+    if(type < maxNrOfChars) { lengthTEST = type; } //a string with 0 .. bytes.
+    else if(type >= kScalarTypes) { lengthTEST = ClassJc.nrofBytesScalarTypes[type - kScalarTypes]; }
+    else { lengthTEST = nrofBytesSpecialTypes[ type - maxNrOfChars]; }
+    return lengthTEST;
+  }
+  
+  
+  
+  /**Returns the byte given value with the designated type as float value with conversion. It is proper 
+   * if an application is attempt to process a float value independent of the value type. 
+   * @param type The type returned by Inspector Communication {@link #kScalarTypes} + {@link ClassJc#REFLECTION_int32} etc.
+   *   A string is not converted yet. (Necessary? then TODO).
+   * @param access Any data access, the value with the given type will be gotten as next child.
+   * @return value in float presentation. 
+   */
+  public static float getFloatChild(short type, ByteDataAccessBase access) {
+    float value;
+    switch(type) {  //Note: some C compiler needs (float) casting to prevent warnings 
+                    //because the mantissa of float is only 24 bis in comparison of int with 32 bit.
+      case kScalarTypes + ClassJc.REFLECTION_int:    value = (float) access.getChildInt(-4); break;
+      case kScalarTypes + ClassJc.REFLECTION_int8:   value = (float) access.getChildInt(-1); break; 
+      case kScalarTypes + ClassJc.REFLECTION_int16:  value = (float) access.getChildInt(-2);  break;
+      case kScalarTypes + ClassJc.REFLECTION_int32:  value = (float) access.getChildInt(-4);  break;
+      case kScalarTypes + ClassJc.REFLECTION_int64:  value = (float) access.getChildInteger(-8); break; 
+      case kScalarTypes + ClassJc.REFLECTION_uint:   value = (float) access.getChildInt(4);  break;
+      case kScalarTypes + ClassJc.REFLECTION_uint8:  value = (float) access.getChildInt(1);  break;
+      case kScalarTypes + ClassJc.REFLECTION_uint16: value = (float) access.getChildInt(2);  break;
+      case kScalarTypes + ClassJc.REFLECTION_uint32: value = (float) access.getChildInt(4);  break;
+      case kScalarTypes + ClassJc.REFLECTION_uint64: value = (float) access.getChildInteger(8); break; 
+      case kScalarTypes + ClassJc.REFLECTION_float:  value = (float) access.getChildFloat();  break;
+      case kScalarTypes + ClassJc.REFLECTION_double: value = (float) access.getChildDouble(); break; 
+      default: value = 0;
+    }
+    return value;
+  }
+  
+  /**Returns the byte given value with the designated type as int32 value with conversion. It is proper 
+   * if an application is attempt to process an int value independent of the value type. 
+   * @param type The type returned by Inspector Communication {@link #kScalarTypes} + {@link ClassJc#REFLECTION_int32} etc.
+   *   A string is not converted yet. (Necessary? then TODO).
+   * @param access Any data access, the value with the given type will be gotten as next child.
+   * @return value in int presentation. 
+   */
+  public static int getIntChild(short type, ByteDataAccessBase access) {
+    int value;
+    switch(type) {
+      case kScalarTypes + ClassJc.REFLECTION_int:    value = access.getChildInt(-4); break; 
+      case kScalarTypes + ClassJc.REFLECTION_int8:   value = access.getChildInt(-1); break; 
+      case kScalarTypes + ClassJc.REFLECTION_int16:  value = access.getChildInt(-2);  break;
+      case kScalarTypes + ClassJc.REFLECTION_int32:  value = access.getChildInt(-4);  break;
+      case kScalarTypes + ClassJc.REFLECTION_int64:  value = (int)access.getChildInteger(-8);  break;//shortened 
+      case kScalarTypes + ClassJc.REFLECTION_uint:   value = access.getChildInt(4);  break;
+      case kScalarTypes + ClassJc.REFLECTION_uint8:  value = access.getChildInt(1);  break;
+      case kScalarTypes + ClassJc.REFLECTION_uint16: value = access.getChildInt(2);  break;
+      case kScalarTypes + ClassJc.REFLECTION_uint32: value = access.getChildInt(4);  break;
+      case kScalarTypes + ClassJc.REFLECTION_uint64: value = (int)access.getChildInteger(8); break; 
+      case kScalarTypes + ClassJc.REFLECTION_float:  value = (int)access.getChildFloat();  break;
+      case kScalarTypes + ClassJc.REFLECTION_double: value = (int)access.getChildDouble();  break;
+      default: value = 0;
+    }
+    return value;
+  }
   
   
   //}
   
-  /**ReflItem which contains a value.
+  /**ReflItem which contains a value. It is a children of an {@link Inspcitem} with {@link Inspcitem#kSetValueByPath}
    * <pre>
    * InspcSetValue::= <@0+6#?pwd> <@7+1#?type> [<@8+4 empty> <@12+4#?long> | ...].
    * </pre>
@@ -645,5 +793,38 @@ public final class InspcDataExchangeAccess
   
   
   
+  /**An item to set values with an index.
+   * <pre>
+   * InspcSetValueData::= <@0+8 Inspcitem> <@8+4#?address> <@12+4#?position> <@16 ReflSetValue>
+   * </pre>
+   * uses @{@link Inspcitem}, {@link InspcSetValue}
+   */
+  @Java4C.ExtendsOnlyMethods
+  public final static class InspcAnswerValueByHandle extends Inspcitem {
+    
+    public final static int sizeofElement = 12;
+    
+    public InspcAnswerValueByHandle(){
+      super(sizeofElement);
+      setBigEndian(true);
+    }
+    
+    public InspcAnswerValueByHandle(Inspcitem src){
+      super(sizeofElement);
+      setBigEndian(true);
+      assignCasted(src, 0, 0);
+    }
+    
+    
+    public final int getIxHandleFrom(){ return _getInt(8,2); } 
+    
+    public final int getIxHandleTo(){ return _getInt(10,2); } 
+    
+    public final void setIxHandleFrom(int val){ _setInt(8,2, val); } 
+    
+    public final void setIxHandleTo(int val){ _setInt(10,2, val); } 
+    
+    
+  }  
   
 }

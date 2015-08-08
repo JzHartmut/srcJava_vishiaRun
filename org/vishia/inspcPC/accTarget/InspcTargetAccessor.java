@@ -149,6 +149,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   /**The version history and license of this class.
    * <ul>
+   * <li>2015-08-08 Hartmut chg: getValueByHandle now works. Some changes. 
    * <li>2015-06-24 Hartmut chg: Writing debug info for all tx and rx items is able to disable. 
    * <li>2015-06-21 Hartmut chg: Now getFields set the {@link GetFieldsData#bGetFieldsPending} and prohibits further telegrams
    *   via {@link #isOrSetReady(long)} false-return: Reason: The target does not regard a new telegram
@@ -201,7 +202,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  final static int version = 20120406;
+  final static String version = "2015-08-08";
 
   private static class DebugTxRx{ 
     //int[] posTelgItems = new int[200];
@@ -287,7 +288,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   private static class TelgData
   {
-    boolean bDebugTelg;
+    boolean bDebugTelg = true;
     
     /**Position of all received items.
      * 
@@ -402,6 +403,12 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   private final ConcurrentLinkedQueue<Runnable> userTxOrders = new ConcurrentLinkedQueue<Runnable>();
   
 
+  
+  /**Map of all Variables which are gotten by handle.
+   * 
+   */
+  final Map<Integer, InspcVariable> XXXvariablesByHandle = new TreeMap<Integer, InspcVariable>();
+  
   
   /**Reused instance to evaluate any info blocks.
    * 
@@ -605,9 +612,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	//ByteBuffer acc4ValueByIdent = new ByteBuffer();
 	
 	/**Managing instance of {@link ByteDataAccessBase} for {@link #dataInfoDataGetValueByIdent}. */
-	private final ByteDataAccessBase accInfoDataGetValueByIdent = new ByteDataAccessSimple(dataInfoDataGetValueByIdent, true);
+	private final ByteDataAccessBase accInfoDataGetValueByIdent;
 	
-	private final InspcAccessExecRxOrder_ifc[] actionRx4GetValueByIdent = new InspcAccessExecRxOrder_ifc[zIdent4GetValueByIdent]; 
+	private final InspcAccessExecRxOrder_ifc[] actionRx4GetValueByHandle = new InspcAccessExecRxOrder_ifc[zIdent4GetValueByIdent]; 
 	//InspcVariable[] variable4GetValueByIdent = new InspcVariable[zIdent4GetValueByIdent];
 	
 	/**The entrant is the sub-consumer of a telegram on the device with given IP.
@@ -626,6 +633,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   { this.name = name;
     this.commPort = commPort;
     this.targetAddr = targetAddr;
+    accInfoDataGetValueByIdent = new ByteDataAccessBase(0);
+    accInfoDataGetValueByIdent.setBigEndian(true);
+    accInfoDataGetValueByIdent.assignClear(dataInfoDataGetValueByIdent);
     //this.infoAccess = new InspcTelgInfoSet();
     for(int ix = 0; ix < _tdata.tx.length; ++ix){
       _tdata.tx[ix] = new TxBuffer();
@@ -886,7 +896,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       if(logTelg !=null){ 
         logTelg.sendMsg(identLogTelg+idLogGetFields, "add cmdGetFields %s, order = %d", sPathInTarget, new Integer(order)); 
       }
-      setExpectedOrder(order, actionOnRx);
+      getFieldsData.orderGetFields = new OrderWithTime(order, System.currentTimeMillis(), actionOnRx);
+      
+      //setExpectedOrder(order, actionOnRx);
     } else {
       //too much info blocks
       order = 0;
@@ -949,7 +961,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     infoAccess.addChildString(sPathInTarget);
     if(restChars >0) { infoAccess.addChildInteger(restChars, 0); }
     final int zInfo = infoAccess.getLength();
-    infoAccess.setInfoHead(zInfo, InspcDataExchangeAccess.Inspcitem.kRegisterRepeat, order);
+    infoAccess.setInfoHead(zInfo, InspcDataExchangeAccess.Inspcitem.kRegisterHandle, order);
     //
     if(logTelg !=null){ 
       logTelg.sendMsg(identLogTelg+idLogRegisterByPath, "add registerByPath %s, order = %d", sPathInTarget, new Integer(order)); 
@@ -963,12 +975,12 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * @param sPathInTarget
    * @return The order number. 0 if the cmd can't be created because the telegram is full.
    */
-  public boolean cmdGetValueByIdent(int ident, InspcAccessExecRxOrder_ifc actionOnRx)
-  { if(ixIdent5GetValueByIdent >= actionRx4GetValueByIdent.length){
+  public boolean cmdGetValueByIdent(int ident, InspcAccessExecRxOrder_ifc action)
+  { if(ixIdent5GetValueByIdent >= actionRx4GetValueByHandle.length){
       return false;
       //  txCmdGetValueByIdent();
     }
-    actionRx4GetValueByIdent[ixIdent5GetValueByIdent] = actionOnRx;
+    actionRx4GetValueByHandle[ixIdent5GetValueByIdent] = action;
     accInfoDataGetValueByIdent.addChildInteger(4, ident);
     ixIdent5GetValueByIdent +=1;
     return true;
@@ -983,13 +995,13 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       int lengthInfo = accInfoDataGetValueByIdent.getLength();
       //It prepares the telg head.
       if(prepareTelg(lengthInfo)){  //It sends an existing telegram if there is not enough space for the idents-info
-        int order = orderGenerator.getNewOrder();
-        setExpectedOrder(order, actionRx4ValueByIdent);
+        int order = 0xabcdef01; //not neccessary. //orderGenerator.getNewOrder();
+        //setExpectedOrder(order, actionRx4ValueByIdent);
         InspcTelgInfoSet infoAccess = newTxitem();
         txAccess.addChild(infoAccess);
         int posInTelg = infoAccess.getPositionInBuffer() + InspcDataExchangeAccess.Inspcitem.sizeofHead;
         System.arraycopy(dataInfoDataGetValueByIdent, 0, infoAccess.getData(), posInTelg, 4 * ixIdent5GetValueByIdent);
-        infoAccess.setInfoHead(lengthInfo + InspcDataExchangeAccess.Inspcitem.sizeofHead, InspcDataExchangeAccess.Inspcitem.kGetValueByIndex, order);
+        infoAccess.setInfoHead(lengthInfo + InspcDataExchangeAccess.Inspcitem.sizeofHead, InspcDataExchangeAccess.Inspcitem.kGetValueByHandle, order);
         ixIdent5GetValueByIdent = 0;
         accInfoDataGetValueByIdent.assignClear(dataInfoDataGetValueByIdent);
         return true;
@@ -999,15 +1011,20 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     } else return false; //no data
   }
   
-  final void execRx4ValueByIdent(InspcDataExchangeAccess.Inspcitem info, long time, LogMessage log, int identLog){
+  
+  
+  
+  final void execRx4ValueByHandle(InspcDataExchangeAccess.Inspcitem inspcitem, long time, LogMessage log, int identLog){
     //int lenInfo = info.getLength();
-    final int ixValStart = (int)info.getChildInteger(4);  //first index of variable in this answer item
+    InspcDataExchangeAccess.InspcAnswerValueByHandle answerItem = new InspcDataExchangeAccess.InspcAnswerValueByHandle(inspcitem);
+    final int ixValStart = answerItem.getIxHandleFrom();  //first index of variable in this answer item
+    final int ixValTo = answerItem.getIxHandleTo();  //first index of variable in this answer item
     int ixVal = ixValStart;  //the suggested index of the action, proper to tx
-    while(info.sufficingBytesForNextChild(1)){  //at least one byte in info, 
-      InspcAccessExecRxOrder_ifc action = actionRx4GetValueByIdent[ixVal];
+    while(ixVal < ixValTo){  //at least one byte in info, 
+      InspcAccessExecRxOrder_ifc action = actionRx4GetValueByHandle[ixVal];
       ixVal +=1;
       if(action !=null){
-        action.execInspcRxOrder(info, time, log, identLog);
+        action.execInspcRxOrder(answerItem, time, log, identLog);
       }
     }
     //System.out.println("execRx4ValueByIdent");
@@ -1575,17 +1592,24 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    *        If null, then the order is searched like given with {@link #setExpectedOrder(int, InspcAccessExecRxOrder_ifc)}
    *        and that special routine is executed.
    * @return null if no error, if not null then it is an error description. 
+   * @since 2015-08 it does not return an error but it writes to System.err on failure. It continues if possible thow an item may be faulty.
    */
-  public String evaluateOneDatagram(InspcDataExchangeAccess.InspcDatagram telgHead
+  public void evaluateOneDatagram(InspcDataExchangeAccess.InspcDatagram telgHead
       , InspcAccessExecRxOrder_ifc executer, long time, LogMessage log, int identLog, DebugTxRx dbgRx, int dbgixAnswer)
   { String sError = null;
     //int currentPos = InspcDataExchangeAccess.InspcDatagram.sizeofHead;
     //for(InspcDataExchangeAccess.ReflDatagram telgHead: telgHeads){
+    int nrofBytesDatagramReceived = telgHead.getLengthTotal();
+    int nrofBytesDatagramInHead = telgHead.getLengthDatagram();
     if(dbgRx !=null) {
-      dbgRx.nrofBytesDatagramInHead = telgHead.getLengthDatagram();          
-      dbgRx.nrofBytesDatagramReceived = telgHead.getLengthTotal();
+      dbgRx.nrofBytesDatagramInHead = nrofBytesDatagramInHead;          
+      dbgRx.nrofBytesDatagramReceived = nrofBytesDatagramReceived;
       assert(dbgRx.nrofBytesDatagramInHead == dbgRx.nrofBytesDatagramReceived); 
       dbgRx.rxTelgHead[dbgixAnswer] = telgHead;
+    }
+    if(dbgRx.nrofBytesDatagramInHead != dbgRx.nrofBytesDatagramReceived) {
+      System.err.println("ERROR InscTargetAccessor.evaluateOneDatagram - mismatch between nrofBytesDatagramReceived, nrofBytesDatagramInHead, " + nrofBytesDatagramReceived+ " != " + nrofBytesDatagramInHead);
+      return;
     }
     //int nrofBytesTelg = telgHead.getLength();  //length from ByteDataAccess-management.
     //telgHead.assertNotExpandable();
@@ -1601,35 +1625,41 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       }
       telgHead.addChild(infoAccessRx);
       int nrofBytesInfo = infoAccessRx.getLenInfo();
+      int posInData = infoAccessRx.getPositionInBuffer();
       if(!infoAccessRx.checkLengthElement(nrofBytesInfo)) {
-        //throw new IllegalArgumentException("nrofBytes in element faulty");
+        System.err.println("ERROR InscTargetAccessor.evaluateOneDatagram - mismatch between nrofBytesInfo, nrofBytesDatagramInHead, " + nrofBytesDatagramReceived+ " != " + nrofBytesDatagramInHead);
+        return;
       }
+      if((posInData + nrofBytesInfo) > nrofBytesDatagramInHead) {
+        System.err.println("ERROR InscTargetAccessor.evaluateOneDatagram - mismatch between nrofBytesInfo, nrofBytesDatagramInHead, " + nrofBytesDatagramReceived+ " != " + nrofBytesDatagramInHead);
+        return;
+      }
+      infoAccessRx.setLengthElement(nrofBytesInfo);  //if an exception throws or evaluation of infoAccess is aborted, is known length.
       if(executer !=null){
         executer.execInspcRxOrder(infoAccessRx, time, log, identLog);
       } else {
-        int order = infoAccessRx.getOrder();
         int cmd = infoAccessRx.getCmd();
-        if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerValueByIndex)
-          stop();
-        OrderWithTime timedOrder = ordersExpected.remove(order);
-        //
         if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerFieldMethod){
           //special case: The same order number is used for more items in the same sequence number.
-          if(timedOrder !=null){
-            getFieldsData.orderGetFields = timedOrder; //store the found order to the oder number. It is the first item of getfields.
-          } else if(getFieldsData.orderGetFields !=null && getFieldsData.orderGetFields.order == order) {
-            //the same order number: use the order for the next item, it is a next field.
-            timedOrder = getFieldsData.orderGetFields;
-          }
+          //callback the proper request for get fileds to any InspcVariable.
+          getFieldsData.orderGetFields.exec.execInspcRxOrder(infoAccessRx, time, log, identLog);
         }
-        //
-        if(timedOrder !=null){
-          //remove timed order
-          InspcAccessExecRxOrder_ifc orderExec = timedOrder.exec;
-          if(orderExec !=null){
-            orderExec.execInspcRxOrder(infoAccessRx, time, log, identLog);
-          } else {
-            stop();  //should not 
+        else if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerValueByHandle){
+          ////
+          execRx4ValueByHandle(infoAccessRx, time, log, identLog);
+        }
+        else {
+          //
+          int order = infoAccessRx.getOrder();
+          OrderWithTime timedOrder = ordersExpected.remove(order);
+          if(timedOrder !=null){
+            //remove timed order
+            InspcAccessExecRxOrder_ifc orderExec = timedOrder.exec;
+            if(orderExec !=null){
+              orderExec.execInspcRxOrder(infoAccessRx, time, log, identLog);
+            } else {
+              stop();  //should not 
+            }
           }
         }
         //
@@ -1640,7 +1670,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       //currentPos += nrofBytesInfo;  //the same as stored in telgHead-access
       
     }
-    return sError;
+    //return sError;
   }
   
   
@@ -1728,10 +1758,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * @param info
    * @return The known character Z, C, D, F, B, S, I, J for the scalar types, 'c' for character array (String)
    */
-  public static int getInspcTypeFromRxValue(InspcDataExchangeAccess.Inspcitem info)
+  public static short getInspcTypeFromRxValue(InspcDataExchangeAccess.Inspcitem info)
   {
     char ret = 0;
-    int type = (int)info.getChildInteger(1);
+    short type = (short)info.getChildInt(1);
     return type;
   }
     
@@ -1764,6 +1794,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       }      
     } else if(type == InspcDataExchangeAccess.kReferenceAddr){
       ret = 'I';
+    } else if(type == InspcDataExchangeAccess.kLengthAndString){
+        ret = 'c';
     } else if(type <= InspcDataExchangeAccess.maxNrOfChars){
         ret = 'c';
     } else {
@@ -1812,9 +1844,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   
   
-  InspcAccessExecRxOrder_ifc actionRx4ValueByIdent = new InspcAccessExecRxOrder_ifc(){
+  InspcAccessExecRxOrder_ifc XXXactionRx4ValueByIdent = new InspcAccessExecRxOrder_ifc(){
     @Override public void execInspcRxOrder(InspcDataExchangeAccess.Inspcitem info, long time, LogMessage log, int identLog)
-    { execRx4ValueByIdent(info, time, log, identLog);
+    { execRx4ValueByHandle(info, time, log, identLog);
     }
     @Override public Runnable callbackOnAnswer(){return null; }  //empty
   };

@@ -109,7 +109,7 @@ public final class ClassJc
   public static final int REFLECTION_bitfield =           0x17;
   
   /**Array contains the number of byte which were used if the scalar types with designation 0..0x17
-   * are stored in a byte structure. 
+   * are stored in a byte structure. For values 00..0x1F 
    */
   public static final int[] nrofBytesScalarTypes = { 0, 0, 8, 8, 4, 4, 2, 2, 1, 1, 4, 4
     , 4, 8  //float, double
@@ -118,6 +118,7 @@ public final class ClassJc
     , 0,0,0,0,0  //0x11..0x15
     , 1     //boolean represented with 1 byte
     , 4     //bitfield supplied with 4 bytes
+    , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 
   };
 
   /**Composition of the Java-original reflection. It is is null, this instance describes 

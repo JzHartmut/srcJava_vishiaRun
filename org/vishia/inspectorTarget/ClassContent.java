@@ -24,6 +24,7 @@ public final class ClassContent implements CmdConsumer_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2015-08-08 Hartmut chg: getValueByHandle now works. Some changes. 
    * <li>2015-08-05 Hartmut new {@link #getValueByHandle(int, org.vishia.communication.InspcDataExchangeAccess.Inspcitem)} etc.
    *   to access data with path without a reflection item, directly in the same application. 
    * <li>2015-06-02 Hartmut bugfix: {@link #evaluateFieldGetFields(org.vishia.communication.InspcDataExchangeAccess.InspcDatagram, String, ClassJc, int, int, int, int)}:
@@ -36,7 +37,7 @@ public final class ClassContent implements CmdConsumer_ifc
    *   Problem with answer for long structures with second telegram. TODO: test it for C too!
    * <li>2013-12-07 Hartmut requfix: Check of the Index for getValueByIndex: Don't start from 0, because a reseted target 
    *   starts by 0 always. Use 16 bit of seconds, about 18 h. Only a new restart in exactly 65536 seconds are faulty. 
-   *   If the index is invalid, the {@link InspcDataExchangeAccess#kInvalidIndex} is returned for this value.
+   *   If the index is invalid, the {@link InspcDataExchangeAccess#kInvalidHandle} is returned for this value.
    *   The requester should remove that index. It is implemented in {@link org.vishia.inspcPC.mng.InspcVariable}.
    * <li>2013-01-10 Hartmut bugfix: If the path fails in 
    *   {@link #getSetValueByPath(org.vishia.communication.InspcDataExchangeAccess.Inspcitem, org.vishia.communication.InspcDataExchangeAccess.InspcSetValue, org.vishia.communication.InspcDataExchangeAccess.InspcDatagram, String, int)},
@@ -71,7 +72,10 @@ public final class ClassContent implements CmdConsumer_ifc
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 20150125;
+  final static String version = "2015-08-08";
+
+  
+      @Java4C.SimpleArray final byte[] __TEST__ = new byte[20];
 
   
   /**The Object from which the user-given path starts to search. 
@@ -152,10 +156,10 @@ public final class ClassContent implements CmdConsumer_ifc
     case InspcDataExchangeAccess.Inspcitem.kGetAddressByPath:
       cmdGetAddressByPath(cmd, answer, maxNrofAnswerBytes);
       break;
-    case InspcDataExchangeAccess.Inspcitem.kRegisterRepeat:
+    case InspcDataExchangeAccess.Inspcitem.kRegisterHandle:
       cmdRegisterRepeat(cmd, answer, maxNrofAnswerBytes);
       break;
-    case InspcDataExchangeAccess.Inspcitem.kGetValueByIndex:
+    case InspcDataExchangeAccess.Inspcitem.kGetValueByHandle:
       cmdGetValueByHandle(cmd, answer, maxNrofAnswerBytes);
       break;
     default:
@@ -491,7 +495,7 @@ public final class ClassContent implements CmdConsumer_ifc
       theField = theFieldP[0];
       idx = idxP[0];
       if(theObject.obj() != null && theField !=null)
-      { getSetValue(theField, idx, theObject, accSetValue, answerItem);
+      { getSetValue(theField, idx, theObject, accSetValue, answerItem, true);
         int nBytesItem = answerItem.getLength();
         answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Inspcitem.kAnswerValue, nOrderNr);
       } else {
@@ -517,13 +521,15 @@ public final class ClassContent implements CmdConsumer_ifc
    * @param theObject in this object
    * @param accSetValue null or given set value.
    * @param answerItem To that an {@link ByteDataAccessBase#addChildInteger(int, long)} or such is invoked with the read value. 
-   * @return true if this information has space in the current telgram, false if not.
+   * @param bStoreTypeInAnswer true then stores the 1-byte-type information before the value. false then store the value only.
+   * @return the type of the field if this information has space in the current telegram. -1 If there are no space.
    * @throws IllegalArgumentException
    * @throws IllegalAccessException
    */
-  private static boolean getSetValue(final FieldJc theField, int idx, final MemSegmJc theObject
+  private static short getSetValue(final FieldJc theField, int idx, final MemSegmJc theObject
      , InspcDataExchangeAccess.InspcSetValue accSetValue
      , InspcDataExchangeAccess.Inspcitem answerItem
+     , boolean bStoreTypeInAnswer
   ) throws IllegalArgumentException, IllegalAccessException
   {
     ClassJc type = theField.getType();
@@ -533,7 +539,7 @@ public final class ClassContent implements CmdConsumer_ifc
     int actLenTelg = answerItem.getLengthTotal();
     int maxLen = answerItem.getData().length;
     int restLen = maxLen - actLenTelg;
-    int nType;
+    short nType = -1;
     //add the answer-item-head. The rest is specific for types.
     if(type.isPrimitive()){
       String sType = type.getName();
@@ -551,7 +557,7 @@ public final class ClassContent implements CmdConsumer_ifc
             value = theField.getInt(theObject, idx);
           }
           nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int32;
-          answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+          if(bStoreTypeInAnswer) { answerItem.addChildInteger(1, nType);  }  
           answerItem.addChildInteger(4, value); 
           sValue = null;
         }
@@ -567,7 +573,7 @@ public final class ClassContent implements CmdConsumer_ifc
             value = theField.getChar(theObject, idx);
           }
           nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16;
-          answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+          if(bStoreTypeInAnswer) { answerItem.addChildInteger(1, nType); }
           answerItem.addChildInteger(2, (short)value); 
           sValue = null;
         }
@@ -583,7 +589,7 @@ public final class ClassContent implements CmdConsumer_ifc
             value = theField.getShort(theObject, idx);
           }
           nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16;
-          answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+          if(bStoreTypeInAnswer) { answerItem.addChildInteger(1, nType); }
           answerItem.addChildInteger(2, value); 
           sValue = null;
         }
@@ -594,7 +600,7 @@ public final class ClassContent implements CmdConsumer_ifc
           long value = theField.getInt64(theObject, idx);
           //TODO long won't supported by ReflectPro, use int
           nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int32;
-          answerItem.addChildInteger(1, nType); //64);  //Set the number of char-bytes in 1 byte
+          if(bStoreTypeInAnswer) { answerItem.addChildInteger(1, nType); }
           answerItem.addChildInteger(4, value);  //8 
           sValue = null;
         }
@@ -611,7 +617,7 @@ public final class ClassContent implements CmdConsumer_ifc
           }
           int value = Float.floatToRawIntBits(valuef);
           nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float;
-          answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+          if(bStoreTypeInAnswer) { answerItem.addChildInteger(1, nType); }
           answerItem.addChildInteger(4, value); 
           sValue = null;
         }
@@ -630,12 +636,12 @@ public final class ClassContent implements CmdConsumer_ifc
           if(fixme){
             int value = Float.floatToRawIntBits((float)fvalue);  //send as float, Problem of ReflectPro
             nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float;
-            answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+            if(bStoreTypeInAnswer) { answerItem.addChildInteger(1, nType); }
             answerItem.addChildInteger(4, value); 
           } else {
             long value = Double.doubleToLongBits(fvalue);
             nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_double;
-            answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+            if(bStoreTypeInAnswer) { answerItem.addChildInteger(1, nType); }
             answerItem.addChildInteger(8, value); 
           }
           sValue = null;
@@ -655,7 +661,7 @@ public final class ClassContent implements CmdConsumer_ifc
             }
             int value1 = value ? 1 : 0;
             nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16;
-            answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+            if(bStoreTypeInAnswer) { answerItem.addChildInteger(1, nType); }
             answerItem.addChildInteger(2, value1); 
             sValue = null;
           }
@@ -665,7 +671,7 @@ public final class ClassContent implements CmdConsumer_ifc
           if(bOk){
             short value = theField.getByte(theObject, idx);
             nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16;
-            answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+            if(bStoreTypeInAnswer) { answerItem.addChildInteger(1, nType); }
             answerItem.addChildInteger(2, value); 
             sValue = null;
           }
@@ -681,7 +687,7 @@ public final class ClassContent implements CmdConsumer_ifc
               value = theField.getBitfield(theObject, idx);
             }
             nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16;
-            answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+            if(bStoreTypeInAnswer) { answerItem.addChildInteger(1, nType); }
             answerItem.addChildInteger(2, value); 
             sValue = null;
           }
@@ -690,7 +696,7 @@ public final class ClassContent implements CmdConsumer_ifc
           bOk = restLen >=1;
           if(bOk){
             nType = InspcDataExchangeAccess.kTypeNoValue;
-            answerItem.addChildInteger(1, nType);  
+            if(bStoreTypeInAnswer) { answerItem.addChildInteger(1, nType); }  
             sValue = null; //"?unknownPrimitiveType?";
           }
         }
@@ -699,7 +705,7 @@ public final class ClassContent implements CmdConsumer_ifc
         bOk = restLen >=1;
         if(bOk){
           nType = InspcDataExchangeAccess.kTypeNoValue;
-          answerItem.addChildInteger(1, nType);  
+          if(bStoreTypeInAnswer) { answerItem.addChildInteger(1, nType); }  
           sValue = null; //"?unknownPrimType?";
         }
       }
@@ -716,9 +722,8 @@ public final class ClassContent implements CmdConsumer_ifc
       }
       bOk = restLen >= zValue +1;
       if(bOk){
-        int zInfo = zValue+1+InspcDataExchangeAccess.Inspcitem.sizeofHead;
-        nType = zValue;
-        answerItem.addChildInteger(1, nType);  //Set the number of char-bytes in 1 byte
+        nType = (short)zValue;
+        answerItem.addChildInteger(1, zValue);  //Set the number of char-bytes in 1 byte
         answerItem.addChildString(sValue);  //Set the character String after them.
       }
     }
@@ -728,7 +733,7 @@ public final class ClassContent implements CmdConsumer_ifc
       adr = getMemoryAddress_FieldJc(theField,theObject, false, idx);
     }
     */
-    return bOk;
+    return bOk ? nType : -1;
   }
   
   
@@ -797,11 +802,10 @@ public final class ClassContent implements CmdConsumer_ifc
     answer.addChild(answerItem);
     
     
-    int ident = registerHandle(sVariablePath, answerItem);
+    int handle = registerHandle(sVariablePath, answerItem);
     int lengthItem = answerItem.getLength();   //the length of the answerItems in byte.
-    int answerCmd = ident != -1 ? InspcDataExchangeAccess.Inspcitem.kAnswerRegisterRepeat : InspcDataExchangeAccess.Inspcitem.kFailedRegisterRepeat; 
+    int answerCmd = handle != -1 ? InspcDataExchangeAccess.Inspcitem.kAnswerRegisterHandle : InspcDataExchangeAccess.Inspcitem.kFailedRegisterRepeat; 
     answerItem.setInfoHead(lengthItem, answerCmd, nOrderNr);
-    answerItem.addChildInteger(4, ident); 
     return 0;
   }
   
@@ -831,7 +835,7 @@ public final class ClassContent implements CmdConsumer_ifc
     int memSegment = 0;
     int idxOutput = 0;
     int maxIdxOutput = 1200; //note: yet a full telegramm can be used.      
-    int identPathAnswer;
+    int handle;
     int idx;
     try{
       /**@java2c=stackInstance, simpleArray.  */
@@ -874,32 +878,41 @@ public final class ClassContent implements CmdConsumer_ifc
         freeOrder.secondOfCreation = currentTime;
         freeOrder.reflectionField = theField;
         freeOrder.addr.set(theObject);
+        short typeValue = (byte)getTypeFromField(theField);
+        freeOrder.typeValue = (byte) typeValue;
+        freeOrder.sizeofValue = (byte)InspcDataExchangeAccess.nrofBytesForType(typeValue);
         //don't start by 0 on reset of the target! date-20131208
         //- freeOrder.check +=1; //change it to detect old requests at same index.
         freeOrder.check = currentTime & 0xfffff;
-        identPathAnswer = ixReg | (freeOrder.check <<12);
+        handle = ixReg | (freeOrder.check <<12);
       } else { 
-        identPathAnswer = -1; //failure path
+        handle = -1; //failure path
         idx = 0;
       }
     } catch(Exception exc){
       /**Unexpected ...*/
       System.out.println("ClassContent-getValueByPath - unexpected:");
       exc.printStackTrace();
-      identPathAnswer = -1; //failure
+      handle = -1; //failure
       idx = 0;
     }
-    if(identPathAnswer != 0 && answerItem !=null){
+    if(handle != -1 && answerItem !=null){
       try{
-        getSetValue(theField, idx, theObject, null, answerItem);
+        answerItem.addChildInteger(4, handle); 
+        getSetValue(theField, idx, theObject, null, answerItem, true);
+        int length = answerItem.getLength();
+        int nRest = 4-(length & 0x3);
+        if(nRest < 4){
+          answerItem.addChildInteger(nRest, 0);
+        }
       } catch(Exception exc){
         /**Unexpected ...*/
         System.out.println("ClassContent-getValueByPath - unexpected:");
         exc.printStackTrace();
-        identPathAnswer = -1; //failure
+        handle = -1; //failure
       }
     }
-    return identPathAnswer;
+    return handle;
   }
 
 
@@ -909,22 +922,53 @@ public final class ClassContent implements CmdConsumer_ifc
   int cmdGetValueByHandle(InspcDataExchangeAccess.Inspcitem cmd, InspcDataExchangeAccess.InspcDatagram answer, int maxNrofAnswerBytes) 
   throws IllegalArgumentException, UnsupportedEncodingException
   {
+    @Java4C.StackInstance InspcDataExchangeAccess.InspcAnswerValueByHandle answerItem = new InspcDataExchangeAccess.InspcAnswerValueByHandle();
     int nrofVariable = (cmd.getLenInfo() - InspcDataExchangeAccess.Inspcitem.sizeofHead) / 4; 
     //cyclTime_MinMaxTime_Fwc(timeValueRepeat);
     int idxOutput = 0;
     int idx;
     boolean bOk = true;
     int nOrderNr =cmd.getOrder();
-    answer.addChild(answerItem);  ///
-    answerItem.addChildInteger(4, 0);  //TODO more as one telg.
+    //int ixFaultyHandle = -1, ixFaultyEnd;
+    int ixHandle = 0;
+    boolean bMoreHandles;
     while(cmd.sufficingBytesForNextChild(4)){
-    //for(idx = 0; bOk && idx < nrofVariable; idx++)
-      int ident = (int)cmd.getChildInteger(4); //getInt16BigEndian(&input->ixAccess[idx].ix);  //the requestions of objmoni access
-      getValueByHandle(ident, answerItem);
-      
-    }//while
-    int nBytesItem = answerItem.getLength();
-    answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Inspcitem.kAnswerValueByIndex, nOrderNr);
+      answerItem.detach();
+      answer.addChild(answerItem); 
+      answerItem.setIxHandleFrom(ixHandle);  //The start index of handle.  TODO more as one telg.
+      int type = 0;
+      int ixHandle1 = ixHandle;
+      int answerCmd = InspcDataExchangeAccess.Inspcitem.kAnswerValueByHandle;
+      do {
+        int handle = (int)cmd.getChildInteger(4); 
+        type = getValueByHandle(handle, answerItem);      //read one value and store in answer
+        if(type != InspcDataExchangeAccess.kInvalidHandle) {
+          ixHandle +=1;
+        }
+        bMoreHandles = cmd.sufficingBytesForNextChild(4);  //check continue evaluating the cmd 
+      } while(type != InspcDataExchangeAccess.kInvalidHandle && bMoreHandles);
+      int nBytesItem = answerItem.getLength();
+      if(ixHandle > ixHandle1){
+        //at least 1 or more values as answer stored:
+        //complete this answerItem:
+        answerItem.setIxHandleTo(ixHandle);  //The start index of handle.  TODO more as one telg.
+        answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Inspcitem.kAnswerValueByHandle, nOrderNr);
+        //and add a next one if necessary
+        if(bMoreHandles || type == InspcDataExchangeAccess.kInvalidHandle){
+          answerItem.detach();
+          answer.addChild(answerItem);
+          answerItem.setIxHandleFrom(ixHandle);
+        }
+      }
+      if(type == InspcDataExchangeAccess.kInvalidHandle){
+        answerItem.setIxHandleTo(++ixHandle);  //The start index of handle.  TODO more as one telg.
+        answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Inspcitem.kFailedHandle, nOrderNr);
+        if(bMoreHandles){
+          answerItem.detach();
+          answer.addChild(answerItem);
+        }
+      }
+    }
     return 0;
   }
 
@@ -932,36 +976,159 @@ public final class ClassContent implements CmdConsumer_ifc
 
 
   /**Gets a value which is registered before by {@link #registerHandle(String, org.vishia.communication.InspcDataExchangeAccess.Inspcitem)}
+   * This is the core routine for {@link #cmdGetValueByHandle(org.vishia.communication.InspcDataExchangeAccess.Inspcitem, org.vishia.communication.InspcDataExchangeAccess.InspcDatagram, int)}
+   * which needs writing to the answer datagram. If this routine is used directly, inside this target, this routine can be used
+   * with following pattern: <pre>
+   *    byte[] answerBuffer = new byte[20]; //buffer for the answer
+        InspcDataExchangeAccess.Inspcitem answerItem = new InspcDataExchangeAccess.Inspcitem();
+        answerItem.assignClear(answerBuffer);
+        short type = inspector.classContent.getValueByHandle(handle, answerItem);
+        //The result is written to the answerBuffer, the answerItem is the helper only.
+        answerItem.assign(answerBuffer); //assign newly but yet to read the content.
+        int value = InspcDataExchangeAccess.getIntChild(type, answerItem);
+   * </pre>
+   * See {@link #getFloatValueByHandle(int)}, {@link #getIntValueByHandle(int)} which uses this routine.
+   * 
    * @param handle The returned ident from registration
-   * @param answerItem destination jar for the value.
-   * @return 0 on success.
-   * @throws IllegalArgumentException
-   * @throws UnsupportedEncodingException
+   * @param answerItem destination jar for the value. The bytes of value will be appended as child only.
+   *   The number of bytes are able to evaluate by checking the length of the item respectively the 
+   *   {@link InspcDataExchangeAccess#nrofBytesForType(short)} with the returned type. That information was stored also
+   *   by executing of {@link #registerHandle(String, org.vishia.communication.InspcDataExchangeAccess.Inspcitem)} in the target system too.
+   *   Therefore the number of the bytes of the value and the type of value should be known, it is not transferred in the datagram.
+   * @return The type of value or InspcDataExchangeAccess#kInvalidHandle 
    */
-  public int getValueByHandle(int handle, InspcDataExchangeAccess.Inspcitem answerItem) 
-  { int error;
+  public short getValueByHandle(int handle, InspcDataExchangeAccess.Inspcitem answerItem) 
+  { short type;
     int idxDataAccess = handle & 0x0fff;
     int check = (handle >> 12) & 0xfffff;
-    InspcDataInfo order = registeredDataAccess[idxDataAccess];
-    //TODO check if it matches in space of telegram!
-    if(check == order.check && order.reflectionField !=null){
-      try{ 
-        getSetValue(order.reflectionField, 0, order.addr, null, answerItem);
-        error = 0;
-      } catch(IllegalAccessException exc){
-        System.err.println("ClassContent - cmdGetValueByIndex; Unexpected IllegalAccessException");
-        error = InspcDataExchangeAccess.kInvalidIndex;
-        answerItem.addChildInteger(1, InspcDataExchangeAccess.kInvalidIndex);
-      }
+    if(idxDataAccess >= registeredDataAccess.length) {
+      type = InspcDataExchangeAccess.kInvalidHandle;
     } else {
-      //The ident is faulty. Any ident request should have its answer.
-      error = InspcDataExchangeAccess.kInvalidIndex;
-      answerItem.addChildInteger(1, InspcDataExchangeAccess.kInvalidIndex);
+      InspcDataInfo datainfo = registeredDataAccess[idxDataAccess];
+      //TODO check if it matches in space of telegram!
+      if(check == datainfo.check && datainfo.reflectionField !=null){
+        try{ 
+          boolean bAnswerValueWithType = false; 
+          type = getSetValue(datainfo.reflectionField, 0, datainfo.addr, null, answerItem, bAnswerValueWithType);
+          if(type <= InspcDataExchangeAccess.maxNrOfChars){
+            type = InspcDataExchangeAccess.kLengthAndString;
+          }
+          if((byte)type != datainfo.typeValue){
+            System.err.println("ClassContent - cmdGetValueByHandle; type mismatch");
+            //it should not occure because the field and the type should be consistent.
+            //assert(false);
+          }
+        } catch(IllegalAccessException exc){
+          System.err.println("ClassContent - cmdGetValueByHandle; Unexpected IllegalAccessException");
+          type = InspcDataExchangeAccess.kInvalidHandle;
+        }
+      } else {
+        //The ident is faulty. Any ident request should have its answer.
+        type = InspcDataExchangeAccess.kInvalidHandle;
+      }
     }
-    return error;
+    return type;
   }
   
   
+  /**Gets the value described by this handle as float value. This method is offered to get a value by an internal
+   * access via reflection.
+   * @param handle Return value of {@link #registerHandle(String, org.vishia.communication.InspcDataExchangeAccess.Inspcitem)}
+   * @return The float value or 0 on error.
+   */
+  public float getFloatValueByHandle(int handle){ 
+    @Java4C.SimpleArray @Java4C.StackInstance final byte[] answerBuffer1 = new byte[20];
+    @Java4C.PtrVal final byte[] answerBuffer = answerBuffer1; //for C: use a PtrVal as argument.
+    @Java4C.StackInstance InspcDataExchangeAccess.Inspcitem answerItem = new InspcDataExchangeAccess.Inspcitem();
+    answerItem.assignClear(answerBuffer);
+    short type = getValueByHandle(handle, answerItem);
+    //The result is written to the answerBuffer, the answerItem is the helper only.
+    answerItem.assign(answerBuffer); //assign newly but yet to read the content.
+    float value = InspcDataExchangeAccess.getFloatChild(type, answerItem);
+    return value; 
+  }
+  
+  
+  /**Gets the value described by this handle as int32 value. This method is offered to get a value by an internal
+   * access via reflection.
+   * @param handle Return value of {@link #registerHandle(String, org.vishia.communication.InspcDataExchangeAccess.Inspcitem)}
+   * @return The int value or 0 on error.
+   */
+  public int getIntValueByHandle(int handle){ 
+    @Java4C.SimpleArray @Java4C.StackInstance final byte[] answerBuffer1 = new byte[20];
+    @Java4C.PtrVal final byte[] answerBuffer = answerBuffer1; //for C: use a PtrVal as argument.
+    @Java4C.StackInstance InspcDataExchangeAccess.Inspcitem answerItem = new InspcDataExchangeAccess.Inspcitem();
+    answerItem.assignClear(answerBuffer);
+    short type = getValueByHandle(handle, answerItem);
+    //The result is written to the answerBuffer, the answerItem is the helper only.
+    answerItem.assign(answerBuffer); //assign newly but yet to read the content.
+    int value = InspcDataExchangeAccess.getIntChild(type, answerItem);
+    return value; 
+  }
+  
+  
+  
+   /**Converts the given Field of Reflection to the type byte.
+   * @param theField describes the field to access
+   * @param idx with this index
+   * @return the type of the field if this information has space in the current telegram. -1 If there are no space.
+   */
+  public static short getTypeFromField(final FieldJc theField) 
+  {
+    ClassJc type = theField.getType();
+    //int modifier = theField.getModifiers();
+    short nType;
+    //add the answer-item-head. The rest is specific for types.
+    if(type.isPrimitive()){
+      String sType = type.getName();
+      char cType = sType.charAt(0);
+      switch(cType){
+      case 'v':   //void, handle as int
+      case 'i': { //int
+        nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int32;
+      } break;
+      case 'c': { //char
+          nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16;
+      } break;
+      case 's': {  //short
+          nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16;
+      } break;
+      case 'l': {  //long, it is int64
+          nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int32;
+      } break;
+      case 'f': {  //float
+          nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float;
+      } break;
+      case 'd': {  //double  TODO 'd' 
+            nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_double;
+      } break;
+      case 'b': switch(sType.charAt(1)){//boolean or byte or bitField
+        case 'o': { //boolean
+            nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16;
+        } break;
+        case 'y': { //byte
+            nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16;
+        } break;
+        case 'i': { //bitfield
+            nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int16;
+        } break;
+        default: {
+            nType = InspcDataExchangeAccess.kTypeNoValue;
+        }
+      } break;
+      default: {
+          nType = InspcDataExchangeAccess.kTypeNoValue;
+      } //default
+      }//switch
+    } else { //it is a complex type, not a numeric.
+      nType = InspcDataExchangeAccess.kLengthAndString;
+    }
+    return nType;
+  }
+  
+  
+  
+
 
 
 

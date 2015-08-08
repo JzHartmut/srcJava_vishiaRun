@@ -2,6 +2,8 @@ package org.vishia.inspectorTarget;
 
 
 import org.vishia.bridgeC.MemSegmJc;
+import org.vishia.communication.InspcDataExchangeAccess;
+import org.vishia.reflect.ClassJc;
 import org.vishia.reflect.FieldJc;
 import org.vishia.util.Java4C;
 
@@ -72,7 +74,9 @@ import org.vishia.util.Java4C;
   /**Nr of bytes of the type to read and transfer. */
   byte sizeofValue;
 
-  /**The type of the value, to send in telegram, see kScalarTypes_DataExchangeCmd_OBM. 
+  /**The type of the value, to send in telegram, It is the definitions in 
+   * {@link InspcDataExchangeAccess#kScalarTypes} + {@link ClassJc#REFLECTION_int32} etc. 
+   * negative value is from 128..255
    * If 0, than the entry is free.
    */
   byte typeValue;

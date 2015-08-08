@@ -6,7 +6,7 @@ public class Inspector
   /**Version and history
    * <ul>
    * <li>2015-08-05 Hartmut new {@link #get()} to get the first instance which may be a singleton.
-   * <li>2015-08-05 Hartmut chg {@link #classContent} is public to access its methods.
+   * <li>2015-08-05 Hartmut chg {@link #classContent} is public to access its methods. 
    * <li>2011-11-17 Hartmut new {@link #shutdown()} to end communication thread.
    * <li>2011-01-00 Hartmut Created from C-Sources, then re-translated to C and testet with Java2C
    * </ul>

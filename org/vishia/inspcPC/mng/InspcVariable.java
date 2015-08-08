@@ -11,6 +11,7 @@ import org.vishia.inspcPC.accTarget.InspcAccessExecRxOrder_ifc;
 import org.vishia.inspcPC.accTarget.InspcTargetAccessData;
 import org.vishia.inspcPC.accTarget.InspcTargetAccessor;
 import org.vishia.msgDispatch.LogMessage;
+import org.vishia.reflect.ClassJc;
 import org.vishia.util.Debugutil;
 import org.vishia.util.StringPartScan;
 
@@ -31,7 +32,7 @@ public class InspcVariable implements VariableAccessArray_ifc
    * <li>2013-12-07 Hartmut new: {@link #itsStruct} 
    * <li>2013-12-07 Hartmut chg: In {@link VariableRxAction}: Answer from target with info.cmd = {@link InspcDataExchangeAccess.Inspcitem#kFailedPath} 
    *   disables this variable from data communication. TODO enable with user action if the target was changed (recompiled, restarted etc).
-   * <li>2013-12-07 Hartmut chg: In {@link VariableRxAction}: Answer from target with variable type designation = {@link InspcDataExchangeAccess#kInvalidIndex}
+   * <li>2013-12-07 Hartmut chg: In {@link VariableRxAction}: Answer from target with variable type designation = {@link InspcDataExchangeAccess#kInvalidHandle}
    *   The requester should remove that index. Then a new {@link InspcTargetAccessor#cmdRegisterByPath(String, InspcAccessExecRxOrder_ifc)}
    *   is forced to get a valid index.
    * <li>2013-12-07 Hartmut chg: {@link #requestValueFromTarget(long)}: If the path starts with '#', it is not requested.       
@@ -89,27 +90,36 @@ public class InspcVariable implements VariableAccessArray_ifc
       int lenItem = info.getLenInfo();  
       //}
       switch(cmd){
-        case InspcDataExchangeAccess.Inspcitem.kAnswerRegisterRepeat: {
-          int ident = (int)info.getChildInteger(4);
-          InspcVariable.this.handleTarget = ident;
+        case InspcDataExchangeAccess.Inspcitem.kAnswerRegisterHandle: {
+          int handle = (int)info.getChildInteger(4);
+          InspcVariable.this.handleTarget = handle;
+          InspcVariable.this.typeTarget = (short)info.getChildInt(1);  //The value follows, first byte is the type.
+          InspcVariable.this.cType = InspcTargetAccessor.getTypeFromInspcType(typeTarget);
           InspcVariable.this.modeTarget = ModeHandleVariable.kTargetUseByHandle;
-        } //no break, use next case too!
-        //$FALL-THROUGH$
-        case InspcDataExchangeAccess.Inspcitem.kAnswerValueByIndex:  //same handling, though only one of some values are gotten.
+        } break;
+        
+        case InspcDataExchangeAccess.Inspcitem.kAnswerValueByHandle: { //same handling, though only one of some values are gotten.
+          InspcDataExchangeAccess.InspcAnswerValueByHandle accValuesByHandle = new InspcDataExchangeAccess.InspcAnswerValueByHandle(info);
+          int ixHandle1 = accValuesByHandle.getIxHandleFrom();
+          int ixHandle2 = accValuesByHandle.getIxHandleTo();
+          for(int ixHandle = ixHandle1; ixHandle < ixHandle2; ++ixHandle) {
+            //check the size and type of any answer value:
+          }
+        } break;
         case InspcDataExchangeAccess.Inspcitem.kAnswerValue: {
-          int typeInspc = InspcTargetAccessor.getInspcTypeFromRxValue(info);
-          InspcVariable.this.cType = InspcTargetAccessor.getTypeFromInspcType(typeInspc);
-          if(typeInspc == InspcDataExchangeAccess.kTypeNoValue || typeInspc == InspcDataExchangeAccess.kInvalidIndex){
+          InspcVariable.this.typeTarget = InspcTargetAccessor.getInspcTypeFromRxValue(info);
+          InspcVariable.this.cType = InspcTargetAccessor.getTypeFromInspcType(typeTarget);
+          if(typeTarget == InspcDataExchangeAccess.kTypeNoValue || typeTarget == InspcDataExchangeAccess.kInvalidHandle){
             modeTarget = ModeHandleVariable.kTargetNotSet;  //try again.
           }
           else if(cType == 'c'){ //character String
-            valueS = InspcTargetAccessor.valueStringFromRxValue(info, typeInspc);  
+            valueS = InspcTargetAccessor.valueStringFromRxValue(info, typeTarget);  
           }
           else if("BSI".indexOf(cType) >=0){
-            valueI = InspcTargetAccessor.valueIntFromRxValue(info, typeInspc);
+            valueI = InspcTargetAccessor.valueIntFromRxValue(info, typeTarget);
             valueF = valueI;
           } else { 
-            valueF = InspcTargetAccessor.valueFloatFromRxValue(info, typeInspc);
+            valueF = InspcTargetAccessor.valueFloatFromRxValue(info, typeTarget);
             valueI = (int)valueF;
           }
           if(log !=null){
@@ -136,6 +146,30 @@ public class InspcVariable implements VariableAccessArray_ifc
 
   }
 
+
+  
+  /**This class supplies the method to set the variable value from a received info block. 
+   */
+  @SuppressWarnings("synthetic-access") 
+  class ActionRxByHandle implements InspcAccessExecRxOrder_ifc
+  {
+     /**This method is called If a answer value by handle was received and the ixHandle has referred this variable.
+     * It prepares the value presentation.
+     * @see org.vishia.inspcPC.accTarget.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem)
+     */
+    @Override public void execInspcRxOrder(InspcDataExchangeAccess.Inspcitem accAnswerItem, long time, LogMessage log, int identLog)
+    {
+      setValueFormAnswerTelgByHandle(accAnswerItem, time);
+    }
+
+    @Override public Runnable callbackOnAnswer(){return null; }  //empty
+ } 
+ 
+  private final ActionRxByHandle actionRxByHandle = new ActionRxByHandle();
+  
+  
+  
+  
   /**The structure were this variable is member of. Not null if this is not the root variable in a device. */
   public final InspcVariable parent;
   
@@ -159,16 +193,19 @@ public class InspcVariable implements VariableAccessArray_ifc
   protected final static int kIdTargetUsePerPath = -2; 
   
   enum ModeHandleVariable {
-    kTargetNotSet, kIdTargetDisabled, kIdTargetUsePerPath, kTargetUseByHandle
+    kTargetNotSet, kIdTargetDisabled, kIdTargetUsePerPath, kTargetUseByHandle, kTargetHandleRequested
   }
   
   ModeHandleVariable modeTarget = ModeHandleVariable.kTargetNotSet;
   
-  /**If >=0 then it is the identification of the variable in the target device.
+  /**If >=0 then it is the handle of the variable in the target device.
    * if <0 then see {@link #kIdTargetDisabled} etc.
-   * The the value can be gotten calling getValueByIdent().
+   * The the value can be gotten calling getValueByHandle().
    */
   int handleTarget;
+  
+  /**The type information which is returned from the target by registerHandle. */
+  short typeTarget;
   
   /**Timestamp in milliseconds after 1970 when the variable was requested. 
    * A value may be gotten only if a new request is pending. */
@@ -261,9 +298,10 @@ public class InspcVariable implements VariableAccessArray_ifc
     }
     if(varMng.bUseGetValueByHandle){
       if(modeTarget == ModeHandleVariable.kTargetUseByHandle){
-        return ds.targetAccessor.cmdGetValueByIdent(this.handleTarget, this.rxAction);
-      } else {
+        return ds.targetAccessor.cmdGetValueByIdent(this.handleTarget, this.actionRxByHandle);
+      } else if(modeTarget != ModeHandleVariable.kTargetHandleRequested){
         //register the variable in the target system:
+        modeTarget = ModeHandleVariable.kTargetHandleRequested;
         String sPathComm = this.ds.sPathInTarget  + ".";
         if(sPathComm.charAt(0) != '#'){
           return  ds.targetAccessor.cmdRegisterByPath(sPathComm, this.rxAction) !=0;
@@ -510,5 +548,31 @@ public class InspcVariable implements VariableAccessArray_ifc
     return 0;
   }
 
+  
+  private void setValueFormAnswerTelgByHandle(InspcDataExchangeAccess.Inspcitem accAnswerItem, long time)
+  {
+    if(typeTarget <= InspcDataExchangeAccess.kLengthAndString){
+      int nrofChars = accAnswerItem.getChildInt(1);
+      valueS = accAnswerItem.getChildString(nrofChars); 
+    } else {
+      switch(typeTarget){
+        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int   : valueI = accAnswerItem.getChildInt(-4); valueF = valueI; break;
+        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int64 : { long val = accAnswerItem.getChildInt(-8); valueI = (int) val; valueF = val; } break;
+        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int32 : valueI = accAnswerItem.getChildInt(-4); valueF = valueI; break;
+        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int16 : valueI = accAnswerItem.getChildInt(-2); valueF = valueI; break;
+        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int8  : valueI = accAnswerItem.getChildInt(-1); valueF = valueI; break;
+        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint  : {long val = accAnswerItem.getChildInt(4); valueI = (int)val; valueF = val; } break;
+        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint64: {long val = accAnswerItem.getChildInt(4); valueI = (int)val; valueF = val < 0 ? (float)val + (65536.0F * 65536.0F * 65536.0F * 32768.0F) : (float)val ; } break;
+        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint32: {long val = accAnswerItem.getChildInt(4); valueI = (int)val; valueF = val; } break;
+        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint16: valueI = accAnswerItem.getChildInt(2); valueF = valueI; break;
+        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint8 : valueI = accAnswerItem.getChildInt(1); valueF = valueI; break;
+        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_float : valueF = accAnswerItem.getChildFloat(); valueF = valueI; break;
+        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_double: { double val = accAnswerItem.getChildDouble(); valueI = (int)val; valueF = (float)val; } break;
+        default: System.err.println("Error InspcVariable.setValueFormAnswerTelgByHandle - faulty type");
+      }
+    }
+    timeRefreshed = time;
+          
+  }
 
 }
