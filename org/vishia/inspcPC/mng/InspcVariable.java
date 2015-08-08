@@ -566,7 +566,7 @@ public class InspcVariable implements VariableAccessArray_ifc
         case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint32: {long val = accAnswerItem.getChildInt(4); valueI = (int)val; valueF = val; } break;
         case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint16: valueI = accAnswerItem.getChildInt(2); valueF = valueI; break;
         case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint8 : valueI = accAnswerItem.getChildInt(1); valueF = valueI; break;
-        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_float : valueF = accAnswerItem.getChildFloat(); valueF = valueI; break;
+        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_float : valueF = accAnswerItem.getChildFloat(); valueI = (int)valueF; break;
         case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_double: { double val = accAnswerItem.getChildDouble(); valueI = (int)val; valueF = (float)val; } break;
         default: System.err.println("Error InspcVariable.setValueFormAnswerTelgByHandle - faulty type");
       }

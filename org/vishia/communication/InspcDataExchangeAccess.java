@@ -741,48 +741,56 @@ public final class InspcDataExchangeAccess
       @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
       this.addChildAt(16, setValue);
       setValue.setBool((byte)value);
+      setValue.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
     }
     
     public final void setShort(int value){ 
       @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
       this.addChildAt(16, setValue);
       setValue.setShort((short)value);
+      setValue.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
     }
     
     public final void setByte(int value){ 
       @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
       this.addChildAt(16, setValue);
       setValue.setByte((byte)value);
+      setValue.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
     }
     
     public final void setInt(int value){ 
       @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
       this.addChildAt(16, setValue);
       setValue.setInt(value);
+      setValue.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
     }
     
     public final void setFloat(float value){ 
       @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
       this.addChildAt(16, setValue);
       setValue.setFloat(value);
+      setValue.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
     }
     
     public final void setFloatIntImage(int value){ 
       @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
       this.addChildAt(16, setValue);
       setValue.setFloatIntImage(value);
+      setValue.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
     }
     
     public final void setDouble(double value){ 
       @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
       this.addChildAt(16, setValue);
       setValue.setDouble(value);
+      setValue.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
     }
     
     public final void setLong(long value){ 
       @Java4C.StackInstance InspcSetValue setValue = new InspcSetValue();
       this.addChildAt(16, setValue);
       setValue.setLong(value);
+      setValue.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
     }
     
     @Java4C.Inline public final void setHead(int order){

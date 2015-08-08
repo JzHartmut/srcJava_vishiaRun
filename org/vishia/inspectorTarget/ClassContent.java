@@ -969,6 +969,7 @@ public final class ClassContent implements CmdConsumer_ifc
         }
       }
     }
+    answerItem.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
     return 0;
   }
 
@@ -1045,6 +1046,7 @@ public final class ClassContent implements CmdConsumer_ifc
     //The result is written to the answerBuffer, the answerItem is the helper only.
     answerItem.assign(answerBuffer); //assign newly but yet to read the content.
     float value = InspcDataExchangeAccess.getFloatChild(type, answerItem);
+    answerItem.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
     return value; 
   }
   
@@ -1063,6 +1065,7 @@ public final class ClassContent implements CmdConsumer_ifc
     //The result is written to the answerBuffer, the answerItem is the helper only.
     answerItem.assign(answerBuffer); //assign newly but yet to read the content.
     int value = InspcDataExchangeAccess.getIntChild(type, answerItem);
+    answerItem.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
     return value; 
   }
   
