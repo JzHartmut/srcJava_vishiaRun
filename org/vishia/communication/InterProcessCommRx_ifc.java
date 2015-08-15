@@ -2,7 +2,15 @@ package org.vishia.communication;
 
 import org.vishia.util.Java4C;
 
-public interface InterProcessCommRx_ifc
+/**This is the base class of a callback for {@link InterProcessCommRxThread}.
+ * It is used to implement the callback on received data.
+ * For C-Usage an anonymous implementation can be build with the macro <code>IFC_IMPL_dataMETHOD1_ObjectJc(TYPE, METHOD)</code>
+ * with a simple given C implementation of the {@link #execRxData(byte[], int, Address_InterProcessComm)} method. 
+ * 
+ * @author Hartmut Schorrig
+ *
+ */
+public abstract class InterProcessCommRx_ifc
 {
 
   /**Version, history and license.
@@ -37,6 +45,17 @@ public interface InterProcessCommRx_ifc
   public static final String version = "2015-06-13";
 
   
-  void execRxData(@Java4C.PtrVal byte[] buffer, int nrofBytesReceived);
+  /**This data pointer can be set by any application. It is offered to the {@link #execRxData(byte[], int)}
+   * by this base class. Especially an application in C does not need to extend this class by additional data,
+   * instead use #data as reference.
+   */
+  @Java4C.SimpleRef public Object data;
+  
+  /**Callback routine for received data.
+   * @param buffer
+   * @param nrofBytesReceived
+   * @param sender The sender of the data.
+   */
+  public abstract void execRxData(@Java4C.PtrVal byte[] buffer, int nrofBytesReceived, Address_InterProcessComm sender);
   
 }

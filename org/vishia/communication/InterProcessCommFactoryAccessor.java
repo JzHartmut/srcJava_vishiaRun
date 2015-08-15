@@ -27,21 +27,11 @@ package org.vishia.communication;
  * The factory-implementor sets the instance. The user should know only this class,
  * not the implementation. Calling of   
  * 
+ * @deprecated the InterProcessCommFactory contains all capability.
 */
-public abstract class InterProcessCommFactoryAccessor
+@Deprecated
+public abstract class InterProcessCommFactoryAccessor extends InterProcessCommFactory
 {
-	private static InterProcessCommFactory theSingleton;
-  
-	protected static void setSingleton(InterProcessCommFactory src){
-		if(theSingleton !=null) throw new IllegalStateException("it is set already.");
-		theSingleton = src;
-	}
-	
-	public static InterProcessCommFactory getInstance()
-	{ return theSingleton;  
-	}
-	
-
 	
   
   

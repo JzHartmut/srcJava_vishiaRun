@@ -4,12 +4,21 @@ import org.vishia.util.Assert;
 import org.vishia.util.Java4C;
 
 
-/**This class provides a bundle with InterProcessCommuniation and a receive thread for it.
- * On received telegrams it invokes the {@link InterProcessCommRx_ifc#execRxData(byte[], int)}
- * which's instance is given by construction. The InterProcessComm can be used to send telegrams too,
- * using this{@link #ipc}.
+/**This class provides a bundle with an InterProcessCommuniation and a receive thread.
+ * On received telegrams it invokes the {@link InterProcessCommRx_ifc#execRxData(byte[], int, Address_InterProcessComm)}
+ * which's instance should be given by construction.
+ * <ul>
+ * <li>Use the static method {@link #create(String, InterProcessCommRx_ifc)} or the constructor to create the instance
+ *  with the given receive port and the given callback on received data.
+ * <li>Invoke {@link #start()} to open the communication and start the receive thread. It returns false on failures, true on success.
+ * <li>Invoke {@link #shutdown()} to close and finish the receive thread. 
+ * <li>Use {@link #createDstAddr(String)} to create a destination address for the given InterProcessComm for sending activities.
+ * <li>Use {@link #send(byte[], int, Address_InterProcessComm)} to send.  
+ * </ul>
  * 
  * @author Hartmut Schorrig
+ *
+ *
  *
  */
 public class InterProcessCommRxThread
@@ -85,14 +94,16 @@ public class InterProcessCommRxThread
   /**@java2c=simpleRef. */
   private final Address_InterProcessComm myAnswerAddress;
   
-  /**Creates the communication for the inspector.
+  /**Creates the communication but does not open it yet. See {@link #start()}
    * The InterProcessComm interface implementation is got depending on
    * <ul><li>the ownAddrIpc-string
    * <li>the existing InterProcessComm-Implementation, which analyzes the address-string.
    * <ul>
    * It means, the communication is not determined from this implementation, it depends
    * on the parameter of the ownAddrIpc and the possibilities. 
-   * @param ownAddrIpc The address String
+   * @param ownAddrIpc The address String for receiving data. This String determines the kind of InterProcessComm.
+   *   Use "UDP:127.9.0.1:6000" to open an UDP-Communication for this example via loop-back on port 6000.
+   *   See {@link InterProcessCommFactoryAccessor}, {@link InterProcessCommFactorySocket}.
    * @param execRxData aggregation of executer of all commands.
    */
   public InterProcessCommRxThread(String ownAddrIpc, InterProcessCommRx_ifc execRxData)
@@ -110,12 +121,16 @@ public class InterProcessCommRxThread
     //create the receive-thread
     
     thread = new Thread(threadRoutine, "IpcRx");
-    thread.start();
     //set it to class ref.
     this.ipc = ipcMtbl;
   }
   
   
+  /**Static method to create invokes the constructor.
+   * @param ownAddrIpc
+   * @param execRxData
+   * @return
+   */
   public static InterProcessCommRxThread create(String ownAddrIpc, InterProcessCommRx_ifc execRxData)
   {
     InterProcessCommRxThread obj = new InterProcessCommRxThread(ownAddrIpc, execRxData);
@@ -123,7 +138,19 @@ public class InterProcessCommRxThread
   }
   
   
-  public final boolean openComm(boolean blocking) {
+  /**Create any destination address for the given InterprocessComm implementation. 
+   * The Address should be stored in the users space and should be used for {@link #send(byte[], int, Address_InterProcessComm)}
+   * @param sAddr Proper String to create the address, see {@link InterProcessComm#createAddress(String)}.
+   *   Hint: For Socket communication it should not start with "UDP:", only the own address on constructor should start with the protocol.
+   *   It should have the form "192.168.1.123:6000" with ip and port.
+   * @return the address, null on failure.
+   */
+  public final Address_InterProcessComm createDstAddr(String sAddr){
+    return ipc.createAddress(sAddr);
+  }
+  
+  
+  private final boolean openComm(boolean blocking) {
     int ok;
     /**@java2c=dynamic-call. */
     InterProcessComm ipcMtbl = ipc; 
@@ -149,15 +176,33 @@ public class InterProcessCommRxThread
 
 
   
-  final public void start(){
-    thread.start();
+  /**Start opens the InterProcessComm and starts the receiver thread.
+   * @return true on success. On false the receiver thread was not started. Open error.
+   */
+  final public boolean start(){
+    boolean bOk = openComm(true);
+    if(bOk){
+      thread.start();
+    } 
+    return bOk;
+  }
+  
+  
+  /**Send a telegram to the given dst. It delegates to {@link InterProcessComm#send(byte[], int, Address_InterProcessComm)}.
+   * An address should be create using {@link #createDstAddr(String)}.
+   * @param data
+   * @param nrofBytesToSend
+   * @param dstAddr
+   * @return
+   */
+  public final int send(@Java4C.PtrVal byte[] data, int nrofBytesToSend, Address_InterProcessComm dstAddr){
+    return ipc.send(data, nrofBytesToSend, dstAddr);
   }
   
   
 
   private final void runThread()
   { while(state != 'x'){
-      openComm(true);
       if(state == 'o'){
         receiveAndExecute();
       } else {
@@ -202,7 +247,7 @@ public class InterProcessCommRxThread
             //
             //cmdExecuterMtbl.executeCmd(rxBuffer, nrofBytesReceived[0]);
           } else {
-            execRxDataMtbl.execRxData(rxBuffer, nrofBytesReceived[0]);      
+            execRxDataMtbl.execRxData(rxBuffer, nrofBytesReceived[0], this.myAnswerAddress);      
             //unnecessary because usage receiveData: ipcMtbl.freeData(rxBuffer);
           }
         }
@@ -216,6 +261,29 @@ public class InterProcessCommRxThread
   }
 
   
+  /**Shutdown the communication, close the thread. This routine should be called 
+   * either on shutdown of the whole system or on closing the inspector functionality.
+   * The inspector functionality can be restarted calling {@link #start(Object)}.
+   * 
+   */
+  public final void shutdown(){
+    if(state == 'e') return; //nothing to do, error.
+    
+    state = 'x';
+    /**@java2c=dynamic-call. */
+    InterProcessComm ipcMtbl = ipc; 
+    ipcMtbl.close();  //breaks waiting in receive socket
+    //waits till the receive thread is finished.
+    while(state !='z'){
+      synchronized(this){
+        try{ wait(100); } catch(InterruptedException exc){}
+      }
+    }
+    try{ 
+      Thread.sleep(1000);  //wait a second.
+    } catch(InterruptedException exc){}
+  }
+
 
   
   @SuppressWarnings("synthetic-access") 

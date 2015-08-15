@@ -22,20 +22,17 @@
  *******************************************************************************/ 
 package org.vishia.communication;
 
-public class InterProcessCommFactorySocket
-extends InterProcessCommFactoryAccessor implements InterProcessCommFactory
+public class InterProcessCommFactorySocket extends InterProcessCommFactory
 {
 	static{
-		setSingleton(new InterProcessCommFactorySocket());
+	  //the constructor does it:
+		//setSingleton(new InterProcessCommFactorySocket());
 	}
 	
-
- /** Destroy a instance of InterProcessComm.
- public static boolean destroyInterProcessComm(InterProcessComm comm )
- {
-   return false;
- }
- */
+	
+  public InterProcessCommFactorySocket(){
+    super();  //it sets the singleton.
+  }
 
 
 	@Override public InterProcessComm create(String protocolAndOwnAddr)
