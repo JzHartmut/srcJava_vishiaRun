@@ -6,11 +6,44 @@ import org.vishia.bridgeC.MemSegmJc;
 import org.vishia.reflect.ClassJc;
 import org.vishia.reflect.FieldJc;
 
-/**It is a wrapper around the java.lang.Class with additional functionality.
+/**Functionality to search an element for reflection access.
  * @author Hartmut Schorrig 
  */
 public class SearchElement
 {
+
+    /**Version, history and license.
+   * <ul>
+   * <li>2015-10-29 Bugfix: It was hanging by "path.." 2 dots one after another. 
+   * <li>2011-02-00 Hartmut created, converted from the C implementation.
+   * <li>2006-00-00 Hartmut created for C/C++
+   * </ul>
+   * <br><br>
+   * <b>Copyright/Copyleft</b>:
+   * For this source the LGPL Lesser General Public License,
+   * published by the Free Software Foundation is valid.
+   * It means:
+   * <ol>
+   * <li> You can use this source without any restriction for any desired purpose.
+   * <li> You can redistribute copies of this source to everybody.
+   * <li> Every user of this source, also the user of redistribute copies
+   *    with or without payment, must accept this license for further using.
+   * <li> But the LPGL is not appropriate for a whole software product,
+   *    if this source is only a part of them. It means, the user
+   *    must publish this part of source,
+   *    but don't need to publish the whole source of the own product.
+   * <li> You can study and modify (improve) this source
+   *    for own using or for redistribution, but you have to license the
+   *    modified sources likewise under this LGPL Lesser General Public License.
+   *    You mustn't delete this Copyright/Copyleft inscription in this source file.
+   * </ol>
+   * If you are intent to use this sources without publishing its usage, you can get
+   * a second license subscribing a special contract with the author. 
+   * 
+   * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
+   * 
+   */
+  final static String version = "2015-10-29";
 
 	
 	/**Only for debugging: Element to store the trace while searching any element.
@@ -126,10 +159,10 @@ public class SearchElement
 	            //nextObj may be null, than exit the loop.
 	          
 	          } else {} //the obj and field are found
-	          posStart = posSep + 1;
 	        }
         }
-    	}while(field != null && posSep > 0 && nextObj.obj() != null);
+    	  posStart = posSep + 1; //next level.
+      }while(field != null && posSep > 0 && nextObj.obj() != null);
     } catch(NoSuchFieldException exc){
     	currentObj.setNull();
     	field = null;

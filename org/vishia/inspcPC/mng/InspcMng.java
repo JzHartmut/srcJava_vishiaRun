@@ -28,7 +28,7 @@ import org.vishia.util.StringFunctions;
 import org.vishia.util.ThreadRun;
 
 /**This class supports the communication via the inspector for example with reflection access. 
- * <img src="../../../img/InspcMng.png"><br>Object model diagram
+ * <img src="../../../../img/InspcMng.png"><br>Object model diagram
  * <br><br>
  * This class is a {@link VariableContainer_ifc}. It means the application can handle with variables, which's values
  * are present in a target devices accessed via reflex access.
@@ -186,7 +186,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   Runnable callbackOnRxData;
   
   
-  Runnable callbackShowingTargetCommState;
+  Runnable XXXcallbackShowingTargetCommState;
   
   /**If true then writes a log of all send and received telegrams. */
   LogMessage logTelg;
@@ -279,8 +279,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   
   
-  public void setCallbackShowingState(Runnable callback) {
-    this.callbackShowingTargetCommState = callback;
+  public void XXXsetCallbackShowingState(Runnable callback) {
+    this.XXXcallbackShowingTargetCommState = callback;
   }
 
   /*
@@ -404,9 +404,11 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       inspcAccessor.evaluateRxTelgInspcThread(); //it sets isReady()
       
     }
+    /*
     if(callbackShowingTargetCommState !=null) {
       callbackShowingTargetCommState.run();
     }
+    */
     if(callbackOnRxData !=null){
       callbackOnRxData.run();         //show the received values.
       //In the callback the next requests for variables will be set to show in the GUI.
@@ -451,7 +453,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
           if(varInspc.ds.sPathInTarget.startsWith("#"))
             Assert.stop();
           bRequest = true;
-          if(varInspc.ds.targetAccessor.isOrSetReady(timeCurr-5000)){ //check whether the device is ready.
+          if(varInspc.ds.targetAccessor.isOrSetReady(timeCurr)){ //check whether the device is ready.
             if(varInspc.ds.sDataPath.equals("CCS:_DSP_.ccs_1P.ccs_IB_priv.ictrl.pire_p.out.YD")) {
               System.out.println("InspcMng.procComm - exec request InspcVar, "  + dtimeRequested/1000.0f + ", "+  varInspc.ds.sDataPath);
               ///Debugutil.stop();

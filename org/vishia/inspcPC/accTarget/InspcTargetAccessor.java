@@ -149,6 +149,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   /**The version history and license of this class.
    * <ul>
+   * <li>2015-10-29 Hartmut chg: {@link #isOrSetReady(long)} now checks the timeout by its own {@link #cycle_timeout}.
+   *   The last one can be changed in the {@link #setStateToUser(InspcPlugUser_ifc)} which acts with the graphical user interface.
+   *   Therewith the timeout can be changed in the GUI especially for debugging situations.
    * <li>2015-08-08 Hartmut chg: getValueByHandle now works. Some changes. 
    * <li>2015-06-24 Hartmut chg: Writing debug info for all tx and rx items is able to disable. 
    * <li>2015-06-21 Hartmut chg: Now getFields set the {@link GetFieldsData#bGetFieldsPending} and prohibits further telegrams
@@ -629,10 +632,16 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   private final InspcCommPort commPort;	
 	
+  
+  final float[] cycle_timeout = new float[2];
+  
+  
   public InspcTargetAccessor(String name, InspcCommPort commPort, Address_InterProcessComm targetAddr, EventTimerThread threadEvents)
   { this.name = name;
     this.commPort = commPort;
     this.targetAddr = targetAddr;
+    cycle_timeout[0] = 0.1f;
+    cycle_timeout[1] = 5.0f;
     accInfoDataGetValueByIdent = new ByteDataAccessBase(0);
     accInfoDataGetValueByIdent.setBigEndian(true);
     accInfoDataGetValueByIdent.assignClear(dataInfoDataGetValueByIdent);
@@ -765,15 +774,16 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	 * It is in all other states of {@link States}. 
 	 * If the time of the last send request was before timeLastTxWaitFor 
 	 * then it is assumed that the communication was faulty. Therefore all older pending requests are removed.
-	 * @param timeLastTxWaitFor The timestamp where the last tx request was send which's answer is expected yet.
-	 *   This time parameter is used to remove older requests as not true. 
+	 * @param timeCurrent The current time. It is compared with the time of the last transmit telegram which's answer is expected,
+	 *   and the timeout. If the timeout is expired, older requests are removed and this routine returns true. 
 	 */
-	public boolean isOrSetReady(long timeLastTxWaitFor){ 
+	public boolean isOrSetReady(long timeCurrent){ 
 	  boolean bReady;
 	  if(!bTaskPending.get()){
 	    bReady = !getFieldsData.bGetFieldsPending; //true;
 	  }
 	  else {
+	    long timeLastTxWaitFor = timeCurrent - (long)(1000 * cycle_timeout[1]);
 	    long dtimeExpired = timeLastTxWaitFor - timeSend;  //timeExpired is the timeLast - wait time 
 	    if(  timeSend ==0  //a telegram was never sent, faulty bTaskPending 
 	      || dtimeExpired >=0 && !bRunInRxThread
@@ -991,7 +1001,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * @return true if the telegram is sent.
    */
   boolean txCmdGetValueByIdent() {
-    if(ixIdent5GetValueByIdent > 0 && isOrSetReady(System.currentTimeMillis() - 5000)){
+    if(ixIdent5GetValueByIdent > 0 && isOrSetReady(System.currentTimeMillis())){
       int lengthInfo = accInfoDataGetValueByIdent.getLength();
       //It prepares the telg head.
       if(prepareTelg(lengthInfo)){  //It sends an existing telegram if there is not enough space for the idents-info
@@ -1278,7 +1288,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       InspcPlugUser_ifc.TargetState stateUser;
       if(bTaskPending.get()){ stateUser = InspcPlugUser_ifc.TargetState.waitReceive; }
       else { stateUser = InspcPlugUser_ifc.TargetState.idle; }
-      user.showStateInfo(name, stateUser, _tdata.nSeqNumber);
+      user.showStateInfo(name, stateUser, _tdata.nSeqNumber, cycle_timeout);
     }
   }
   
@@ -1501,7 +1511,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * 
    */
   public void checkExecuteSendUserOrder(){
-    if(isOrSetReady(System.currentTimeMillis() - 5000)) {
+    if(isOrSetReady(System.currentTimeMillis())) {
       Runnable userTxOrder;
       if(getFieldsData.requFields !=null){
         System.out.println("InspcTargetAccessor - send getFields;");
