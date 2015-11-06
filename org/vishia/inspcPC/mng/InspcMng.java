@@ -25,6 +25,7 @@ import org.vishia.util.Assert;
 import org.vishia.util.CompleteConstructionAndStart;
 import org.vishia.util.ReplaceAlias_ifc;
 import org.vishia.util.StringFunctions;
+import org.vishia.util.StringFunctions_C;
 import org.vishia.util.ThreadRun;
 
 /**This class supports the communication via the inspector for example with reflection access. 
@@ -337,9 +338,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     //it is a bit designation:
     if(sDataPath.charAt(posIndex -1) =='.'){ //a double .. for bit space like 12..8
       int posIndex1 = sDataPath.lastIndexOf('.', posIndex -2);
-      int bitStart = StringFunctions.parseIntRadixBack(sDataPath, posIndex1-1, posIndex1-1, 10, null);
+      int bitStart = StringFunctions_C.parseIntRadixBack(sDataPath, posIndex1-1, posIndex1-1, 10, null);
       int[] zParsed = new int[1];
-      int bitEnd = StringFunctions.parseIntRadix(sDataPath, posIndex+1, 2, 10, zParsed);
+      int bitEnd = StringFunctions_C.parseIntRadix(sDataPath, posIndex+1, 2, 10, zParsed);
       posIndex = posIndex1 - zParsed[0];
       if(bitStart >= bitEnd){
         bit = bitEnd;
@@ -349,7 +350,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         mask = (1 << (bitEnd - bitStart +1)) -1;
       }
     } else {
-      bit = StringFunctions.parseIntRadix(sDataPath, posIndex+1, 2, 10, null);
+      bit = StringFunctions_C.parseIntRadix(sDataPath, posIndex+1, 2, 10, null);
       mask = 1;
     }
     sDataPathOfWidget = sDataPath.substring(0, posIndex);
