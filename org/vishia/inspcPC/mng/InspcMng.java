@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.vishia.byteData.VariableAccessArray_ifc;
 import org.vishia.byteData.VariableAccessWithBitmask;
 import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.byteData.VariableContainer_ifc;
@@ -15,10 +16,11 @@ import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessComm_SocketImpl;
 import org.vishia.event.EventTimerThread;
-import org.vishia.inspcPC.accTarget.InspcAccessExecRxOrder_ifc;
-import org.vishia.inspcPC.accTarget.InspcAccess_ifc;
+import org.vishia.inspcPC.InspcAccessExecRxOrder_ifc;
+import org.vishia.inspcPC.InspcAccess_ifc;
+import org.vishia.inspcPC.InspcPlugUser_ifc;
+import org.vishia.inspcPC.InspcTargetAccessData;
 import org.vishia.inspcPC.accTarget.InspcCommPort;
-import org.vishia.inspcPC.accTarget.InspcTargetAccessData;
 import org.vishia.inspcPC.accTarget.InspcTargetAccessor;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.util.Assert;
@@ -267,6 +269,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    */
   @Override public void startupThreads(){
     threadReqFromTarget.start();
+    try {
+      Thread.sleep(100);
+    } catch (InterruptedException e) { }
   }
 
   public void setmodeRetryDisabledVariables(boolean retry){ retryDisabledVariable = retry; }
@@ -595,7 +600,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     final String sPathInTarget;
     final String sName;
     
-    String pathRepl = replacerAlias.replaceDataPathPrefix(sDataPath);
+    String pathRepl = replacerAlias == null ? sDataPath : replacerAlias.replaceDataPathPrefix(sDataPath);
     String sPathWithTarget = pathRepl !=null ? pathRepl : sDataPath;    //with or without replacement.
     int posSepDevice = sPathWithTarget.indexOf(':');
     if(posSepDevice >0){
@@ -781,6 +786,11 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   }
 
 
+  @Override public void cmdSetValueByPath(VariableAccessArray_ifc var, String value)
+  { throw new RuntimeException("only valid for a defined target.");
+  }
+
+  
   @Override
   public void cmdSetValueByPath(String sDataPath, float value, InspcAccessExecRxOrder_ifc actionOnRx)
   { InspcTargetAccessData acc = getTargetAccessFromPath(sDataPath, true);
@@ -794,4 +804,15 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     acc.targetAccessor.cmdSetValueByPath(acc.sPathInTarget, value, actionOnRx);
   }
   
+  
+  @Override public boolean isOrSetReady(long timeCurrent) { return false; }
+  
+  @Override public void addUserTxOrder(Runnable order) 
+  { throw new RuntimeException("only valid for a defined target.");
+  }
+  
+  @Override public void requestFields(InspcTargetAccessData data, InspcAccessExecRxOrder_ifc rxActionGetFields, Runnable runOnReceive)
+  { throw new RuntimeException("only valid for a defined target.");
+  }
+
 }

@@ -1,11 +1,20 @@
-package org.vishia.inspcPC.accTarget;
+package org.vishia.inspcPC;
+
+import org.vishia.byteData.VariableAccessArray_ifc;
 
 
+/**This is the interface to use the Inspector to access any target. This interface is used both 
+ * from the central {@link org.vishia.inspcPc.mng.InspcMng} to access all known targets
+ * and for the {@link org.vishia.inspcPc.accTarget.InspcTargetAccessor} to access a specific target.
+ * 
+ * @author Hartmut Schorrig
+ *
+ */
 public interface InspcAccess_ifc
 {
   /**Version, history and license.
    * <ul>
-   * <li>2014-04-24 Hartmut Methods should all return boolean for success or not, for differenz reasons.
+   * <li>2014-04-24 Hartmut Methods should all return boolean for success or not, for different reasons.
    *   It is fatal if a command was not sent and it is not known. Implemented only on {@link #cmdGetAddressByPath(String, InspcAccessExecRxOrder_ifc)} yet. 
    * <li>2014-04-24 Hartmut created: Methods from {@link InspcTargetAccessor}
    * </ul>
@@ -19,7 +28,7 @@ public interface InspcAccess_ifc
    * <li> You can redistribute copies of this source to everybody.
    * <li> Every user of this source, also the user of redistribute copies
    *    with or without payment, must accept this license for further using.
-   * <li> But the LPGL ist not appropriate for a whole software product,
+   * <li> But the LPGL is not appropriate for a whole software product,
    *    if this source is only a part of them. It means, the user
    *    must publish this part of source,
    *    but don't need to publish the whole source of the own product.
@@ -39,12 +48,13 @@ public interface InspcAccess_ifc
   static final public String sVersion = "2014-04-30";
 
   
-  /**Some adding values for telegrams. */ 
+  /**Some adding values for the message number for the log system. */ 
   static int idLogGetValueByPath=0, idLogGetValueByIdent=1, idLogGetAddress=2, idLogGetFields=4
     , idLogRegisterByPath=5, idLogSetValueByPath=6, idLogGetOther=9
     , idLogTx=10, idLogRx=11, idLogRxLast=12, idLogRxNotlast=13
     , idLogRxItem = 14, idLogFailedSeq=17, idLogRxRepeat=18, idLogRxError=19;  
   
+  /**Some adding values for the message number for the log system. */ 
   static int idLogRcvGetValueByPath=20, idLogRcvGetValueByIdent=21, idLogRcvGetAddress=22, idLogRcvGetFields=24
   , idLogRcvRegisterByPath=25, idLogRcvSetValueByPath=26, idLogRcvGetOther=29;
 
@@ -94,6 +104,9 @@ public interface InspcAccess_ifc
   public int cmdSetValueByPath(String sPathInTarget, int value);
   
   
+  void cmdSetValueByPath(VariableAccessArray_ifc var, String value);
+
+  
   /**Adds the info block to send 'get value by path'
    * @param sPathInTarget
    * @param value The value as long-image, it may be a double, float, int etc.
@@ -126,7 +139,51 @@ public interface InspcAccess_ifc
 
 
 
+/**Checks readiness of communication cycle. Returns true if a communication cycle is not pending (finished).
+   * It is in state {@link States.StateIdle} or {@link States.StateFilling}
+   * Returns false if not all answer telegrams were received from the last request.
+   * It is in all other states of {@link States}. 
+   * If the time of the last send request was before timeLastTxWaitFor 
+   * then it is assumed that the communication was faulty. Therefore all older pending requests are removed.
+   * 
+   * Note: On InspcMng it return false;
+   * @param timeCurrent The current time. It is compared with the time of the last transmit telegram which's answer is expected,
+   *   and the timeout. If the timeout is expired, older requests are removed and this routine returns true. 
+   *   
+   */
+  boolean isOrSetReady(long timeCurrent); 
+  
+  
+  
+  /**Adds any program snippet which is executed while preparing the telegram for data request from target.
+   * After execution the order will be removed.
+   * @param order the program snippet.
+   */
+  void addUserTxOrder(Runnable order);
+
+
+  /**Set the request for all fields of the given variable. This method is invoked from outer (GUI) 
+   * to force {@link #cmdGetFields(String, InspcAccessExecRxOrder_ifc)} in the inspector thread.
+   * @param data The variable
+   * @param rxActionGetFields Action on gotten fields
+   * @param runOnReceive Action should be run if all fields are received, if all datagrams are received for that communication cycle.
+   */
+  void requestFields(InspcTargetAccessData data, InspcAccessExecRxOrder_ifc rxActionGetFields, Runnable runOnReceive);
 
   
+  
+    /**Splits a given full data path with device:datapath maybe with alias:datapath in the device, path, name and returns a struct. 
+   * It uses {@link #indexTargetAccessor} to get the target accessor instance.
+   * It uses {@link #idxAllStruct} to get the existing {@link InspcStruct} for the variable
+   *  
+   * @param sDataPath The user given data path maybe with alias, necessary with target.
+   *   An alias is written in form "alias:rest.of.path". A device is written "device:rest.of.path".
+   *   The distinction between alias and device is done with checking whether the charsequence before :
+   *   is detected as alias.
+   * @param strict true then throws an error on faulty device, if false then returns null if faulty. 
+   * @return structure which contains the device, path, name.
+   */
+  InspcTargetAccessData getTargetAccessFromPath(String sDataPath, boolean strict);
+
 
 }

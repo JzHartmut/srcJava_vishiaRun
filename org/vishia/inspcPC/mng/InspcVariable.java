@@ -7,8 +7,8 @@ import org.vishia.bridgeC.IllegalArgumentExceptionJc;
 import org.vishia.byteData.VariableAccessArray_ifc;
 import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.communication.InspcDataExchangeAccess;
-import org.vishia.inspcPC.accTarget.InspcAccessExecRxOrder_ifc;
-import org.vishia.inspcPC.accTarget.InspcTargetAccessData;
+import org.vishia.inspcPC.InspcAccessExecRxOrder_ifc;
+import org.vishia.inspcPC.InspcTargetAccessData;
 import org.vishia.inspcPC.accTarget.InspcTargetAccessor;
 import org.vishia.msgDispatch.LogMessage;
 import org.vishia.reflect.ClassJc;
@@ -79,7 +79,7 @@ public class InspcVariable implements VariableAccessArray_ifc
      /**This method is called for any info block in the received telegram from target,
      * if this implementing instance is stored on the order.
      * It prepares the value presentation.
-     * @see org.vishia.inspcPC.accTarget.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem)
+     * @see org.vishia.inspcPC.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem)
      */
     @Override public void execInspcRxOrder(InspcDataExchangeAccess.Inspcitem info, long time, LogMessage log, int identLog)
     {
@@ -155,7 +155,7 @@ public class InspcVariable implements VariableAccessArray_ifc
   {
      /**This method is called If a answer value by handle was received and the ixHandle has referred this variable.
      * It prepares the value presentation.
-     * @see org.vishia.inspcPC.accTarget.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem)
+     * @see org.vishia.inspcPC.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem)
      */
     @Override public void execInspcRxOrder(InspcDataExchangeAccess.Inspcitem accAnswerItem, long time, LogMessage log, int identLog)
     {
@@ -423,11 +423,15 @@ public class InspcVariable implements VariableAccessArray_ifc
 
   @Override public long getLastRefreshTime(){ return timeRefreshed; }
 
-  @Override public void requestValue(long time){ this.timeRequested = time; }
+  @Override public void requestValue(long time){ 
+    if(time == 0) this.timeRequested = System.currentTimeMillis();
+    else this.timeRequested = time; 
+  }
   
   @Override public void requestValue(long time, Runnable run)
   { ///
-    this.timeRequested = time;
+    if(time == 0) this.timeRequested = System.currentTimeMillis();
+    else this.timeRequested = time; 
     if(run !=null){
       int catastrophicCount = 10;
       while(this.runOnRecv.remove(run)){  //prevent multiple add 
@@ -435,7 +439,7 @@ public class InspcVariable implements VariableAccessArray_ifc
       }
       boolean offerOk = this.runOnRecv.offer(run);
       if(ds.sDataPath.equals("CCS:_DSP_.ccs_1P.ccs_IB_priv.ictrl.pire_p.out.YD")) {
-        System.out.println("InspcVariable.execInspcRxOrder - requestValue, " + (time-System.currentTimeMillis())/1000.0f + ", " + ds.sDataPath);
+        System.out.println("InspcVariable.execInspcRxOrder - requestValue, " + (this.timeRequested - System.currentTimeMillis())/1000.0f + ", " + ds.sDataPath);
         Debugutil.stop();
       }  
       if(!offerOk){ throw new IllegalArgumentExceptionJc("InspcVariable - requestValue run cannot be added", run.hashCode()); }
@@ -459,7 +463,10 @@ public class InspcVariable implements VariableAccessArray_ifc
     return timeNew >=0;
   }
   
-  @Override public boolean isRefreshed(){ return timeRefreshed != 0 && (timeRefreshed - timeRequested ) >=0; }
+  @Override public boolean isRefreshed(){ 
+    long timeAnswer = timeRefreshed - timeRequested;
+    return timeRefreshed != 0 && (timeAnswer ) >=0; 
+  }
 
   
   

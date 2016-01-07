@@ -9,7 +9,7 @@ import java.util.TreeMap;
 import org.vishia.byteData.VariableAccessWithIdx;
 import org.vishia.byteData.VariableContainer_ifc;
 import org.vishia.communication.InspcDataExchangeAccess;
-import org.vishia.inspcPC.accTarget.InspcAccessExecRxOrder_ifc;
+import org.vishia.inspcPC.InspcAccessExecRxOrder_ifc;
 import org.vishia.inspcPC.accTarget.InspcTargetAccessor;
 import org.vishia.msgDispatch.LogMessage;
 
@@ -191,7 +191,7 @@ public final class InspcStruct
      /**This method is called for any info block in the received telegram from target,
      * if this implementing instance is stored on the order.
      * It prepares the value presentation.
-     * @see org.vishia.inspcPC.accTarget.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem)
+     * @see org.vishia.inspcPC.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem)
      */
     @Override public void execInspcRxOrder(InspcDataExchangeAccess.Inspcitem info, long time, LogMessage log, int identLog)
     { rxActionGetFields(info, time, log, identLog);

@@ -1,8 +1,9 @@
-package org.vishia.inspcPC.accTarget;
+package org.vishia.inspcPC;
+
 
 
 /**This class assembles all data to access the target for any thing.
- * It contains only data, no functionality. It is used especially for orders of the {@link InspcTargetAccessor}
+ * It contains only data, no functionality. It is used especially for orders of the {@link  org.vishia.inspcPC.accTarget.InspcTargetAccessor}
  * @author Hartmut Schorrig
  *
  */
@@ -11,7 +12,7 @@ public class InspcTargetAccessData
   /**Version, history and license.
    * <ul>
    * <li>2015-03-21 Hartmut created. It contains all data which was stored in the now deprecated InspcVarPathStructAcc
-   *   but not the InspcStruct. Minimize Dependency in {@link InspcTargetAccessor}.  
+   *   but not the InspcStruct. Minimize Dependency in {@link  org.vishia.inspcPC.accTarget.InspcTargetAccessor}.  
    * </ul>
    * <br><br>
    * <b>Copyright/Copyleft</b>:
@@ -42,7 +43,8 @@ public class InspcTargetAccessData
 
   
   /**Instance of the target accessor gotten from prefix "Target:..." */
-  public final InspcTargetAccessor targetAccessor;
+  public final InspcAccess_ifc targetAccessor;
+  //public final InspcTargetAccessor targetAccessor;
   
   /**Path how it is necessary in the target. Especially without prefix "Target:..." */
   public final String sPathInTarget;
@@ -56,7 +58,7 @@ public class InspcTargetAccessData
   /**Path like it is given, maybe with "Alias:...". */
   public final String sDataPath;
 
-  public InspcTargetAccessData(InspcTargetAccessor targetAccessor, String sDataPath, String sPathInTarget, String sParentPath, String sName)
+  public InspcTargetAccessData(InspcAccess_ifc targetAccessor, String sDataPath, String sPathInTarget, String sParentPath, String sName)
   { this.targetAccessor = targetAccessor;
     this.sDataPath = sDataPath;
     this.sPathInTarget = sPathInTarget;

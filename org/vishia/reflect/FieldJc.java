@@ -883,6 +883,7 @@ public class FieldJc
    * @throws IllegalAccessException 
    * @throws IllegalArgumentException 
    */
+  /*
   public int xxxsetInt(MemSegmJc objM, int val, int ... ix) throws IllegalArgumentException, IllegalAccessException
   { Object obj = objM.obj();
     String sTypename = type.getName();
@@ -908,7 +909,7 @@ public class FieldJc
     } 
     return val;
   }
-  
+  */
 
   /**Sets the integer adequate Field.setInt(obj, value), but with one or more indices.
    * @param data

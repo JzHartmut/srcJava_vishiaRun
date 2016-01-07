@@ -1,4 +1,4 @@
-package org.vishia.inspcPC.mng;
+package org.vishia.inspcPC;
 
 
 /**This is a callback or plug interface to inform a plugged instance about some things from the {@link InspcMng}.
@@ -14,7 +14,7 @@ public interface InspcPlugUser_ifc// extends GralPlugUser_ifc
   /**Show the state of target communication. */
   void showStateInfo(String key, TargetState state, int count, float[] cycle_timeout);
   
-  void setInspcComm(InspcMng inspcMng);
+  void setInspcComm(InspcAccess_ifc inspcMng);
   
   /**This method is called periodically on start of requesting data all widgets in visible windows.
    * It is possible to get some special data here.

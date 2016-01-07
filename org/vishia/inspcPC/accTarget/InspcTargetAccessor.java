@@ -15,14 +15,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.vishia.byteData.ByteDataAccessBase;
 import org.vishia.byteData.ByteDataAccessSimple;
+import org.vishia.byteData.VariableAccessArray_ifc;
 import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.event.EventCmdtypeWithBackEvent;
 import org.vishia.event.EventTimeout;
 import org.vishia.event.EventTimerThread;
+import org.vishia.inspcPC.InspcAccessExecRxOrder_ifc;
+import org.vishia.inspcPC.InspcAccess_ifc;
+import org.vishia.inspcPC.InspcPlugUser_ifc;
+import org.vishia.inspcPC.InspcTargetAccessData;
 import org.vishia.inspcPC.mng.InspcMng;
-import org.vishia.inspcPC.mng.InspcPlugUser_ifc;
 import org.vishia.inspcPC.mng.InspcStruct;
 import org.vishia.inspcPC.mng.InspcVariable;
 import org.vishia.inspectorTarget.InspcTelgInfoSet;
@@ -533,15 +537,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     class StateReceive extends StateSimple {
     //StateSimple stateWaitAnswer = new StateSimple(states, "waitAnswer"){
 
-      Trans lastAnswer_Idle = new Trans(StateIdle.class){ @Override protected void check(EventObject ev)
-      {
-        // TODO Auto-generated method stub
-      }};
+      Trans lastAnswer_Idle = new Trans(StateIdle.class);
     
-      Trans notLastAnswer_WaitReceive = new Trans(StateReceive.class){ @Override protected void check(EventObject ev)
-      {
-        // TODO Auto-generated method stub
-      }};
+      Trans notLastAnswer_WaitReceive = new Trans(StateReceive.class);
       
     };
     
@@ -886,8 +884,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   }
   
 
-  /**Adds the info block to send 'get value by path'
-   * @param sPathInTarget
+  /**Adds the info block to send 'get fields by path'
+   * @param sPathInTarget The path in the target with the target specific rules.
    * @param actionOnRx this action will be executed on receiving the item.
    * @return The order number. 0 if the cmd can't be created.
    */
@@ -1108,15 +1106,17 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   }
   
   
-  public void cmdSetValueByPath(InspcVariable var, String value){
+  @Override public void cmdSetValueByPath(VariableAccessArray_ifc var, String value){
+    assert(var instanceof InspcVariable);
+    InspcVariable var1 = (InspcVariable)var;
     String valueTrimmed = value.trim();
-    assert(var.ds.targetAccessor == this);
+    assert(var1.ds.targetAccessor == this);
     try{
         switch(var.getType()){
           case 'D':
           case 'F': {
             double val = Double.parseDouble(valueTrimmed); 
-            cmdSetValueByPath(var.ds.sPathInTarget, val, null); 
+            cmdSetValueByPath(var1.ds.sPathInTarget, val, null); 
           } break;
           case 'S':
           case 'B':
@@ -1127,7 +1127,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
             } else {
               val = Integer.parseInt(valueTrimmed); 
             }
-            cmdSetValueByPath(var.ds.sPathInTarget, val, null); 
+            cmdSetValueByPath(var1.ds.sPathInTarget, val, null); 
           } break;
           case 's': {  //empty yet
             
@@ -1851,7 +1851,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	  return name + ": " + targetAddr.toString() + ":" + state;
 	}
 	
-	
+	@Override public InspcTargetAccessData getTargetAccessFromPath(String sDataPath, boolean strict)
+  { throw new RuntimeException("only valid for the manager.");
+  }
+
   
   
   InspcAccessExecRxOrder_ifc XXXactionRx4ValueByIdent = new InspcAccessExecRxOrder_ifc(){

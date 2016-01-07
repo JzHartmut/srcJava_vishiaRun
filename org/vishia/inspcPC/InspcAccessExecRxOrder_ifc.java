@@ -1,10 +1,12 @@
-package org.vishia.inspcPC.accTarget;
+package org.vishia.inspcPC;
 
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.msgDispatch.LogMessage;
 
 
 /**This interface is used to execute anything if any info block is received in a telegram.
+ * An instance maybe implemented in the user level should be given on invocation of 
+ * {@link InspcAccess_ifc#cmdGetAddressByPath(String, InspcAccessExecRxOrder_ifc)} etc. 
  * @author Hartmut Schorrig
  *
  */
