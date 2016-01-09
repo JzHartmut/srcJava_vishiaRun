@@ -201,7 +201,7 @@ public InspCmd(MainCmd_ifc console)
 
 
 
-void execute(Args args, Writer out) throws IOException, ScriptException, IllegalAccessException
+void execute(Args args, Writer out) throws IOException, ScriptException, IllegalAccessException, IllegalArgumentException
 {
 
   //String sRet = null;
@@ -213,18 +213,23 @@ void execute(Args args, Writer out) throws IOException, ScriptException, Illegal
   JZcmdExecuter executer = new JZcmdExecuter(console);
   executer.initialize(null, false, null, null);
   //create variables as argument for exexSub:
-  Map<String, DataAccess.Variable<Object>> vars = new IndexMultiTable<String, DataAccess.Variable<Object>>(IndexMultiTable.providerString);
+  Map<String, DataAccess.Variable<Object>> vars; // = new IndexMultiTable<String, DataAccess.Variable<Object>>(IndexMultiTable.providerString);
   //define String ownIp
-  DataAccess.createOrReplaceVariable(vars, "ownIp", 'S', null, false);
+  //DataAccess.createOrReplaceVariable(vars, "ownIp", 'S', null, false);
   //define Map targets
-  Map<String, DataAccess.Variable<Object>> idx1TargetIpcAddr = new IndexMultiTable<String, DataAccess.Variable<Object>>(IndexMultiTable.providerString);
-  DataAccess.createOrReplaceVariable(vars, "targets", 'M', idx1TargetIpcAddr, false);
+  Map<String, DataAccess.Variable<Object>> idx1TargetIpcAddr; // = new IndexMultiTable<String, DataAccess.Variable<Object>>(IndexMultiTable.providerString);
+  //DataAccess.createOrReplaceVariable(vars, "targets", 'M', idx1TargetIpcAddr, false);
   //
   //invoke the sub routine args
   //
-  vars = executer.execSub(script, "args", vars, false, out, null);
+  JZcmdScript.JZcmdClass class1 = script.getClass("Args");
+  if(class1 == null) throw new IllegalArgumentException("Script class \"Args\" not found in \"" + args.sFileScript + "\"");
+  JZcmdExecuter.ExecuteLevel level = executer.execute_Scriptclass(class1);
+  vars = level.localVariables;
   String sOwnIpcAddr = vars.get("ownIp").value().toString();
+  idx1TargetIpcAddr = (Map<String, DataAccess.Variable<Object>>)vars.get("targets").value();
   Map<String, String> idxTargetIpcAddr = new IndexMultiTable<String, String>(IndexMultiTable.providerString);
+  
   for(Map.Entry <String, DataAccess.Variable<Object>> entry: idx1TargetIpcAddr.entrySet()){
     idxTargetIpcAddr.put(entry.getKey(), entry.getValue().value().toString());
   }
@@ -235,13 +240,13 @@ void execute(Args args, Writer out) throws IOException, ScriptException, Illegal
   inspcMng.startupThreads();
   //create devices:
   
+  executer.initialize(script, false, null, null);
   try{
     executer.setScriptVariable("inspc", 'O', inspcMng, true);
   } catch(IllegalAccessException exc) {
     //TODO
   }
-  executer.executeScriptLevel(script, null);
-  executer.execute(script, false, true, out, null);
+  executer.execute(null, false, true, out, null);
   //JZcmd.execute(executer, fileScript, out, console.currdir(), true, fScriptCheck, console);
 
 
