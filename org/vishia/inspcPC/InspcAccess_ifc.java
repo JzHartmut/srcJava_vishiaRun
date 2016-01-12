@@ -59,72 +59,72 @@ public interface InspcAccess_ifc
   , idLogRcvRegisterByPath=25, idLogRcvSetValueByPath=26, idLogRcvGetOther=29;
 
   
-  public int cmdGetFields(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx);
+  public int cmdGetFields(String sDataPath, InspcAccessExecRxOrder_ifc actionOnRx);
   
   
   /**Adds the info block to send 'get value by path'
-   * @param sPathInTarget
+   * @param sDataPath
    * @return The order number. 0 if the cmd can't be created.
    */
-  public int cmdGetValueByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx);
+  public int cmdGetValueByPath(String sDataPath, InspcAccessExecRxOrder_ifc actionOnRx);
   
   
   
   /**Adds the info block to send 'register by path'
-   * @param sPathInTarget
+   * @param sDataPath
    * @return The order number. 0 if the cmd can't be created because the telegram is full.
    */
-  public int cmdRegisterByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx);
+  public int cmdRegisterByPath(String sDataPath, InspcAccessExecRxOrder_ifc actionOnRx);
   
   
   
   /**Adds the info block to send 'register by path'
-   * @param sPathInTarget
+   * @param sDataPath
    * @return The order number. 0 if the cmd can't be created because the telegram is full.
    */
   public boolean cmdGetValueByIdent(int ident, InspcAccessExecRxOrder_ifc actionOnRx);
   
 
   /**Adds the info block to send 'get value by path'
-   * @param sPathInTarget
+   * @param sDataPath
    * @param value The value as long-image, it may be a double, float, int etc.
    * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created.
    */
-  public void cmdSetValueByPath(String sPathInTarget, long value, int typeofValue, InspcAccessExecRxOrder_ifc actionOnRx);
+  public void cmdSetValueByPath(String sDataPath, long value, int typeofValue, InspcAccessExecRxOrder_ifc actionOnRx);
   
   /**Adds the info block to send 'get value by path'
-   * @param sPathInTarget
+   * @param sDataPath
    * @param value The value as long-image, it may be a double, float, int etc.
    * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created because the telgram is full.
    */
-  public int cmdSetValueByPath(String sPathInTarget, int value);
+  public int cmdSetValueByPath(String sDataPath, int value);
   
   
   void cmdSetValueByPath(VariableAccessArray_ifc var, String value);
 
   
   /**Adds the info block to send 'get value by path'
-   * @param sPathInTarget
+   * @param sDataPath
    * @param value The value as long-image, it may be a double, float, int etc.
    * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created because the telgram is full.
    */
-  public void cmdSetValueByPath(String sPathInTarget, float value, InspcAccessExecRxOrder_ifc actionOnRx);
+  public void cmdSetValueByPath(String sDataPath, float value, InspcAccessExecRxOrder_ifc actionOnRx);
   
   
   /**Adds the info block to send 'get value by path'
-   * @param sPathInTarget
+   * @param sDataPath
    * @param value The value as long-image, it may be a double, float, int etc.
    * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created.
    */
-  public void cmdSetValueByPath(String sPathInTarget, double value, InspcAccessExecRxOrder_ifc actionOnRx);
+  public void cmdSetValueByPath(String sDataPath, double value, InspcAccessExecRxOrder_ifc actionOnRx);
   
   
   /**Adds the info block to send 'get value by path'

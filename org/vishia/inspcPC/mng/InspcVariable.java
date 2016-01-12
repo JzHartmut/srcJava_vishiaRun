@@ -428,6 +428,11 @@ public class InspcVariable implements VariableAccessArray_ifc
     else this.timeRequested = time; 
   }
   
+  
+  /**Request with the current time. This is more simple for usage in JZcmd. */
+  public void requestValue(){ requestValue(System.currentTimeMillis()); }
+  
+  
   @Override public void requestValue(long time, Runnable run)
   { ///
     if(time == 0) this.timeRequested = System.currentTimeMillis();

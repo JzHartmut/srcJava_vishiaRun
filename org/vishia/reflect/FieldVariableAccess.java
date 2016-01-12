@@ -204,6 +204,9 @@ public class FieldVariableAccess implements VariableAccessArray_ifc
 
   @Override public void requestValue(long timeRequested){ timeRequestRefresh = timeRequested; }
 
+  @Override public void requestValue(){ requestValue(System.currentTimeMillis()); }
+
+  
   @Override public void requestValue(long timeRequested, Runnable run){ timeRequestRefresh = timeRequested; }
 
   @Override public boolean isRequestedValue(boolean retryFaultyVariables){

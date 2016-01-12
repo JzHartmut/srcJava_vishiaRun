@@ -101,6 +101,9 @@ public class FieldJcVariableAccess implements VariableAccessArray_ifc
   @Override
   public void requestValue(long timeRequested) { }
   
+  @Override public void requestValue(){ }
+
+  
   @Override
   public void requestValue(long timeRequested, Runnable run) { }
   

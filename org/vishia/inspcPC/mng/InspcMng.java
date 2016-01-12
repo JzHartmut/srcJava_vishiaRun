@@ -7,22 +7,27 @@ import java.util.EventObject;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.vishia.byteData.VariableAccessArray_ifc;
 import org.vishia.byteData.VariableAccessWithBitmask;
 import org.vishia.byteData.VariableAccess_ifc;
 import org.vishia.byteData.VariableContainer_ifc;
 import org.vishia.communication.Address_InterProcessComm;
+import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessComm_SocketImpl;
 import org.vishia.event.EventTimerThread;
 import org.vishia.inspcPC.InspcAccessExecRxOrder_ifc;
 import org.vishia.inspcPC.InspcAccess_ifc;
 import org.vishia.inspcPC.InspcPlugUser_ifc;
+import org.vishia.inspcPC.InspcRxOk;
 import org.vishia.inspcPC.InspcTargetAccessData;
 import org.vishia.inspcPC.accTarget.InspcCommPort;
 import org.vishia.inspcPC.accTarget.InspcTargetAccessor;
 import org.vishia.msgDispatch.LogMessage;
+import org.vishia.reflect.ClassJc;
 import org.vishia.util.Assert;
 import org.vishia.util.CompleteConstructionAndStart;
 import org.vishia.util.ReplaceAlias_ifc;
@@ -37,7 +42,7 @@ import org.vishia.util.ThreadRun;
  * are present in a target devices accessed via reflex access.
  * <br><br>
  * A Variable can be gotten via {@link VariableContainer_ifc#getVariable(String)} using this instance.
- * To request an actual value for a variable {@link VariableAccess_ifc#requestValue(long)} 
+ * To request an actual value for a variable {@link VariableAccess_ifc#requestValue()} 
  * or {@link VariableAccess_ifc#requestValue(long, Runnable)} shoud be called. Therewith the time stamp 
  * is written in the variable (see {@link InspcVariable#timeRequested})
  * and that variable is requested via its {@link InspcVariable#ds} from the associated
@@ -221,6 +226,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   private Map<String, String> indexFaultDevice;
   
+  private ConcurrentLinkedQueue<InspcCmdStore> cmdQueue = new ConcurrentLinkedQueue<>();
+  
   boolean retryDisabledVariable;
 
   long millisecTimeoutOrders = 5000;
@@ -370,7 +377,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 }
   
   
-  public InspcVariable getVariable(final String sDataPath, int recurs)
+  private InspcVariable getVariable(final String sDataPath, int recurs)
   { if(recurs > 100) throw new IllegalArgumentException("too many recursion");
     InspcVariable var = idxAllVars.get(sDataPath);
     if(var == null){
@@ -389,6 +396,36 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   }
  
   
+  /**Returns a variable which's access to the target is established.
+   * Returns null if either the path is faulty (faulty target ident) or the communication was not established in the given time.
+   * If a variable is returned, the data path is correct in the target. The last current value can be gotten via
+   * {@link VariableAccess_ifc#getFloat()} etc. If a new value is need, invoke {@link VariableAccess_ifc#requestValue()}.
+   * 
+   * @param sDataPath Path to the target:data.path.
+   * @param maxtimeSeconds waiting time for establishing the target communication.
+   * @return A living variable or null.
+   */
+  public VariableAccess_ifc accVariable(final String sDataPath, int maxtimeMilliseconds)
+  {
+    VariableAccess_ifc var = getVariable(sDataPath);
+    if(var == null) return null;
+    long timeStart = System.currentTimeMillis();
+    long time = timeStart - 3000; //firstly request
+    do {
+      long time1 = System.currentTimeMillis();
+      if(time1 - time > 2000) {   //request newly after longer time.
+        var.requestValue(time1);
+        time = time1;
+      }
+      try { Thread.sleep(200); } catch (InterruptedException e) { }
+    } while(!var.isRefreshed() && (time - timeStart) < maxtimeMilliseconds);  //check in cycle of 200 ms, the request will be send in 100 ms-cycle.
+    if( (time - timeStart) >= maxtimeMilliseconds) return null;  //communication was not established
+    else return var;
+  }
+  
+  public InspcRxOk create_InspcRxOk(){ return new InspcRxOk(); }
+  
+  
   
   /**This routine requests all values from its target devices, 
    * for the variables which were requested itself after last call of refresh.
@@ -402,6 +439,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   protected void procComm(){
     boolean bRequest = false;
     bUserCalled = false;
+    //System.out.println("InspcMng.ProcComm - step;");
     long timeCurr = System.currentTimeMillis();
     //check received telegrams
     for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
@@ -420,8 +458,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       //In the callback the next requests for variables will be set to show in the GUI.
       //It may be the same, it may be other.
     }
-  
-  
+    //
+    //
     //All received telegrams may be evaluated, this is the only one position where a target communication may be in idle state
     //because after them some new variables were requested.
     //Therefore show the state here:
@@ -429,11 +467,25 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       //show the state to the user plug ifc.
       inspcAccessor.setStateToUser(user);
     }
+    //
+    //Assemble the transmit telegrams for requesting or set values.
+    //
+    //first check requesting queues.
+    //
+    InspcCmdStore cmd;
+    while( (cmd = cmdQueue.poll()) !=null) {
+      cmd.exec();
+    }
+    //
+    //Some requests may be stored in the targetAccessors:
+    //
     for(InspcTargetAccessor inspcAccessor: listTargetAccessor){
       //invokes userTxOrders and cmdGetFields but only if isOrSetReady() of this target.
       inspcAccessor.checkExecuteSendUserOrder(); //invokes getFields if requested.     
     }
-    //System.out.println("InspcMng.ProcComm - step;");
+    //
+    //Check all variables, some maybe requested. Then send the request value:
+    //
     int nrofVarsReq = 0;
     @SuppressWarnings("unused") int nrofVarsAll = 0;
     for(Map.Entry<String,InspcVariable> entryVar: idxAllVars.entrySet()){ //check all variables of the system.
@@ -720,6 +772,10 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   @Override public void close() throws IOException
   { //bThreadRuns = false;
+    while(cmdQueue.size()>0){
+      try { Thread.sleep(500); } catch (InterruptedException e) { }
+    }
+    try { Thread.sleep(1500); } catch (InterruptedException e) { }
     threadReqFromTarget.close();
     commPort.close();
     threadEvent.close();
@@ -773,35 +829,68 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   @Override
   public void cmdSetValueByPath(String sDataPath, long value, int typeofValue, InspcAccessExecRxOrder_ifc actionOnRx)
-  { InspcTargetAccessData acc = getTargetAccessFromPath(sDataPath, true);
-    acc.targetAccessor.cmdSetValueByPath(acc.sPathInTarget, value, typeofValue, actionOnRx);
+  { //check which thread: The inspector thread itself:
+    if(false) {
+      InspcTargetAccessData acc = getTargetAccessFromPath(sDataPath, true);
+      acc.targetAccessor.cmdSetValueByPath(acc.sPathInTarget, value, typeofValue, actionOnRx);
+    } else {
+      InspcCmdStore cmd = new InspcCmdStore(this);
+      cmd.cmdSetValueByPath(sDataPath, value, typeofValue, actionOnRx);
+      cmdQueue.offer(cmd);
+    
+    }
   }
 
 
+  
+  public void cmdSetInt32ByPath(String sDataPath, int value, InspcAccessExecRxOrder_ifc actionOnRx) 
+  { cmdSetValueByPath(sDataPath, value, InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int32, actionOnRx);
+  }
+  
+  public void cmdSetFloatByPath(String sDataPath, float value, InspcAccessExecRxOrder_ifc actionOnRx) 
+  { //NOTE: The target need a double, old compatibility necessary!
+    cmdSetValueByPath(sDataPath, Double.doubleToRawLongBits(value), InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_double, actionOnRx);
+  }
+  
+  
+  public void cmdSetDoubleByPath(String sDataPath, double value, InspcAccessExecRxOrder_ifc actionOnRx) 
+  { cmdSetValueByPath(sDataPath, Double.doubleToRawLongBits(value), InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_double, actionOnRx);
+  }
+  
+  
+  /**Command to set a value. It is queued and executed in the tx thread.
+   * @see org.vishia.inspcPC.InspcAccess_ifc#cmdSetValueByPath(java.lang.String, int)
+   */
   @Override
-  public int cmdSetValueByPath(String sPathInTarget, int value)
-  {
-    // TODO Auto-generated method stub
+  public int cmdSetValueByPath(String sDataPath, int value)
+  { InspcCmdStore cmd = new InspcCmdStore(this);
+    cmd.cmdSetValueByPath(sDataPath, value);
+    cmdQueue.offer(cmd);
     return 0;
   }
 
 
   @Override public void cmdSetValueByPath(VariableAccessArray_ifc var, String value)
-  { throw new RuntimeException("only valid for a defined target.");
+  { InspcCmdStore cmd = new InspcCmdStore(this);
+    cmd.cmdSetValueByPath(var, value);
+    cmdQueue.offer(cmd);
+    throw new RuntimeException("only valid for a defined target.");
   }
 
   
   @Override
   public void cmdSetValueByPath(String sDataPath, float value, InspcAccessExecRxOrder_ifc actionOnRx)
-  { InspcTargetAccessData acc = getTargetAccessFromPath(sDataPath, true);
-    acc.targetAccessor.cmdSetValueByPath(acc.sPathInTarget, value, actionOnRx);
+  { InspcCmdStore cmd = new InspcCmdStore(this);
+    cmd.cmdSetValueByPath(sDataPath, value, actionOnRx);
+    cmdQueue.offer(cmd);
   }
 
 
   @Override
   public void cmdSetValueByPath(String sDataPath, double value, InspcAccessExecRxOrder_ifc actionOnRx)
-  { InspcTargetAccessData acc = getTargetAccessFromPath(sDataPath, true);
-    acc.targetAccessor.cmdSetValueByPath(acc.sPathInTarget, value, actionOnRx);
+  { InspcCmdStore cmd = new InspcCmdStore(this);
+    cmd.cmdSetValueByPath(sDataPath, value, actionOnRx);
+    cmdQueue.offer(cmd);
   }
   
   

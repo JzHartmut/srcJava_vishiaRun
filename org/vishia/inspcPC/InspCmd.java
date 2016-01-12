@@ -240,15 +240,16 @@ void execute(Args args, Writer out) throws IOException, ScriptException, Illegal
   inspcMng.startupThreads();
   //create devices:
   
-  executer.initialize(script, false, null, null);
+  executer.initialize(null, false, null, null);
   try{
     executer.setScriptVariable("inspc", 'O', inspcMng, true);
   } catch(IllegalAccessException exc) {
     //TODO
   }
+  executer.executeScriptLevel(script, null);
   executer.execute(null, false, true, out, null);
   //JZcmd.execute(executer, fileScript, out, console.currdir(), true, fScriptCheck, console);
-
+  inspcMng.close();
 
 }
 
