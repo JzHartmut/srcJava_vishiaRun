@@ -19,6 +19,7 @@ import org.vishia.byteData.VariableAccessArray_ifc;
 import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
+import org.vishia.communication.InterProcessComm_SocketImpl;
 import org.vishia.event.EventCmdtypeWithBackEvent;
 import org.vishia.event.EventTimeout;
 import org.vishia.event.EventTimerThread;
@@ -38,68 +39,142 @@ import org.vishia.util.Assert;
 import org.vishia.util.Debugutil;
 
 /**An instance of this class accesses one target device via InterProcessCommunication, usual Ethernet-Sockets.
- * This class gets an opened {@link InterProcessComm} from its {@link InspcCommPort} aggregate 
- * and creates a receiving thread. 
- * Any send requests are invoked from the environment. A send request usual contains
- * a reference to a {@link InspcAccessExecRxOrder_ifc}. 
+ * This class gets an opened {@link InterProcessComm} from its {@link InspcCommPort} aggregate. 
+ * The InspcCommPort has created a receiving thread.<br> 
+ * <img src="../../../../img/InspcTargetAccessor_omd.png"><br>Object model diagram:
+ * <ul>
+ * <li>The {@link InspcMng} knows one or more InspcTargetAccessor-instances, indicated by its name. 
+ *   The name of the target access is the first part of the data path to a target: <code>"name:path.in.target"</code>
+ * <li>Any of that InspcTargetAccessor handles the datagrams to and from one target.
+ * <li>More as one InspcTargetAccessor or all one can handle their communication via only one instance of {@link InspcCommPort}.
+ * <li>The InspcCommPort associates an {@link InterProcessComm} interface which is implemented by the {@link InterProcessComm_SocketImpl}
+ *   or maybe for a serial communication or Dual-Port-RAM or other. It means the communication connection to a target can be done
+ *   in several ways independent of the mission of this class. 
+ * </ul>  
+ 
+ * A send requests are invoked from the environment, it is the {@link InspcMng}. 
+ * <ul>
+ * <li>Firstly {@link #isOrSetReady(long)} is invoked to see whether a communication task is pending yet.
+ * <li>If a communication is pending for this target, new requests should be deferred.
+ * <li>If the communication hangs, {@link #isOrSetReady(long)} clears the communication to this target and returns true
+ *   if the given timeout is expired: It is possible to unplug a target - it does not answer - and plug again later. 
+ *   The target does not repeat the lost answers. But it is ready for new communication. The timeout should be a proper time for the target.
+ *   If it is to less, the target may prepare the answer yet in the moment and it is disturbed hectically. The timeout should be acceptable
+ *   for usage. About 5 seconds may be a proper value.
+ * <li>If the communication is not pending, {@link #isOrSetReady(long)} returns true.
+ * <li>Then some requests can be prepared by invocation of the methods of the {@link InspcAccess_ifc} <code>cmdGet/Set</code>.... 
+ *   With them one or more datagrams are prepared. 
+ * <li>The requests contain a callback reference to  a {@link InspcAccessExecRxOrder_ifc}. 
  * Thats {@link InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem, long, LogMessage, int)} 
  * is executed if the response item is received. With the order-number-concept 
- * see {@link InspcDataExchangeAccess.Inspcitem#getOrder()} the request and the response are associated together.
- * <br><br>
- * The following sequence shows handling in one thread for cyclic communication. Env is one thread
- * which invokes this sequence diagram cyclically.
+ * see {@link InspcDataExchangeAccess.Inspcitem#getOrder()} the request and the response are associated together.  
+ * <li>At least {@link #cmdFinit()} should be invoked. That completes the one or last datagram and forces sending to the target.   
+ * </ul>
+ * The following sequence shows that. This sequence is executed in one thread for cyclic communication. 
  * <pre>        
- * Env                       this                 txAccess      ipc        commPort
- *  |--isReady()-------------->|                      |          !            !
- *  |--cmdGetSet...----------->|--->addChild--------->|          !            !
- *  |--cmdGetSet...----------->|--->addChild--------->|          !            !
- *  |--cmdGetSet...----------->|--->addChild--------->|          !            !
- *  |                          |--completeDatagram()->|          !            !
- *  |--cmdGetSet...----------->|--->addChild--------->|          !            !
- *  |--cmdGetSet...----------->|--->addChild--------->|          !            !
- *  |                          |                      |          !<-receive()-!
- *  |-->cmdFinit()------------>|--completeDatagram()->|          !            !
- *  |                  [bTaskPending = true]                     !            !
- *  |                          |---send(txBuffer)--------------->!            !
+ * InspcMng                  this                 txAccess   commPort     ipc
+ *  |                          |                                 |            |
  *  ~                          ~                                 ~            ~
- *  |                          |                                 !..receive..>!
- *  |                     [rxDatagram]<-!<----evaluateRxTelg(datagram)--------!  
- *  |                     [rxDatagram]<-!<----evaluateRxTelg(datagram)--------!  
- *  |                          |                                 !            !
- *  |<-execInspcRxOrder(item)--|                                 !<-receive()-!
- *  |     ...                  |                                 !            !
- *  |<-execInspcRxOrder(item)--|                                 !            !
- *  |                          |---send(txBuffer)--------------->!
+ *  +procComm():               |                                 |            |
+ *  +--isOrSetReady(...)------>|                      |          |            | 
+ *  +--cmdGetSet...----------->|--->addChild--------->|          |            | 
+ *  +--isOrSetReady(...)------>|                      |          |            | 
+ *  +--cmdGetSet...----------->|--->addChild--------->|          |            | 
+ *  +--cmdGetSet...----------->|--->addChild--------->|          |            | 
+ *  +                          |--completeDatagram()->|          |            | 
+ *  +--cmdGetSet...----------->|--->addChild--------->|          |            | 
+ *  +--cmdGetSet...----------->|--->addChild--------->|          |            | 
+ *  +                          |                      |          |            | 
+ *  +-->cmdFinit()------------>|--completeDatagram()->|          |            | 
+ *  |                  [bTaskPending = true]                     |            | 
+ *  |                          |---send(txBuffer)--------------->|--send----->| 
+ *  |                          |                                 |            | 
+ *  ~                          ~                                 ~            ~ 
+ * </pre>
+ * Therewith up to 10 datagrams are assembled. Only the first datagram is sent yet. The target may answer:
+ * <ul>
+ * <li>An answer may need more as one answer datagram. 
+ *  The received datagrams are checked whether they have the correct sequence and answer number. Only then
+ *  they are stored in {@link #_tdata} {@link TelgData#rxDatagram}. This is done in {@link #evaluateRxTelg(byte[], int)}.
+ * <li>The answer datagrams don't need to receive in the correct order. There are filled some bits {@link TelgData#rxBitsAnswerNr}. 
+ *  An datagram which is received twice is ignored as twice.
+ * <li>The last answer datagram is marked with {@link InspcDataExchangeAccess.InspcDatagram#lastAnswer()}, a special bit. 
+ *  With them is can be recognized that all datagrams are completely received.
+ * </ul>
+ * <pre> 
+ *                           this                              commPort      ipc
+ *                             |                                 |            !
+ *                             ~                                 ~            ~<<==
+ *                             |                                 !            !   "
+ *                             !                                 !<..receive..!   "
+ *                 [rxDatagram]!<---evaluateRxTelg(datagram)-----!            !   "
+ *                 [rxDatagram]!<---evaluateRxTelg(datagram)-----!            !   "
+ *                             !                                 !            !   "
+ *                             ~                                 ~            ~   "
+ * </pre>
+ * <ul>
+ * <li>The cyclic {@link InspcMng#procComm()} invokes {@link #evaluateRxTelgInspcThread()} cyclically. This routine checks 
+ *   whether all datagrams of one request datagram are received. It invokes 
+ *   {@link #evaluateOneDatagram(org.vishia.communication.InspcDataExchangeAccess.InspcDatagram, InspcAccessExecRxOrder_ifc, long, LogMessage, int, DebugTxRx, int)}
+ *   internally for each of the received datagrams.
+ * <li>The data of the datagram are evaluated using the {@link InspcDataExchangeAccess.Inspcitem} for each item.
+ *   That is derived from {@link ByteDataAccessBase} which converts the byte data in the datagram to user specifics.
+ * <li>For each item the {@link InspcDataExchangeAccess.Inspcitem#getOrder()} is read. 
+ *  With them and the stored {@link InspcAccessExecRxOrder_ifc} is searched in the {@link #ordersExpected} index.
+ * <li>The {@link InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem, long, LogMessage, int)}
+ *  is invoked with the received datagram item. That is the <b>callback to the users level</b> with the received information.     
+ * <li>If the datagram is evaluated, the routine {@link #evaluateRxTelgInspcThread()} looks whether a next datagram with assembled requests
+ *   are given furthermore. Then it sends is to the target.  
+ * <li>With a next {@link #send()} this sequence is repeated.
+ * </ul>
+ * <pre>
+ * InspcMng                  this                                                 "
+ *  |                          |                                                  "
+ *  ~                          ~                                                  "
+ *  +procComm():               |                                                  "
+ *  +-evalRxTelgInspcThread()->|[rxDatagram]
+ *  +                          |-evaluateOneDatagram()-+            Requestor     "              
+ *  +                          +<----------------------+                  |       "         
+ *  +                          +----execInspcRxOrder(datagramitem, ...)-->|       "                          
+ *  +                          +----execInspcRxOrder(datagramitem, ...)-->|       "                          
+ *  +                          +----execInspcRxOrder(datagramitem, ...)-->|       "                          
+ *  +                          +----execInspcRxOrder(datagramitem, ...)-->|       "                          
+ *  +                          +                                          |       "
+ *  +                          +                                                  "
+ *  +                          +                               commPort      ipc  "
+ *  +                          +                                 |            |   "
+ *  +                          +---send(txBuffer)--------------->|...........>|   "
+ *  +<.........................+                                 |            |   "
+ *  |                          |                                 |            |   "
+ *  |                          |                                 |            |   "
+ *  ~                          ~                                 ~            ~====
+ * </pre>
+ * The communication is still pending yet. Next requests from user level are deferred till this repetition
+ * of {@link #send()} and {@link #evaluateRxTelgInspcThread()} is currently.
+ * <br><br>
+ * If all datagrams are sent and all answers are received: 
+ *  <pre>
+ * InspcMng                  this                                                 "
+ *  |                          |                                                  "
  *  ~                          ~                                 ~            ~
- *  |                          |                                 !..receive..>!
- *  |                     [rxDatagram]<-!<----evaluateRxTelg(datagram)--------!  
- *  |<-execInspcRxOrder(item)--|                                 !<-receive()-!
- *  |     ...                  |                               
- *  |<-execInspcRxOrder(item)--|  
- *  |                      [on last datagram:    ]
- *  |                      [bTaskPending = false;]
+ *  |                          |[on last datagram:    ]
+ *  |                          |[bTaskPending = false;]
  *  |                          |
  *  ~                          ~
- *  |--isReady()-------------->|   //the next task
- *                               
+ *  |--isOrSetReady(...)------>|   //the next communication cycle
+ *  |                             
  *  </pre>
- * First {@link #isReady(long)} should be invoked. This routine checks whether the communication hangs. 
- * If that routine returns false, a new cmd can't be sent. This is because the target has not answered. 
- * After a dedicated timeout after the last request this {@link #isReady(long)} routines clears all ressources
- * and returns true. Then a new request is accepted. A target may be absent, the communication hangs therefore,
- * but later it may be present already. If one telegram was lost, it is the same behavior. Generally telegrams
- * are not repeated, because usual new values should be gotten after new requests.
- * The {@link #isReady(long)} routine can be invoked before any cmd..., if it is ready, it is a lightweight routine.
- * <br><br>
  * The cmdGetSet routines are:
  * <ul>
+ * <li>{@link #cmdGetFields(String, InspcAccessExecRxOrder_ifc)}
  * <li>{@link #cmdGetValueByPath(String, InspcAccessExecRxOrder_ifc)}
- * <li>{@link #cmdRegisterByPath(String, InspcAccessExecRxOrder_ifc)}
- * <li>{@link #cmdGetValueByIdent(int, InspcAccessExecRxOrder_ifc)}
- * <li>{@link #cmdGetAddressByPath(String)}
- * <li>{@link #cmdSetValueByPath(String, double)}
- * <li>{@link #cmdSetValueByPath(String, float)}
- * <li>{@link #cmdSetValueByPath(String, long, int)}
+ * <li>{@link #cmdRegisterHandle(String, InspcAccessExecRxOrder_ifc)}
+ * <li>{@link #cmdGetValueByHandle(int, InspcAccessExecRxOrder_ifc)}
+ * <li>{@link #cmdGetAddressByPath(String, InspcAccessExecRxOrder_ifc)}
+ * <li>{@link #cmdSetValueByPath(String, double, InspcAccessExecRxOrder_ifc)}
+ * <li>{@link #cmdSetValueByPath(String, float, InspcAccessExecRxOrder_ifc)}
+ * <li>{@link #cmdSetValueByPath(String, int, InspcAccessExecRxOrder_ifc)}
+ * <li>{@link #cmdSetValueByPath(String, long, int, InspcAccessExecRxOrder_ifc)}
  * </ul>
  * The routines organizes the datagram. If one datagram is full, the next instance is used. There are 10 instances
  * of {@link TxBuffer}.
@@ -401,7 +476,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   /**Map of all orders which are send as request.
    * 
    */
-  final Map<Integer, OrderWithTime> ordersExpected = new TreeMap<Integer, OrderWithTime>();
+  protected final Map<Integer, OrderWithTime> ordersExpected = new TreeMap<Integer, OrderWithTime>();
   
   
   final Deque<OrderWithTime> listTimedOrders = new LinkedList<OrderWithTime>();
@@ -889,7 +964,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * @param actionOnRx this action will be executed on receiving the item.
    * @return The order number. 0 if the cmd can't be created.
    */
-  public int cmdGetFields(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
+  @Override public int cmdGetFields(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
     //states.applyEvent(evFill);
     //if(states.isInState(stateFilling))
@@ -923,10 +998,6 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   public int cmdGetValueByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order = 5;
     int lengthItem = InspcTelgInfoSet.lengthCmdGetValueByPath(sPathInTarget.length());
-    if(sPathInTarget.equals("_DSP_.ccs_1P.ccs_IB_priv.ictrl.pire_p.out.YD.")) {
-      System.out.println("InspcTargetAccessor.cmdGetValueByPath - check1, " +  sPathInTarget);
-      ///Debugutil.stop();
-    }  
     if(prepareTelg(lengthItem)) {
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       InspcTelgInfoSet infoAccess = newTxitem();
@@ -957,7 +1028,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * @param sPathInTarget
    * @return The order number. 0 if the cmd can't be created because the telegram is full.
    */
-  public int cmdRegisterByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
+  public int cmdRegisterHandle(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
   { final int order;
     final int zPath = sPathInTarget.length();
     final int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
@@ -983,7 +1054,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * @param sPathInTarget
    * @return The order number. 0 if the cmd can't be created because the telegram is full.
    */
-  public boolean cmdGetValueByIdent(int ident, InspcAccessExecRxOrder_ifc action)
+  @Override public boolean cmdGetValueByHandle(int ident, InspcAccessExecRxOrder_ifc action)
   { if(ixIdent5GetValueByIdent >= actionRx4GetValueByHandle.length){
       return false;
       //  txCmdGetValueByIdent();
@@ -1002,7 +1073,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     if(ixIdent5GetValueByIdent > 0 && isOrSetReady(System.currentTimeMillis())){
       int lengthInfo = accInfoDataGetValueByIdent.getLength();
       //It prepares the telg head.
-      if(prepareTelg(lengthInfo)){  //It sends an existing telegram if there is not enough space for the idents-info
+      if(prepareTelg(lengthInfo)){  //It finishes an existing telegram if there is not enough space for the idents-info
         int order = 0xabcdef01; //not neccessary. //orderGenerator.getNewOrder();
         //setExpectedOrder(order, actionRx4ValueByIdent);
         InspcTelgInfoSet infoAccess = newTxitem();
@@ -1269,6 +1340,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   public boolean cmdFinit(){
     states.processEvent(evSend);
     if(!bTaskPending.get()) {
+      txCmdGetValueByIdent();
       if(bFillTelg || _tdata.txixFill >0){
         if(bFillTelg) {
           completeDatagram(true);
@@ -1526,7 +1598,6 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       while( (userTxOrder = userTxOrders.poll()) !=null){
         userTxOrder.run(); //maybe add some more requests to the current telegram.
       }
-      txCmdGetValueByIdent();
     }    
   }
   
@@ -1646,8 +1717,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       }
       infoAccessRx.setLengthElement(nrofBytesInfo);  //if an exception throws or evaluation of infoAccess is aborted, is known length.
       if(executer !=null){
+        //deprecated and unused.
         executer.execInspcRxOrder(infoAccessRx, time, log, identLog);
       } else {
+        //that is correct:
         int cmd = infoAccessRx.getCmd();
         if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerFieldMethod){
           //special case: The same order number is used for more items in the same sequence number.

@@ -74,7 +74,7 @@ public interface InspcAccess_ifc
    * @param sDataPath
    * @return The order number. 0 if the cmd can't be created because the telegram is full.
    */
-  public int cmdRegisterByPath(String sDataPath, InspcAccessExecRxOrder_ifc actionOnRx);
+  public int cmdRegisterHandle(String sDataPath, InspcAccessExecRxOrder_ifc actionOnRx);
   
   
   
@@ -82,7 +82,7 @@ public interface InspcAccess_ifc
    * @param sDataPath
    * @return The order number. 0 if the cmd can't be created because the telegram is full.
    */
-  public boolean cmdGetValueByIdent(int ident, InspcAccessExecRxOrder_ifc actionOnRx);
+  public boolean cmdGetValueByHandle(int ident, InspcAccessExecRxOrder_ifc actionOnRx);
   
 
   /**Adds the info block to send 'get value by path'

@@ -141,8 +141,10 @@ public class CmdExecuter implements AnswerComm_ifc
           try{ 
           	cmdConsumerMtbl.executeMonitorCmd(infoCmd, myAnswerData, maxNrofBytesAnswerPart);
           } catch(IllegalArgumentException exc){
-          	//TODO send a nack
+          	System.err.println("CmdExecuter - Exception");
+            //TODO send a nack
           }catch(UnsupportedEncodingException exc){
+            System.err.println("CmdExecuter - Exception2");
             //TODO send a nack
           }
           

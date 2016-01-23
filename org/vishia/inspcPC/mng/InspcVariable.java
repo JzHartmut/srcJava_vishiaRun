@@ -6,6 +6,7 @@ import org.vishia.bridgeC.ConcurrentLinkedQueue;
 import org.vishia.bridgeC.IllegalArgumentExceptionJc;
 import org.vishia.byteData.VariableAccessArray_ifc;
 import org.vishia.byteData.VariableAccess_ifc;
+import org.vishia.byteData.VariableContainer_ifc;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.inspcPC.InspcAccessExecRxOrder_ifc;
 import org.vishia.inspcPC.InspcTargetAccessData;
@@ -15,9 +16,36 @@ import org.vishia.reflect.ClassJc;
 import org.vishia.util.Debugutil;
 import org.vishia.util.StringPartScan;
 
-/**This class presents a variable, which is accessed by a {@link InspcTargetAccessor} to get or set its value.
- * The value of the variable is presented with the {@link VariableAccessArray_ifc}. 
- * 
+/**This class presents a variable, which is accessed by a {@link InspcTargetAccessor}. It mirrors a variable in the target.
+ * <br><br>
+ * <b>Get a variable</b>:<br>
+ * Use the {@link VariableContainer_ifc#getVariable(String)} which is provided with the {@link InspcMng} to access an already existing
+ * variable or create a new one mirror for a variable. The String parameter should be the access path to the target. 
+ * The access path can start with <br>
+ * <code>alias:...path...</code>: <br>
+ * The alias will be translated using the given {@link InspcMng#complete_ReplaceAlias_ifc(org.vishia.util.ReplaceAlias_ifc)}.
+ * <br><br>
+ * After replacing the alias or without alias the path should start with <br>
+ * <code>target:...path...</code><br>
+ * The target identifier should be one of the names given by construction of the {@link InspcMng#InspcMng(String, java.util.Map, int, boolean, org.vishia.inspcPC.InspcPlugUser_ifc)}.
+ *  
+ * <br><br>
+ * <b>Access a variable</b>:<br>
+ * <ul>
+ * <li>One can invoke {@link #requestValue()} or {@link #requestValue(long, Runnable)} to request the communication with the target. 
+ * This is done for example for graphical representation in {@link org.vishia.gral.base.GralWidget#requestNewValueForVariable(long)} 
+ * <li>The {@link InspcMng#procComm()} routine checks all variables via {@link #isRequestedValue(boolean)}. 
+ * That call sets an internal flag {@link #isRequested} to prevent more as one request to the target. 
+ * It sends the request to the target in the routine {@link #requestValueFromTarget(long, boolean)}
+ * either via {@link InspcTargetAccessor#cmdGetValueByPath(String, InspcAccessExecRxOrder_ifc)}
+ * or {@link InspcTargetAccessor#cmdGetValueByHandle(int, InspcAccessExecRxOrder_ifc)} with more variable in one datagram and all requests in up to 10 datagrams.
+ * <li>The target may answer (if connected) and invoke the callback routine of the request. This is done in the same thread as the request
+ * on start of {@link InspcMng#procComm()}. The answer was expected in another thread (communication thread) but the answer datagrams are stored in the 
+ * {@link InspcTargetAccessor.TelgData} instance to evaluate in the procComm. The answer sets the {@link #timeRefreshed}.
+ * <li>It is possible to check whether the variable is updated by invocation of {@link #getLastRefreshTime()}. With them it is possible 
+ * to set fields to show the value to gray if the variable was not refreshed a longer time.
+ * <li>The invocation of {@link #getFloat()} etc. returns the stored value independently whether it was refreshed or not.
+ * </ul>  
  * @author Hartmut Schorrig
  *
  */
@@ -26,6 +54,7 @@ public class InspcVariable implements VariableAccessArray_ifc
   
   /**Version, history and license.
    * <ul>
+   * <li>2013-12-07 Hartmut new: Bit {@link #isRequested} to prevent request twice, in experience.
    * <li>2013-12-07 Hartmut new: {@link #sValueToTarget} is set on {@link #setString(String)}. Then the new content
    *   is sent to target to change it there. It is done in the {@link #requestValueFromTarget(long, boolean)} 
    *   because this routine is called if the field is shown. Only if it is shown the change can be done.
@@ -33,7 +62,7 @@ public class InspcVariable implements VariableAccessArray_ifc
    * <li>2013-12-07 Hartmut chg: In {@link VariableRxAction}: Answer from target with info.cmd = {@link InspcDataExchangeAccess.Inspcitem#kFailedPath} 
    *   disables this variable from data communication. TODO enable with user action if the target was changed (recompiled, restarted etc).
    * <li>2013-12-07 Hartmut chg: In {@link VariableRxAction}: Answer from target with variable type designation = {@link InspcDataExchangeAccess#kInvalidHandle}
-   *   The requester should remove that index. Then a new {@link InspcTargetAccessor#cmdRegisterByPath(String, InspcAccessExecRxOrder_ifc)}
+   *   The requester should remove that index. Then a new {@link InspcTargetAccessor#cmdRegisterHandle(String, InspcAccessExecRxOrder_ifc)}
    *   is forced to get a valid index.
    * <li>2013-12-07 Hartmut chg: {@link #requestValueFromTarget(long)}: If the path starts with '#', it is not requested.       
    * <li>2013-01-10 Hartmut bugfix: If a variable can't be requested in {@link #requestValueFromTarget(long)} because
@@ -211,6 +240,9 @@ public class InspcVariable implements VariableAccessArray_ifc
    * A value may be gotten only if a new request is pending. */
   long timeRequested;
   
+  /**If true this variable is requested already by the {@link InspcMng}. The answer should be awaited. */ 
+  boolean isRequested;
+  
   long timeRefreshed;
   
   private final ConcurrentLinkedQueue<Runnable> runOnRecv = new ConcurrentLinkedQueue<Runnable>();
@@ -251,11 +283,12 @@ public class InspcVariable implements VariableAccessArray_ifc
    * @param retryDisabledVariable true then retry a disabled variable, see {@link #kIdTargetDisabled}
    * @return order if the datagram item is set. 0 if the datagram is full. -1 if there is nothing to send.
    */
-  public boolean requestValueFromTarget(long timeCurrent, boolean retryDisabledVariable)  
+  //package private
+  boolean requestValueFromTarget(long timeCurrent, boolean retryDisabledVariable)  
   { //check whether the widget has an comm action already. 
     //First time a widgets gets its WidgetCommAction. Then for ever the action is kept.
-    if(ds.sDataPath.equals("CCS:_DSP_.ccs_1P.ccs_IB_priv.ictrl.pire_p.out.YD")) {
-      System.out.println("InspcTargetAccessor.cmdGetValueByPath - check1, " +  ds.sDataPath);
+    if(ds.sDataPath.equals("Sim94:simTime.timeShort")) {
+      //System.out.println("InspcTargetAccessor.cmdGetValueByPath - check1, " +  ds.sDataPath);
       ///Debugutil.stop();
     }  
 
@@ -298,13 +331,13 @@ public class InspcVariable implements VariableAccessArray_ifc
     }
     if(varMng.bUseGetValueByHandle){
       if(modeTarget == ModeHandleVariable.kTargetUseByHandle){
-        return ds.targetAccessor.cmdGetValueByIdent(this.handleTarget, this.actionRxByHandle);
+        return ds.targetAccessor.cmdGetValueByHandle(this.handleTarget, this.actionRxByHandle);
       } else if(modeTarget != ModeHandleVariable.kTargetHandleRequested){
         //register the variable in the target system:
         modeTarget = ModeHandleVariable.kTargetHandleRequested;
         String sPathComm = this.ds.sPathInTarget  + ".";
         if(sPathComm.charAt(0) != '#'){
-          return  ds.targetAccessor.cmdRegisterByPath(sPathComm, this.rxAction) !=0;
+          return  ds.targetAccessor.cmdRegisterHandle(sPathComm, this.rxAction) !=0;
         }
       }
     } else if(modeTarget == ModeHandleVariable.kIdTargetDisabled){
@@ -423,20 +456,23 @@ public class InspcVariable implements VariableAccessArray_ifc
 
   @Override public long getLastRefreshTime(){ return timeRefreshed; }
 
-  @Override public void requestValue(long time){ 
-    if(time == 0) this.timeRequested = System.currentTimeMillis();
-    else this.timeRequested = time; 
-  }
-  
-  
   /**Request with the current time. This is more simple for usage in JZcmd. */
-  public void requestValue(){ requestValue(System.currentTimeMillis()); }
+  public void requestValue(){ requestValue(System.currentTimeMillis(), null); }
   
-  
+  @Override public void requestValue(long time){ requestValue(time, null); }
+ 
   @Override public void requestValue(long time, Runnable run)
   { ///
     if(time == 0) this.timeRequested = System.currentTimeMillis();
-    else this.timeRequested = time; 
+    long timeLast = time - timeRequested;
+    if(  this.timeRequested == 0 //never requested, request now.
+      || (this.timeRefreshed !=0 && (this.timeRefreshed - this.timeRequested) >= 0)  //already refreshed 
+      || (timeLast) >= 5000  //requested for a longer time.
+      ) {
+      //request newly only if it was requested 
+      this.timeRequested = time; 
+      this.isRequested = false;
+    }
     if(run !=null){
       int catastrophicCount = 10;
       while(this.runOnRecv.remove(run)){  //prevent multiple add 
@@ -451,26 +487,32 @@ public class InspcVariable implements VariableAccessArray_ifc
     }
   }
   
-
   
   
-  @Override public boolean isRequestedValue(boolean retryFaultyVariables){
-    if(timeRequested == 0) return false;  //never requested
+  
+  @Override public boolean isRequestedValue(long timeEarlyRequested, boolean retryFaultyVariables){
+    if(ds.sDataPath.equals("Sim94:simTime.timeShort"))
+      Debugutil.stop();
+    if(timeRequested == 0 /* || isRequested*/) return false;  //never requested
+    //NOTE isRequested: Don't request twice if there is not an answer ? Then timeRefreshed is not set or increased.
+    //It is not proper to continue a request.
     if(modeTarget == ModeHandleVariable.kIdTargetDisabled && !retryFaultyVariables) 
       return false;
-    long timeNew = timeRequested - timeRefreshed;
-    if(timeNew >=0 && ds.sDataPath.equals("CCS:_DSP_.ccs_1P.ccs_IB_priv.ictrl.pire_p.out.YD")) {
-      System.out.println("InspcVariable.execInspcRxOrder - isRequested, " + timeNew/1000.0f + ", " + ds.sDataPath);
-      Debugutil.stop();
-    }  
-    if(timeNew < 0) 
-      Debugutil.stop();
-    return timeNew >=0;
+    long timeNew = timeRequested - timeRefreshed;  //in newer time requested.
+    long timeReq1 = timeRequested - timeEarlyRequested;
+    boolean bReq = (timeNew >=0 || timeRefreshed == 0) && timeReq1 >=0;
+    if(bReq) {
+      isRequested = true;
+    }
+    return bReq;  //for latest 5 seconds requested
   }
   
   @Override public boolean isRefreshed(){ 
     long timeAnswer = timeRefreshed - timeRequested;
-    return timeRefreshed != 0 && (timeAnswer ) >=0; 
+    boolean isRefreshed = timeRefreshed != 0 && (timeAnswer ) >=0;
+    if(isRefreshed) 
+      Debugutil.stop();
+    return isRefreshed; 
   }
 
   

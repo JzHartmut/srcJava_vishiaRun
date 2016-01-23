@@ -38,23 +38,30 @@ import org.vishia.util.ThreadRun;
 /**This class supports the communication via the inspector for example with reflection access. 
  * <img src="../../../../img/InspcMng.png"><br>Object model diagram
  * <br><br>
- * This class is a {@link VariableContainer_ifc}. It means the application can handle with variables, which's values
- * are present in a target devices accessed via reflex access.
+ * There are two ways to access a target via the InspcMng:
+ * <ul>
+ * <li>Using the {@link VariableContainer_ifc} and the {@link VariableAccess_ifc}: The InspcMng is a variable container.
+ *   A variable can be gotten using {@link VariableContainer_ifc#getVariable(String)}. This variable is created in the InspcMng then
+ *   unless it is existing in the target. It is a mirror of a variable in the target with a specified access path. 
+ *   The last current value is contained in the mirror. <br>
+ *   It is possible to {@link VariableAccess_ifc#requestValue()}, {@link VariableAccess_ifc#isRefreshed()},
+ *   {@link VariableAccess_ifc#getFloat()} etc. The InspcMng and its subordinated classes organnizes the communication with the target
+ *   in an own time cycle.
+ * <li>Using the {@link InspcAccess_ifc}. With them requests can be done immediately to a target. 
+ *   The callback is done with implementing the {@link InspcAccessExecRxOrder_ifc} in the users area.
+ * </ul>   
+ * See at
+ * <ul>
+ * <li>{@link InspcVariable} to see how the variable request, send request to the target, receive from target works.
+ * <li>{@link InspcStruct} to see how data struct in the target are re-built in the InspcMng.
+ * <li>{@link InspcTargetAccessor} to see how the access to the target works
+ * <li>{@link InspcCommPort} The commmunication port.
+ * </ul>
  * <br><br>
- * A Variable can be gotten via {@link VariableContainer_ifc#getVariable(String)} using this instance.
- * To request an actual value for a variable {@link VariableAccess_ifc#requestValue()} 
- * or {@link VariableAccess_ifc#requestValue(long, Runnable)} shoud be called. Therewith the time stamp 
- * is written in the variable (see {@link InspcVariable#timeRequested})
- * and that variable is requested via its {@link InspcVariable#ds} from the associated
- * target device.
- * <br><br>
- * This class supports free communication with Inspector reflex access outside the {@link VariableAccess_ifc}
- * thinking too. Especially via {@link #addUserOrder(Runnable)} some code snippet can be placed in the
- * communication thread of this class.
  * <br><br>
  * This class starts an own thread {@link #startupThreads()} for the send requests to the target device. 
  * That thread opens the
- * inspector reflex access communication via {@link InspcTargetAccessor#open(String)} which may use an
+ * inspector communication via {@link InspcTargetAccessor#open(String)} which may use an
  * {@link org.vishia.communication.InterProcessComm} instance.
  * <br><br>
  * The references to all known variables of the user are hold in an indexed list {@link #idxAllVars} sorted by name.
@@ -66,7 +73,7 @@ import org.vishia.util.ThreadRun;
  * {@link InspcTargetAccessor} and can get values from the target.
  * <br><br>
  * <b>Communication principle</b>:
- * The {@link #threadReqFromTarget} calls method {@link #procComm()} cyclically,
+ * The {@link #threadProcComm} calls method {@link #procComm()} cyclically,
  * if the communication was opened till {@link #close()} is called. In this loop all requested variables
  * were handled with a request-value telegram and all {@link #addUserOrder(Runnable)} are processed.
  * <br><br>
@@ -83,28 +90,7 @@ import org.vishia.util.ThreadRun;
  * It is possible to send from more as this thread, or it is possible to receive some special telegrams which 
  * are not requested. That does the receive thread.
  * <br><br>
- * The receive thread knows the sequence numbers of a sent telegram, which is response by an answer telegram.
- * This sequence numbers are TODO
- * 
  *  
- * The {@link InspcTargetAccessor} supports the execution of any action in the received thread too,
- * but this class calls {@link InspcTargetAccessor#awaitAnswer(int)} in its send thread to force notifying
- * of this class if the correct answer telegram is received.  
- * <br>
- * TODO it seems better to execute the answer in the receive thread, because some user requests can be executed
- * in that kind too. It isn't necessary to call a {@link InspcAccessEvaluatorRxTelg#evaluate(org.vishia.communication.InspcDataExchangeAccess.Datagram[], InspcAccessExecRxOrder_ifc)}
- * in the sending thread. But the sending thread should be inform about completely receiving and execution
- * before the next telegram will be send to the same device. That is because the device should not be 
- * flood and trash with too many telegrams. A embedded target may have a limited IP stack!
- * Sending a next telegram to the same device without an answer should be taken only after a suitable
- * timeout. But another device can be requested in that time. 
- * <br>
- * But the receiving of telegrams is executing in an extra receive Thread, see {@link InspcTargetAccessor#receiveThread}.
- * The {@link InspcTargetAccessor} supports the execution of any action in the received thread too,
- * but this class calls {@link InspcTargetAccessor#awaitAnswer(int)} in its send thread to force notifying
- * of this class if the correct answer telegram is received.  
- * <br>
- * If the telegram is received, all variables are filled with the received values and the  
  * @author Hartmut Schorrig
  *
  */
@@ -113,6 +99,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   /**Version, history and license.
    * <ul>
+   * <li>2016-01-24 Hartmut chg: A request of a variable is not regarded if the request is older than a longer timer. 
+   *   In the previous version a request is removed if it was older. This is more simple.
    * <li>2015-06-21 Hartmut new. invokes {@link InspcTargetAccessor#setStateToUser(InspcPlugUser_ifc)}. 
    * <li>2015-06-02 Hartmut The addUserOrder(Runnable) method is removed from here. It is replaced by 
    *   the {@link InspcTargetAccessor#addUserTxOrder(Runnable)}. Any target has its own timing. Only the target
@@ -173,9 +161,10 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   
   /**The request of values from the target is organized in a cyclic thread. The thread sends
-   * the request and await the answer.
+   * the request and evaluates the answers. The answers are received in the communication thread (socket) but 
+   * put theire results in a queue which is evaluated in {@link #procComm()}.
    */
-  private final ThreadRun threadReqFromTarget;
+  private final ThreadRun threadProcComm;
   
   
   /**Thread which manages timers and creates time events. */
@@ -250,8 +239,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    */
   boolean bAllReceived;
   
-  public InspcMng(String sOwnIpcAddr, Map<String, String> indexTargetIpcAddr, boolean bUseGetValueByIndex, InspcPlugUser_ifc user){
-    this.threadReqFromTarget = new ThreadRun("InspcMng", step, 100);
+  public InspcMng(String sOwnIpcAddr, Map<String, String> indexTargetIpcAddr, int cycletime, boolean bUseGetValueByIndex, InspcPlugUser_ifc user){
+    this.threadProcComm = new ThreadRun("InspcMng", step, cycletime);
     this.commPort = new InspcCommPort();  //maybe more as one
     //maybe more as one
     //this.inspcAccessor = new InspcTargetAccessor(commPort, new InspcAccessEvaluatorRxTelg());
@@ -275,7 +264,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    * @see org.vishia.util.CompleteConstructionAndStart#startupThreads()
    */
   @Override public void startupThreads(){
-    threadReqFromTarget.start();
+    threadProcComm.start();
     try {
       Thread.sleep(100);
     } catch (InterruptedException e) { }
@@ -495,32 +484,17 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         InspcVariable varInspc = (InspcVariable)var;
         if(varInspc.ds.sPathInTarget.equals("this$0.inspcMng"))
           Assert.stop();
-        if(   var.isRequestedValue(retryDisabledVariable) ){              //but handle only variable which are requested
-          nrofVarsReq +=1;
-          int dtimeRequested = (int)(timeCurr - varInspc.timeRequested);
-          if(varInspc.ds.sDataPath.equals("CCS:_DSP_.ccs_1P.ccs_IB_priv.ictrl.pire_p.out.YD")) {
-            System.out.println("InspcMng.procComm - test request InspcVar, "  + dtimeRequested/1000.0f + ", "+  varInspc.ds.sDataPath);
-            ///Debugutil.stop();
-          }  
-          if(dtimeRequested > 10000){
-            System.out.println("InspcMng.procComm - remove old request - device may not ready, " + varInspc.ds.sDataPath);
-            //The variable is not able to get, remove the request.
-            //The request will be repeat if the variable is newly requested.
-            var.requestValue(0);  //old request set to 0
-          }
-          if(varInspc.ds.sPathInTarget.startsWith("#"))
-            Assert.stop();
-          bRequest = true;
+        //handle only variable which are requested:
+        if(var.isRequestedValue(timeCurr - 2000, retryDisabledVariable) ){              
+          //Note that several targets are ready or not in the same time.
+          //Therefore for any variable isOrSetReady should be checked.
           if(varInspc.ds.targetAccessor.isOrSetReady(timeCurr)){ //check whether the device is ready.
-            if(varInspc.ds.sDataPath.equals("CCS:_DSP_.ccs_1P.ccs_IB_priv.ictrl.pire_p.out.YD")) {
-              System.out.println("InspcMng.procComm - exec request InspcVar, "  + dtimeRequested/1000.0f + ", "+  varInspc.ds.sDataPath);
-              ///Debugutil.stop();
-            }  
+            //enter the request to the target accessor.
+            nrofVarsReq +=1;
+            if(varInspc.ds.sPathInTarget.startsWith("#"))
+              Assert.stop();
+            bRequest = true;
             varInspc.requestValueFromTarget(timeCurr, retryDisabledVariable);
-          } else {
-            //It is usual that the target is slower than the request. Let the request active.
-            //The request will be removed if it is older than the expired time. 
-            //it is strong faulty: var.requestValue(0, null);   //remove this request.
           }
           
         }
@@ -776,7 +750,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       try { Thread.sleep(500); } catch (InterruptedException e) { }
     }
     try { Thread.sleep(1500); } catch (InterruptedException e) { }
-    threadReqFromTarget.close();
+    threadProcComm.close();
     commPort.close();
     threadEvent.close();
   }
@@ -793,7 +767,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
 
   @Override
-  public boolean cmdGetValueByIdent(int ident,
+  public boolean cmdGetValueByHandle(int ident,
       InspcAccessExecRxOrder_ifc actionOnRx)
   {
     // TODO Auto-generated method stub
@@ -811,7 +785,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
 
   @Override
-  public int cmdRegisterByPath(String sPathInTarget,
+  public int cmdRegisterHandle(String sPathInTarget,
       InspcAccessExecRxOrder_ifc actionOnRx)
   {
     // TODO Auto-generated method stub

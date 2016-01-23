@@ -39,6 +39,9 @@ public final class InspcDataExchangeAccess
   
   /**Version, history and license.
    * <ul>
+   * <li>2016-01-23 Hartmut new: {@link InspcSetValue#getType()} should return short, not byte, to detect the values of the type.
+   * <li>2016-01-23 Hartmut new: {@link InspcSetValue#getInt()} etc. not tests the given type and converts it. Till now the transmitter
+   *   has known the value type and send it proper. But that is not a common approach.
    * <li>2015-08-08 Hartmut new: {@link #nrofBytesForType(short)}, {@link InspcAnswerValueByHandle}. 
    *   The getValueByHandle is improved and tested. It is changed in communication yet.
    * <li>2015-08-08 Hartmut new: {@link #getFloatChild(short, ByteDataAccessBase)} 
@@ -647,7 +650,11 @@ public final class InspcDataExchangeAccess
     
     @Java4C.Inline public final void setPwd(int pwd){ _setLong(0, 6, pwd); }
     
-    @Java4C.Inline public final byte getType(){ return (byte) _getLong(7, 1); }
+    /**Returns the type stored in byte 7 in range 0...255.
+     * The type is either {@link InspcDataExchangeAccess#kScalarTypes} + one of {@link ClassJc#REFLECTION_float} etc.
+     * or maybe 0..{@link InspcDataExchangeAccess#kLengthAndString} or {@link InspcDataExchangeAccess#kReferenceAddr}
+     */
+    @Java4C.Inline public final short getType(){ return (short) _getLong(7, 1); }
     
     @Java4C.Inline public final byte getByte(){ return (byte)_getLong(15, -1);} 
     
@@ -657,17 +664,33 @@ public final class InspcDataExchangeAccess
      * If only a int value will be used, it were found in the bit 12..15.
      * @return The int value.
      */
-    @Java4C.Inline public final int getInt(){ return (int)_getLong(12, -4); }
+    @Java4C.Inline public final int getInt(){ 
+      switch((short)getType()){  //unsigned int
+        case InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_double: return (int)getDouble(8);
+        case InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float: return (int)getFloat(12);
+        default: return (int)_getLong(8, -8);   //any integer information.
+      }
+    }
     
     /**A long value is provided in the bytes 8..15 in Big endian.
      * @return The long value.
      */
-    @Java4C.Inline public final long getLong(){ return _getLong(8, -8); }
+    @Java4C.Inline public final long getLong(){ 
+      switch((short)getType()){  //unsigned int
+        case InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_double: return (int)getDouble(8);
+        case InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float: return (int)getFloat(12);
+        default: return _getLong(8, -8);   //any integer information.
+    } }
     
     /**A float value is provided in the bytes 8..11 in Big endian.
      * @return The float value.
      */
-    @Java4C.Inline public final float getFloat(){ return getFloat(8); }
+    @Java4C.Inline public final float getFloat(){ 
+      switch((short)getType()){  //unsigned int
+        case InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_double: return (float)getDouble(8);
+        case InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float: return getFloat(12);
+        default: return (float)_getLong(8, -8);   //any integer information.
+    } }
     
     @Java4C.Inline public final double getDouble(){ return getDouble(8); }
     

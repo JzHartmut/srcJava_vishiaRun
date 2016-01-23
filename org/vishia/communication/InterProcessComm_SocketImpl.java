@@ -45,7 +45,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
   private final Address_InterProcessComm_Socket ownAddress;
   
   /** The UDP Socket handling as receiver */
-  private DatagramSocket rxSocket;
+  private DatagramSocket udpSocket;
 
   private String sRxErrorMsg;
 
@@ -87,7 +87,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
     } else {
 	    InetSocketAddress ownAddressSocket = ownAddress1.getSocketAddress();
 	    try
-	    { this.rxSocket = new DatagramSocket(ownAddressSocket);
+	    { this.udpSocket = new DatagramSocket(ownAddressSocket);
 	    this.sRxErrorMsg = null;
 	    }
 	    catch (SocketException e)
@@ -102,9 +102,9 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
 
 
   public int close()
-  { if(this.rxSocket != null)
-    { this.rxSocket.close();
-      this.rxSocket = null;
+  { if(this.udpSocket != null)
+    { this.udpSocket.close();
+      this.udpSocket = null;
     }
     return 0;
   }
@@ -113,9 +113,9 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
   public int send(final byte[] data, int nBytes, final Address_InterProcessComm addresseeP)
   { Address_InterProcessComm_Socket addressee = (Address_InterProcessComm_Socket) addresseeP; 
     try
-    { if(rxSocket !=null){ //may be closed in another thread.
+    { if(udpSocket !=null){ //may be closed in another thread.
         DatagramPacket dataOut = new DatagramPacket(data, nBytes, addressee.getSocketAddress());
-        this.rxSocket.send(dataOut);
+        this.udpSocket.send(dataOut);
       } else {
         nBytes = -1;
       }
@@ -134,7 +134,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
 
   @Override public byte[] receive(int[] result, Address_InterProcessComm senderP)
   { boolean bOk = true;
-    if(this.rxSocket == null)
+    if(this.udpSocket == null)
     {
       return null;
     }
@@ -142,7 +142,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
     { Address_InterProcessComm_Socket sender = (Address_InterProcessComm_Socket)(senderP);
       byte[] dataBuffer = new byte[kDataBufferSize];
       DatagramPacket datagramPacket = new DatagramPacket(dataBuffer, kDataBufferSize);
-      try{ this.rxSocket.receive(datagramPacket); }
+      try{ this.udpSocket.receive(datagramPacket); }
       catch(IOException exception)
       { bOk = false;
         result[0] = -1;
@@ -204,7 +204,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
 	@Override
 	public int checkConnection() {
 		// TODO Auto-generated method stub
-		if(this.rxSocket == null){ return -1; }
+		if(this.udpSocket == null){ return -1; }
 		return 0;
 	}
 
@@ -250,7 +250,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
 	@Override	public byte[] receiveData(int[] result, byte[] bufferP,	Address_InterProcessComm senderP) 
 	{
 	  boolean bOk = true;
-    if(this.rxSocket == null)
+    if(this.udpSocket == null)
     {
       return null;
     }
@@ -258,7 +258,7 @@ public class InterProcessComm_SocketImpl implements InterProcessComm
     { Address_InterProcessComm_Socket sender = (Address_InterProcessComm_Socket)(senderP);
       byte[] dataBuffer = bufferP != null ? bufferP : new byte[kDataBufferSize];
       DatagramPacket datagramPacket = new DatagramPacket(dataBuffer, dataBuffer.length);
-      try{ this.rxSocket.receive(datagramPacket); }
+      try{ this.udpSocket.receive(datagramPacket); }
       catch(IOException exception)
       { bOk = false;
         if(result != null) { result[0] = -1; }

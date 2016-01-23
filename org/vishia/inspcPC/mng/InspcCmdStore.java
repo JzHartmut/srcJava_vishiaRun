@@ -59,7 +59,7 @@ class InspcCmdStore implements InspcAccess_ifc
     return 0;
   }
 
-  @Override public int cmdRegisterByPath(String sDataPath, InspcAccessExecRxOrder_ifc actionOnRx)
+  @Override public int cmdRegisterHandle(String sDataPath, InspcAccessExecRxOrder_ifc actionOnRx)
   {
     this.sDataPath = sDataPath;
     this.cmd = InspcDataExchangeAccess.Inspcitem.kRegisterHandle;
@@ -67,7 +67,7 @@ class InspcCmdStore implements InspcAccess_ifc
     return 0;
   }
 
-  @Override public boolean cmdGetValueByIdent(int ident, InspcAccessExecRxOrder_ifc actionOnRx)
+  @Override public boolean cmdGetValueByHandle(int ident, InspcAccessExecRxOrder_ifc actionOnRx)
   {
     this.sDataPath = null;
     this.handle = ident;
@@ -161,10 +161,10 @@ class InspcCmdStore implements InspcAccess_ifc
           acc.targetAccessor.cmdGetAddressByPath(acc.sPathInTarget, actionOnRx);
           break;
         case InspcDataExchangeAccess.Inspcitem.kRegisterHandle:
-          acc.targetAccessor.cmdRegisterByPath(acc.sPathInTarget, actionOnRx);
+          acc.targetAccessor.cmdRegisterHandle(acc.sPathInTarget, actionOnRx);
           break;
         case InspcDataExchangeAccess.Inspcitem.kGetValueByHandle:
-          acc.targetAccessor.cmdGetValueByIdent(handle, actionOnRx);
+          acc.targetAccessor.cmdGetValueByHandle(handle, actionOnRx);
           break;
         default:
         { //Unknown command - answer is: kFailedCommand.

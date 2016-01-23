@@ -932,9 +932,12 @@ public final class ClassContent implements CmdConsumer_ifc
     //int ixFaultyHandle = -1, ixFaultyEnd;
     int ixHandle = 0;
     boolean bMoreHandles;
-    while(cmd.sufficingBytesForNextChild(4)){
+    while(cmd.sufficingBytesForNextChild(4)) {  //there are 4 byte for the next handle in cmd.
       answerItem.detach();
-      answer.addChild(answerItem); 
+      if(!answer.addChild(answerItem)) {
+        //TODO prepare new telegram
+        break;
+      }
       answerItem.setIxHandleFrom(ixHandle);  //The start index of handle.  TODO more as one telg.
       int type = 0;
       int ixHandle1 = ixHandle;
