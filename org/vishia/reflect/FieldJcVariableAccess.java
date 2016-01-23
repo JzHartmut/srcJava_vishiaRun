@@ -2,6 +2,7 @@ package org.vishia.reflect;
 
 import java.lang.reflect.Field;
 
+import org.vishia.bridgeC.MemSegmJc;
 import org.vishia.byteData.VariableAccessArray_ifc;
 import org.vishia.byteData.VariableAccess_ifc;
 
@@ -67,7 +68,7 @@ public class FieldJcVariableAccess implements VariableAccessArray_ifc
    */
   int nrofArrayElements;
   
-  public FieldVariableAccess(Object instance, Field theField)
+  public FieldJcVariableAccess(Object instance, Field theField)
   { theField.setAccessible(true);
     /*
     int modifiers = theField.getModifiers();

@@ -51,7 +51,9 @@ import org.vishia.util.Debugutil;
  *   or maybe for a serial communication or Dual-Port-RAM or other. It means the communication connection to a target can be done
  *   in several ways independent of the mission of this class. 
  * </ul>  
- 
+ * See also: <li><a href="../../../../../../Inspc/html/InspcComm.html">.../vishia/Inspc/InspcComm.html</href> or 
+ * <a href="http://www.vishia.org/Inspc/html/InspcComm.html">www.vishia.org/Inspc/InspcComm.html</href>
+ * <br><br>
  * A send requests are invoked from the environment, it is the {@link InspcMng}. 
  * <ul>
  * <li>Firstly {@link #isOrSetReady(long)} is invoked to see whether a communication task is pending yet.

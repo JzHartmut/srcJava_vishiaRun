@@ -50,12 +50,14 @@ import org.vishia.util.ThreadRun;
  * <li>Using the {@link InspcAccess_ifc}. With them requests can be done immediately to a target. 
  *   The callback is done with implementing the {@link InspcAccessExecRxOrder_ifc} in the users area.
  * </ul>   
- * See at
+ * See also
  * <ul>
  * <li>{@link InspcVariable} to see how the variable request, send request to the target, receive from target works.
  * <li>{@link InspcStruct} to see how data struct in the target are re-built in the InspcMng.
  * <li>{@link InspcTargetAccessor} to see how the access to the target works
  * <li>{@link InspcCommPort} The commmunication port.
+ * <li><a href="../../../../../../Inspc/html/InspcComm.html">.../vishia/Inspc/InspcComm.html</href> or 
+ *     <a href="http://www.vishia.org/Inspc/html/InspcComm.html">www.vishia.org/Inspc/InspcComm.html</href>
  * </ul>
  * <br><br>
  * <br><br>
