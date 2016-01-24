@@ -111,12 +111,12 @@ public final class ClassContent implements CmdConsumer_ifc
   final InspcDataInfo test = new InspcDataInfo();
   
   /**Array of registered data access info items. @java2c = embeddedArrayElements. */
-  final InspcDataInfo[] registeredDataAccess = new InspcDataInfo[1024];
+  final InspcDataInfo[] handles = new InspcDataInfo[1024];
   
   public ClassContent()
   { debugRemoteAccess = MemAccessArrayDebugJc.getSingleton();
-    for(int ii=0; ii<registeredDataAccess.length; ++ii){
-      registeredDataAccess[ii] = new InspcDataInfo();
+    for(int ii=0; ii<handles.length; ++ii){
+      handles[ii] = new InspcDataInfo();
     }
     //TODO: Java2C-problem because different array annotations ... 
      //TODO: searchTrc should be used an onw instanc with idx!!!
@@ -173,6 +173,23 @@ public final class ClassContent implements CmdConsumer_ifc
     }//switch
     return 0;
   }
+  
+ 
+  /**The information doesn't fit in the datagram: Send the last one and clear it. 
+    */
+  private void txAnswerAndPrepareNewTelg(InspcDataExchangeAccess.InspcDatagram answer)
+  { ////
+    @Java4C.DynamicCall final AnswerComm_ifc answerCommMtbl = answerComm;  //concession to Java2C_ build Mtbl-reference
+    int nrofBytesAnswer = answer.getLengthTotal();
+    answer.setLengthDatagram(nrofBytesAnswer);
+    answerCommMtbl.txAnswer(nrofBytesAnswer, false); 
+    //for next usage, send is done:
+    answer.removeChildren();  //reuse it.
+    //Note: txAnswer increments already: answer.incrAnswerNr();
+    
+  }
+  
+  
   
   
   
@@ -403,16 +420,9 @@ public final class ClassContent implements CmdConsumer_ifc
         int zChildAnswer = InspcDataExchangeAccess.Inspcitem.sizeofHead + uAnswer.length();
         int lengthAnswerTelg = answer.getLengthTotal();
         int lengthData = answer.getData().length;
-        if(lengthAnswerTelg + zChildAnswer > lengthData) {
-        //if(!answer.sufficingBytesForNextChild(zChildAnswer)) {
-          /**The information doesn't fit in the datagram: Send the last one and clear it. 
-           * @java2c=dynamic-call. */
-          @Java4C.DynamicCall final AnswerComm_ifc answerCommMtbl = answerComm;  //concession to Java2C_ build Mtbl-reference
-          int nrofAnswer = answer.getLengthTotal();
-          answerCommMtbl.txAnswer(nrofAnswer, false); 
-          //for next usage, send is done:
-          answer.removeChildren();
-          //Note: txAnswer increments already: answer.incrAnswerNr();
+        if(lengthAnswerTelg + zChildAnswer > lengthData) {  ////
+          //if(!answer.sufficingBytesForNextChild(zChildAnswer)) {
+          txAnswerAndPrepareNewTelg(answer);
         }
         answer.addChild(answerItem);
         /**sAnswer contains one entry for the telegram. Builds a String to add,
@@ -516,11 +526,13 @@ public final class ClassContent implements CmdConsumer_ifc
   
   
   /**Sets the value if accSetValue is not null, fills the {@link #answerItem} with the read value.
+   * Fills with or without type byte.
    * @param theField describes the field to access
    * @param idx with this index
    * @param theObject in this object
-   * @param accSetValue null or given set value.
-   * @param answerItem To that an {@link ByteDataAccessBase#addChildInteger(int, long)} or such is invoked with the read value. 
+   * @param accSetValue null or given to set a value.
+   * @param answerItem It writes the type with one byte if bStoreTypeInAnswer = true, 
+   *   and than the value with {@link ByteDataAccessBase#addChildInteger(int, long)} or such with the read value. 
    * @param bStoreTypeInAnswer true then stores the 1-byte-type information before the value. false then store the value only.
    * @return the type of the field if this information has space in the current telegram. -1 If there are no space.
    * @throws IllegalArgumentException
@@ -539,7 +551,7 @@ public final class ClassContent implements CmdConsumer_ifc
     int actLenTelg = answerItem.getLengthTotal();
     int maxLen = answerItem.getData().length;
     int restLen = maxLen - actLenTelg;
-    short nType = -1;
+    short nType = -1;  //default if restlength is not proper.
     //add the answer-item-head. The rest is specific for types.
     if(type.isPrimitive()){
       String sType = type.getName();
@@ -558,7 +570,7 @@ public final class ClassContent implements CmdConsumer_ifc
           }
           nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int32;
           if(bStoreTypeInAnswer) { answerItem.addChildInteger(1, nType);  }  
-          answerItem.addChildInteger(4, value); 
+          answerItem.addChildInteger(4, value);
           sValue = null;
         }
       } break;
@@ -595,13 +607,13 @@ public final class ClassContent implements CmdConsumer_ifc
         }
       } break;
       case 'l': {  //long, it is int64
-        bOk = restLen >=5;  //TODO 9
+        bOk = restLen >=9; 
         if(bOk){
           long value = theField.getInt64(theObject, idx);
           //TODO long won't supported by ReflectPro, use int
           nType = InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_int32;
           if(bStoreTypeInAnswer) { answerItem.addChildInteger(1, nType); }
-          answerItem.addChildInteger(4, value);  //8 
+          answerItem.addChildInteger(8, value);  //8 
           sValue = null;
         }
       } break;
@@ -622,7 +634,7 @@ public final class ClassContent implements CmdConsumer_ifc
           sValue = null;
         }
       } break;
-      case 'd': {  //double  TODO 'd' 
+      case 'd': {  //double 
         bOk = restLen >=9;
         if(bOk){
           double fvalue;
@@ -855,8 +867,8 @@ public final class ClassContent implements CmdConsumer_ifc
         /**Search a free position in the static array: */
         int ixRegLast = 0;
         int diffLast = 0;
-        while(freeOrder == null && ixReg < registeredDataAccess.length)
-        { InspcDataInfo order = registeredDataAccess[ixReg];
+        while(freeOrder == null && ixReg < handles.length)
+        { InspcDataInfo order = handles[ixReg];
           int lastUsed = currentTime - order.lastUsed;
           if( (lastUsed) > 3600 ){
             freeOrder = order;
@@ -872,7 +884,7 @@ public final class ClassContent implements CmdConsumer_ifc
         if(freeOrder == null)
         { //no registerItem found which is older than 1 our:
           ixReg = ixRegLast;  //get the oldest one.
-          freeOrder = registeredDataAccess[ixReg];
+          freeOrder = handles[ixReg];
         }
         freeOrder.lastUsed = currentTime;
         freeOrder.secondOfCreation = currentTime;
@@ -915,64 +927,88 @@ public final class ClassContent implements CmdConsumer_ifc
     return handle;
   }
 
-
-
   
+  
+
+  private void addAnswerItemValueByHandle(InspcDataExchangeAccess.InspcDatagram answer, InspcDataExchangeAccess.InspcAnswerValueByHandle answItem, int sizeExpected)
+  {
+    if(!answer.sufficingBytesForNextChild(answItem.sizeHead() + sizeExpected)) {
+      assert(answItem.isInUse());
+      int nrofBytesAnswerItem = answItem.getLength();
+      answItem.setLength(nrofBytesAnswerItem);
+      //Close this answer datagram, create a next: ////
+      txAnswerAndPrepareNewTelg(answer);
+    }
+    answItem.detach();
+    if(!answer.addChild(answItem)) {
+      //This cannot occure normally because it is tested via answer.sufficingBytesForNextChild(answItem.sizeHead() + 4)
+      //TODO negative answer.
+    }
+  }
+  
+  private void completeAnswerItemByHandle(InspcDataExchangeAccess.InspcAnswerValueByHandle answItem, int indexTo, int nOrderNr) {
+    //complete this answItem:
+    int nBytesItem = answItem.getLength();
+    answItem.setIxHandleTo(indexTo);  //The start index of handle.  TODO more as one telg.
+    answItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Inspcitem.kAnswerValueByHandle, nOrderNr);
+    //that information are written in the data. Because it is completed:
+    answItem.detach();
+  }
   
   int cmdGetValueByHandle(InspcDataExchangeAccess.Inspcitem cmd, InspcDataExchangeAccess.InspcDatagram answer, int maxNrofAnswerBytes) 
   throws IllegalArgumentException, UnsupportedEncodingException
   {
-    @Java4C.StackInstance InspcDataExchangeAccess.InspcAnswerValueByHandle answerItem = new InspcDataExchangeAccess.InspcAnswerValueByHandle();
-    int nrofVariable = (cmd.getLenInfo() - InspcDataExchangeAccess.Inspcitem.sizeofHead) / 4; 
-    //cyclTime_MinMaxTime_Fwc(timeValueRepeat);
-    int idxOutput = 0;
-    int idx;
-    boolean bOk = true;
+    @Java4C.StackInstance InspcDataExchangeAccess.InspcAnswerValueByHandle answItem = new InspcDataExchangeAccess.InspcAnswerValueByHandle();
+    @Java4C.StackInstance InspcDataExchangeAccess.InspcAnswerValueByHandle answFaultyItem = new InspcDataExchangeAccess.InspcAnswerValueByHandle();
+    int nrofHandle = (cmd.getLenInfo() - InspcDataExchangeAccess.Inspcitem.sizeofHead) / 4; 
     int nOrderNr =cmd.getOrder();
-    //int ixFaultyHandle = -1, ixFaultyEnd;
-    int ixHandle = 0;
-    boolean bMoreHandles;
-    while(cmd.sufficingBytesForNextChild(4)) {  //there are 4 byte for the next handle in cmd.
-      answerItem.detach();
-      if(!answer.addChild(answerItem)) {
-        //TODO prepare new telegram
-        break;
-      }
-      answerItem.setIxHandleFrom(ixHandle);  //The start index of handle.  TODO more as one telg.
-      int type = 0;
-      int ixHandle1 = ixHandle;
-      int answerCmd = InspcDataExchangeAccess.Inspcitem.kAnswerValueByHandle;
-      do {
-        int handle = (int)cmd.getChildInteger(4); 
-        type = getValueByHandle(handle, answerItem);      //read one value and store in answer
-        if(type != InspcDataExchangeAccess.kInvalidHandle) {
-          ixHandle +=1;
+    int ixHandle = 0, ixHandle1 = 0;
+    boolean bCheckInvalidHandles = false;
+    addAnswerItemValueByHandle(answer, answItem, 20);
+    //
+    //loop over all requested handle
+    //
+    while( --nrofHandle >=0) { //cmd.sufficingBytesForNextChild(4)) {  //there are 4 byte for the next handle in cmd.
+      int handle = (int)cmd.getChildInteger(4); 
+      int type = getValueByHandle(handle, answItem, answer, ixHandle, nOrderNr);      //read one value and store in answer
+      if(type == InspcDataExchangeAccess.kInvalidHandle) {  
+        if(!bCheckInvalidHandles) {
+          //close the answItem for valid handles and add one for invalid:
+          if(ixHandle == ixHandle1) { //nothing found before:
+            //a valid handle is found, but before it there were invalid ones or only one.
+            //complete that answer item and create a new one.
+            answer.removeChild(answItem);  //not used.
+            answItem.detach();
+          } else {
+            completeAnswerItemByHandle(answItem, ixHandle -1, nOrderNr);
+          }
+          addAnswerItemValueByHandle(answer, answFaultyItem, 0);
+          answFaultyItem.setInfoHead(answFaultyItem.getLengthHead(), InspcDataExchangeAccess.Inspcitem.kFailedHandle, nOrderNr);
+          answFaultyItem.setIxHandleFrom(ixHandle);
+          addAnswerItemValueByHandle(answer, answItem, 20);   //the item for proper answer after them.
+          ixHandle1 = ixHandle;
+          bCheckInvalidHandles = true;
         }
-        bMoreHandles = cmd.sufficingBytesForNextChild(4);  //check continue evaluating the cmd 
-      } while(type != InspcDataExchangeAccess.kInvalidHandle && bMoreHandles);
-      int nBytesItem = answerItem.getLength();
-      if(ixHandle > ixHandle1){
-        //at least 1 or more values as answer stored:
-        //complete this answerItem:
-        answerItem.setIxHandleTo(ixHandle);  //The start index of handle.  TODO more as one telg.
-        answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Inspcitem.kAnswerValueByHandle, nOrderNr);
-        //and add a next one if necessary
-        if(bMoreHandles || type == InspcDataExchangeAccess.kInvalidHandle){
-          answerItem.detach();
-          answer.addChild(answerItem);
-          answerItem.setIxHandleFrom(ixHandle);
-        }
+        answFaultyItem.setIxHandleTo(ixHandle);  //The start index of handle.  TODO more as one telg.
+      } else if(bCheckInvalidHandles) {  
+        //an valid handle is found after an invalid one:
+        answItem.setIxHandleFrom(ixHandle);  //the first valid.
+        bCheckInvalidHandles = false;
+        ixHandle1 = ixHandle;
       }
-      if(type == InspcDataExchangeAccess.kInvalidHandle){
-        answerItem.setIxHandleTo(++ixHandle);  //The start index of handle.  TODO more as one telg.
-        answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Inspcitem.kFailedHandle, nOrderNr);
-        if(bMoreHandles){
-          answerItem.detach();
-          answer.addChild(answerItem);
-        }
-      }
+      ixHandle +=1;  //count the handles for a next item in datagram.
+    }//while all handle.
+    if(bCheckInvalidHandles) {
+      //
+      answer.removeChild(answItem);  //not used.
+      answItem.detach();
     }
-    answerItem.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
+    else if(ixHandle > ixHandle1){
+      //at least 1 or more values as answer stored:
+      completeAnswerItemByHandle(answItem, ixHandle-1, nOrderNr);
+    }
+    answItem.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
+    answFaultyItem.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
     return 0;
   }
 
@@ -984,36 +1020,43 @@ public final class ClassContent implements CmdConsumer_ifc
    * which needs writing to the answer datagram. If this routine is used directly, inside this target, this routine can be used
    * with following pattern: <pre>
    *    byte[] answerBuffer = new byte[20]; //buffer for the answer
-        InspcDataExchangeAccess.Inspcitem answerItem = new InspcDataExchangeAccess.Inspcitem();
-        answerItem.assignClear(answerBuffer);
-        short type = inspector.classContent.getValueByHandle(handle, answerItem);
-        //The result is written to the answerBuffer, the answerItem is the helper only.
-        answerItem.assign(answerBuffer); //assign newly but yet to read the content.
-        int value = InspcDataExchangeAccess.getIntChild(type, answerItem);
+        InspcDataExchangeAccess.Inspcitem answItem = new InspcDataExchangeAccess.Inspcitem();
+        answItem.assignClear(answerBuffer);
+        short type = inspector.classContent.getValueByHandle(handle, answItem);
+        //The result is written to the answerBuffer, the answItem is the helper only.
+        answItem.assign(answerBuffer); //assign newly but yet to read the content.
+        int value = InspcDataExchangeAccess.getIntChild(type, answItem);
    * </pre>
    * See {@link #getFloatValueByHandle(int)}, {@link #getIntValueByHandle(int)} which uses this routine.
    * 
    * @param handle The returned ident from registration
-   * @param answerItem destination jar for the value. The bytes of value will be appended as child only.
+   * @param answItem destination jar for the value. The bytes of value will be appended as child only.
    *   The number of bytes are able to evaluate by checking the length of the item respectively the 
    *   {@link InspcDataExchangeAccess#nrofBytesForType(short)} with the returned type. That information was stored also
    *   by executing of {@link #registerHandle(String, org.vishia.communication.InspcDataExchangeAccess.Inspcitem)} in the target system too.
    *   Therefore the number of the bytes of the value and the type of value should be known, it is not transferred in the datagram.
    * @return The type of value or InspcDataExchangeAccess#kInvalidHandle 
    */
-  public short getValueByHandle(int handle, InspcDataExchangeAccess.Inspcitem answerItem) 
+  private short getValueByHandle(int handle, InspcDataExchangeAccess.InspcAnswerValueByHandle answItem, InspcDataExchangeAccess.InspcDatagram answer, int index, int nOrderNr) 
   { short type;
     int idxDataAccess = handle & 0x0fff;
     int check = (handle >> 12) & 0xfffff;
-    if(idxDataAccess >= registeredDataAccess.length) {
+    if(idxDataAccess >= handles.length) {
       type = InspcDataExchangeAccess.kInvalidHandle;
     } else {
-      InspcDataInfo datainfo = registeredDataAccess[idxDataAccess];
+      InspcDataInfo datainfo = handles[idxDataAccess];
       //TODO check if it matches in space of telegram!
       if(check == datainfo.check && datainfo.reflectionField !=null){
         try{ 
           boolean bAnswerValueWithType = false; 
-          type = getSetValue(datainfo.reflectionField, 0, datainfo.addr, null, answerItem, bAnswerValueWithType);
+          type = getSetValue(datainfo.reflectionField, 0, datainfo.addr, null, answItem, bAnswerValueWithType);
+          if(type == -1) { //has it place in answer?
+            //The getSetValue has not enough place, in the answItem, 
+            completeAnswerItemByHandle(answItem, index, nOrderNr);
+            addAnswerItemValueByHandle(answer, answItem, 9999999);  //start a new datagram always.
+            //now it should has place in.
+            type = getSetValue(datainfo.reflectionField, 0, datainfo.addr, null, answItem, bAnswerValueWithType);
+          }
           if(type <= InspcDataExchangeAccess.maxNrOfChars){
             type = InspcDataExchangeAccess.kLengthAndString;
           }
@@ -1043,13 +1086,13 @@ public final class ClassContent implements CmdConsumer_ifc
   public float getFloatValueByHandle(int handle){ 
     @Java4C.SimpleArray @Java4C.StackInstance final byte[] answerBuffer1 = new byte[20];
     @Java4C.PtrVal final byte[] answerBuffer = answerBuffer1; //for C: use a PtrVal as argument.
-    @Java4C.StackInstance InspcDataExchangeAccess.Inspcitem answerItem = new InspcDataExchangeAccess.Inspcitem();
-    answerItem.assignClear(answerBuffer);
-    short type = getValueByHandle(handle, answerItem);
-    //The result is written to the answerBuffer, the answerItem is the helper only.
-    answerItem.assign(answerBuffer); //assign newly but yet to read the content.
-    float value = InspcDataExchangeAccess.getFloatChild(type, answerItem);
-    answerItem.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
+    @Java4C.StackInstance InspcDataExchangeAccess.InspcAnswerValueByHandle answItem = new InspcDataExchangeAccess.InspcAnswerValueByHandle();
+    answItem.assignClear(answerBuffer);
+    short type = getValueByHandle(handle, answItem, null, 0, 0);
+    //The result is written to the answerBuffer, the answItem is the helper only.
+    answItem.assign(answerBuffer); //assign newly but yet to read the content.
+    float value = InspcDataExchangeAccess.getFloatChild(type, answItem);
+    answItem.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
     return value; 
   }
   
@@ -1062,13 +1105,13 @@ public final class ClassContent implements CmdConsumer_ifc
   public int getIntValueByHandle(int handle){ 
     @Java4C.SimpleArray @Java4C.StackInstance final byte[] answerBuffer1 = new byte[20];
     @Java4C.PtrVal final byte[] answerBuffer = answerBuffer1; //for C: use a PtrVal as argument.
-    @Java4C.StackInstance InspcDataExchangeAccess.Inspcitem answerItem = new InspcDataExchangeAccess.Inspcitem();
-    answerItem.assignClear(answerBuffer);
-    short type = getValueByHandle(handle, answerItem);
-    //The result is written to the answerBuffer, the answerItem is the helper only.
-    answerItem.assign(answerBuffer); //assign newly but yet to read the content.
-    int value = InspcDataExchangeAccess.getIntChild(type, answerItem);
-    answerItem.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
+    @Java4C.StackInstance InspcDataExchangeAccess.InspcAnswerValueByHandle answItem = new InspcDataExchangeAccess.InspcAnswerValueByHandle();
+    answItem.assignClear(answerBuffer);
+    short type = getValueByHandle(handle, answItem, null, 0, 0);
+    //The result is written to the answerBuffer, the answItem is the helper only.
+    answItem.assign(answerBuffer); //assign newly but yet to read the content.
+    int value = InspcDataExchangeAccess.getIntChild(type, answItem);
+    answItem.detach();   //detach it because it is a Stack instance in C, don't reference furthermore.
     return value; 
   }
   
