@@ -135,6 +135,14 @@ public class InspcVariable implements VariableAccessArray_ifc
             //check the size and type of any answer value:
           }
         } break;
+        case InspcDataExchangeAccess.Inspcitem.kFailedHandle: { //same handling, though only one of some values are gotten.
+          InspcDataExchangeAccess.InspcAnswerValueByHandle accValuesByHandle = new InspcDataExchangeAccess.InspcAnswerValueByHandle(info);
+          int ixHandle1 = accValuesByHandle.getIxHandleFrom();
+          int ixHandle2 = accValuesByHandle.getIxHandleTo();
+          for(int ixHandle = ixHandle1; ixHandle < ixHandle2; ++ixHandle) {
+            //check the size and type of any answer value:
+          }
+        } break;
         case InspcDataExchangeAccess.Inspcitem.kAnswerValue: {
           InspcVariable.this.typeTarget = InspcTargetAccessor.getInspcTypeFromRxValue(info);
           InspcVariable.this.cType = InspcTargetAccessor.getTypeFromInspcType(typeTarget);
@@ -222,7 +230,18 @@ public class InspcVariable implements VariableAccessArray_ifc
   protected final static int kIdTargetUsePerPath = -2; 
   
   enum ModeHandleVariable {
-    kTargetNotSet, kIdTargetDisabled, kIdTargetUsePerPath, kTargetUseByHandle, kTargetHandleRequested
+    /**The Variable is not used yet. */
+    kTargetNotSet, 
+    /**The variable has not responsed and it is set to disable yet. */
+    kIdTargetDisabled, 
+    
+    kIdTargetUsePerPath, 
+    
+    /**The variable has a valid handle. {@link #handleTarget} should hava a proper value.
+     * The cmdRequestByHandle is used. */
+    kTargetUseByHandle, 
+    /**The variable was requested with cmdRequestHandle. It has not answered till now. wait for answer. */
+    kTargetHandleRequested
   }
   
   ModeHandleVariable modeTarget = ModeHandleVariable.kTargetNotSet;
@@ -605,27 +624,33 @@ public class InspcVariable implements VariableAccessArray_ifc
   
   private void setValueFormAnswerTelgByHandle(InspcDataExchangeAccess.Inspcitem accAnswerItem, long time)
   {
-    if(typeTarget <= InspcDataExchangeAccess.kLengthAndString){
-      int nrofChars = accAnswerItem.getChildInt(1);
-      valueS = accAnswerItem.getChildString(nrofChars); 
+    int cmd = accAnswerItem.getCmd();
+    if(cmd == InspcDataExchangeAccess.Inspcitem.kFailedHandle) {
+      handleTarget = 0;  //request a new one.
+      modeTarget = ModeHandleVariable.kTargetNotSet;
     } else {
-      switch(typeTarget){
-        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int   : valueI = accAnswerItem.getChildInt(-4); valueF = valueI; break;
-        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int64 : { long val = accAnswerItem.getChildInt(-8); valueI = (int) val; valueF = val; } break;
-        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int32 : valueI = accAnswerItem.getChildInt(-4); valueF = valueI; break;
-        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int16 : valueI = accAnswerItem.getChildInt(-2); valueF = valueI; break;
-        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int8  : valueI = accAnswerItem.getChildInt(-1); valueF = valueI; break;
-        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint  : {long val = accAnswerItem.getChildInt(4); valueI = (int)val; valueF = val; } break;
-        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint64: {long val = accAnswerItem.getChildInt(4); valueI = (int)val; valueF = val < 0 ? (float)val + (65536.0F * 65536.0F * 65536.0F * 32768.0F) : (float)val ; } break;
-        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint32: {long val = accAnswerItem.getChildInt(4); valueI = (int)val; valueF = val; } break;
-        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint16: valueI = accAnswerItem.getChildInt(2); valueF = valueI; break;
-        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint8 : valueI = accAnswerItem.getChildInt(1); valueF = valueI; break;
-        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_float : valueF = accAnswerItem.getChildFloat(); valueI = (int)valueF; break;
-        case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_double: { double val = accAnswerItem.getChildDouble(); valueI = (int)val; valueF = (float)val; } break;
-        default: System.err.println("Error InspcVariable.setValueFormAnswerTelgByHandle - faulty type");
+      if(typeTarget <= InspcDataExchangeAccess.kLengthAndString){
+        int nrofChars = accAnswerItem.getChildInt(1);
+        valueS = accAnswerItem.getChildString(nrofChars); 
+      } else {
+        switch(typeTarget){
+          case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int   : valueI = accAnswerItem.getChildInt(-4); valueF = valueI; break;
+          case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int64 : { long val = accAnswerItem.getChildInt(-8); valueI = (int) val; valueF = val; } break;
+          case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int32 : valueI = accAnswerItem.getChildInt(-4); valueF = valueI; break;
+          case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int16 : valueI = accAnswerItem.getChildInt(-2); valueF = valueI; break;
+          case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int8  : valueI = accAnswerItem.getChildInt(-1); valueF = valueI; break;
+          case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint  : {long val = accAnswerItem.getChildInt(4); valueI = (int)val; valueF = val; } break;
+          case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint64: {long val = accAnswerItem.getChildInt(4); valueI = (int)val; valueF = val < 0 ? (float)val + (65536.0F * 65536.0F * 65536.0F * 32768.0F) : (float)val ; } break;
+          case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint32: {long val = accAnswerItem.getChildInt(4); valueI = (int)val; valueF = val; } break;
+          case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint16: valueI = accAnswerItem.getChildInt(2); valueF = valueI; break;
+          case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_uint8 : valueI = accAnswerItem.getChildInt(1); valueF = valueI; break;
+          case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_float : valueF = accAnswerItem.getChildFloat(); valueI = (int)valueF; break;
+          case InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_double: { double val = accAnswerItem.getChildDouble(); valueI = (int)val; valueF = (float)val; } break;
+          default: System.err.println("Error InspcVariable.setValueFormAnswerTelgByHandle - faulty type");
+        }
       }
+      timeRefreshed = time;
     }
-    timeRefreshed = time;
           
   }
 

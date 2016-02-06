@@ -1101,7 +1101,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     final int ixValStart = answerItem.getIxHandleFrom();  //first index of variable in this answer item
     final int ixValTo = answerItem.getIxHandleTo();  //first index of variable in this answer item
     int ixVal = ixValStart;  //the suggested index of the action, proper to tx
-    while(ixVal < ixValTo){  //at least one byte in info, 
+    while(ixVal <= ixValTo){  //at least one byte in info, 
       InspcAccessExecRxOrder_ifc action = actionRx4GetValueByHandle[ixVal];
       ixVal +=1;
       if(action !=null){
@@ -1729,7 +1729,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
           //callback the proper request for get fileds to any InspcVariable.
           getFieldsData.orderGetFields.exec.execInspcRxOrder(infoAccessRx, time, log, identLog);
         }
-        else if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerValueByHandle){
+        else if(cmd == InspcDataExchangeAccess.Inspcitem.kAnswerValueByHandle || cmd == InspcDataExchangeAccess.Inspcitem.kFailedHandle){
           ////
           execRx4ValueByHandle(infoAccessRx, time, log, identLog);
         }
