@@ -290,7 +290,7 @@ public final class ClassContent implements CmdConsumer_ifc
           boolean hasSubstructure = (modifiers & ModifierJc.mPrimitiv) ==0; 
           uAnswer.setLength(0);
           uAnswer.append('[').append(nSize).append("]:");
-          String name = field.getClass().getName();
+          String name = field.getType().getName();  //2016-02: The type of the field
           uAnswer.append(name);
           if(hasSubstructure)
           { uAnswer.append("...");

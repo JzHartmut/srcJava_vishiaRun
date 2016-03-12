@@ -63,7 +63,11 @@ public abstract class InterProcessCommFactory
   private static InterProcessCommFactory theSingleton;
   
   
-  protected InterProcessCommFactory() {
+  /**Sets {@link #theSingleton} if not set yet. returns always a new instance. 
+   * 
+   */
+  protected InterProcessCommFactory() 
+  {
     if(theSingleton ==null){
       theSingleton = this;
     } else {
