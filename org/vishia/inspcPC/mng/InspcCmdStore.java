@@ -85,16 +85,15 @@ class InspcCmdStore implements InspcAccess_ifc
     this.actionOnRx = actionOnRx;
   }
 
-  @Override public int cmdSetValueByPath(String sDataPath, int value)
-  { cmdSetValueByPath(sDataPath, value, InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int32, null);
-    return 0;
+  @Override public void cmdSetInt32ByPath(String sDataPath, int value, InspcAccessExecRxOrder_ifc actionOnRx)
+  { cmdSetValueByPath(sDataPath, value, InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int32, actionOnRx);
   }
 
-  @Override public void cmdSetValueByPath(VariableAccessArray_ifc var, String value)
+  @Override public void cmdSetStringByPath(VariableAccessArray_ifc var, String value)
   { throw new RuntimeException("TODO");
   }
 
-  @Override public void cmdSetValueByPath(String sDataPath, float value, InspcAccessExecRxOrder_ifc actionOnRx)
+  @Override public void cmdSetFloatByPath(String sDataPath, float value, InspcAccessExecRxOrder_ifc actionOnRx)
   {
     this.sDataPath = sDataPath;
     this.typeofValue = InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_float;
@@ -103,7 +102,7 @@ class InspcCmdStore implements InspcAccess_ifc
     this.actionOnRx = actionOnRx;
   }
 
-  @Override public void cmdSetValueByPath(String sDataPath, double value,
+  @Override public void cmdSetDoubleByPath(String sDataPath, double value,
       InspcAccessExecRxOrder_ifc actionOnRx)
   {
     this.sDataPath = sDataPath;

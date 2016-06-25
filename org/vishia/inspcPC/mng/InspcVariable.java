@@ -321,7 +321,7 @@ public class InspcVariable implements VariableAccessArray_ifc
           } else {
             value = Integer.parseInt(sValueToTarget);
           }
-          ds.targetAccessor.cmdSetValueByPath(sPathComm, value, null);
+          ds.targetAccessor.cmdSetInt32ByPath(sPathComm, value, null);
         } else if(cType == 'F') {
           sValueToTarget = sValueToTarget.replace(',','.');  //use decimal point instead german colon 
           StringPartScan spValue = new StringPartScan(sValueToTarget);
@@ -334,7 +334,7 @@ public class InspcVariable implements VariableAccessArray_ifc
               } else if(spValue.scan("M").scanOk()){
                 value *= 1000000.0f;
               }
-              ds.targetAccessor.cmdSetValueByPath(sPathComm, value, null);
+              ds.targetAccessor.cmdSetDoubleByPath(sPathComm, value, null);
             }
           } catch(ParseException exc){
             
@@ -517,10 +517,11 @@ public class InspcVariable implements VariableAccessArray_ifc
     //It is not proper to continue a request.
     if(modeTarget == ModeHandleVariable.kIdTargetDisabled && !retryFaultyVariables) 
       return false;
-    long timeNew = timeRequested - timeRefreshed;  //in newer time requested.
+    long timeNew = timeRefreshed == 0 ? 1 : timeRequested - timeRefreshed;  //in newer time requested.
     long timeReq1 = timeRequested - timeEarlyRequested;
-    boolean bReq = (timeNew >=0 || timeRefreshed == 0) && timeReq1 >=0;
+    boolean bReq = timeNew > 0 && timeReq1 >=0;
     if(bReq) {
+      //System.out.println("InspcVariable.isRequestedValue, " + this);
       isRequested = true;
     }
     return bReq;  //for latest 5 seconds requested

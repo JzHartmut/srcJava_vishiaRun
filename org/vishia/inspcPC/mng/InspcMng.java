@@ -817,7 +817,10 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     }
   }
 
-
+  @Override public void cmdSetStringByPath(VariableAccessArray_ifc var, String value)
+  { assert(false); //TODO
+  }
+  
   
   public void cmdSetInt32ByPath(String sDataPath, int value, InspcAccessExecRxOrder_ifc actionOnRx) 
   { cmdSetValueByPath(sDataPath, value, InspcDataExchangeAccess.kScalarTypes + ClassJc.REFLECTION_int32, actionOnRx);
@@ -837,35 +840,36 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   /**Command to set a value. It is queued and executed in the tx thread.
    * @see org.vishia.inspcPC.InspcAccess_ifc#cmdSetValueByPath(java.lang.String, int)
    */
-  @Override
-  public int cmdSetValueByPath(String sDataPath, int value)
+  //@Override
+  public int XXXcmdSetValueByPath(String sDataPath, int value)
   { InspcCmdStore cmd = new InspcCmdStore(this);
-    cmd.cmdSetValueByPath(sDataPath, value);
+    cmd.cmdSetInt32ByPath(sDataPath, value, null);
     cmdQueue.offer(cmd);
     return 0;
   }
 
 
-  @Override public void cmdSetValueByPath(VariableAccessArray_ifc var, String value)
+  //@Override 
+  public void XXXcmdSetValueByPath(VariableAccessArray_ifc var, String value)
   { InspcCmdStore cmd = new InspcCmdStore(this);
-    cmd.cmdSetValueByPath(var, value);
+    cmd.cmdSetStringByPath(var, value);
     cmdQueue.offer(cmd);
     throw new RuntimeException("only valid for a defined target.");
   }
 
   
-  @Override
-  public void cmdSetValueByPath(String sDataPath, float value, InspcAccessExecRxOrder_ifc actionOnRx)
+  //@Override
+  public void XXXcmdSetValueByPath(String sDataPath, float value, InspcAccessExecRxOrder_ifc actionOnRx)
   { InspcCmdStore cmd = new InspcCmdStore(this);
-    cmd.cmdSetValueByPath(sDataPath, value, actionOnRx);
+    cmd.cmdSetFloatByPath(sDataPath, value, actionOnRx);
     cmdQueue.offer(cmd);
   }
 
 
-  @Override
-  public void cmdSetValueByPath(String sDataPath, double value, InspcAccessExecRxOrder_ifc actionOnRx)
+  //@Override
+  public void XXXcmdSetValueByPath(String sDataPath, double value, InspcAccessExecRxOrder_ifc actionOnRx)
   { InspcCmdStore cmd = new InspcCmdStore(this);
-    cmd.cmdSetValueByPath(sDataPath, value, actionOnRx);
+    cmd.cmdSetDoubleByPath(sDataPath, value, actionOnRx);
     cmdQueue.offer(cmd);
   }
   

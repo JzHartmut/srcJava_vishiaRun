@@ -94,17 +94,17 @@ public interface InspcAccess_ifc
    */
   public void cmdSetValueByPath(String sDataPath, long value, int typeofValue, InspcAccessExecRxOrder_ifc actionOnRx);
   
-  /**Adds the info block to send 'get value by path'
+  /**Adds the info block to send 'set value by path'
    * @param sDataPath
    * @param value The value as long-image, it may be a double, float, int etc.
    * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created because the telgram is full.
    */
-  public int cmdSetValueByPath(String sDataPath, int value);
+  //public int cmdSetValueByPath(String sDataPath, int value);
   
   
-  void cmdSetValueByPath(VariableAccessArray_ifc var, String value);
+  void cmdSetStringByPath(VariableAccessArray_ifc var, String value);
 
   
   /**Adds the info block to send 'get value by path'
@@ -114,7 +114,17 @@ public interface InspcAccess_ifc
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created because the telgram is full.
    */
-  public void cmdSetValueByPath(String sDataPath, float value, InspcAccessExecRxOrder_ifc actionOnRx);
+  public void cmdSetInt32ByPath(String sDataPath, int value, InspcAccessExecRxOrder_ifc actionOnRx);
+  
+  
+  /**Adds the info block to send 'get value by path'
+   * @param sDataPath
+   * @param value The value as long-image, it may be a double, float, int etc.
+   * @param typeofValue The type of the value, use {@link InspcDataExchangeAccess#kScalarTypes}
+   *                    + {@link ClassJc#REFLECTION_double} etc.
+   * @return The order number. 0 if the cmd can't be created because the telgram is full.
+   */
+  public void cmdSetFloatByPath(String sDataPath, float value, InspcAccessExecRxOrder_ifc actionOnRx);
   
   
   /**Adds the info block to send 'get value by path'
@@ -124,7 +134,7 @@ public interface InspcAccess_ifc
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created.
    */
-  public void cmdSetValueByPath(String sDataPath, double value, InspcAccessExecRxOrder_ifc actionOnRx);
+  public void cmdSetDoubleByPath(String sDataPath, double value, InspcAccessExecRxOrder_ifc actionOnRx);
   
   
   /**Adds the info block to send 'get value by path'

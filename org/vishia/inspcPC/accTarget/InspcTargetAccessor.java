@@ -1179,17 +1179,20 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   }
   
   
-  @Override public void cmdSetValueByPath(VariableAccessArray_ifc var, String value){
+  @Override public void cmdSetStringByPath(VariableAccessArray_ifc var, String value){
     assert(var instanceof InspcVariable);
     InspcVariable var1 = (InspcVariable)var;
     String valueTrimmed = value.trim();
     assert(var1.ds.targetAccessor == this);
     try{
         switch(var.getType()){
-          case 'D':
-          case 'F': {
+          case 'D': {
             double val = Double.parseDouble(valueTrimmed); 
-            cmdSetValueByPath(var1.ds.sPathInTarget, val, null); 
+            cmdSetDoubleByPath(var1.ds.sPathInTarget, val, null); 
+          } break;
+          case 'F': {
+            float val = Float.parseFloat(valueTrimmed); 
+            cmdSetFloatByPath(var1.ds.sPathInTarget, val, null); 
           } break;
           case 'S':
           case 'B':
@@ -1200,7 +1203,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
             } else {
               val = Integer.parseInt(valueTrimmed); 
             }
-            cmdSetValueByPath(var1.ds.sPathInTarget, val, null); 
+            cmdSetInt32ByPath(var1.ds.sPathInTarget, val, null); 
           } break;
           case 's': {  //empty yet
             
@@ -1246,7 +1249,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created because the telgram is full.
    */
-  public void cmdSetValueByPath(String sPathInTarget, int value, InspcAccessExecRxOrder_ifc actionOnRx)
+  public void cmdSetInt32ByPath(String sPathInTarget, int value, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
     int lengthItem = InspcTelgInfoSet.lengthCmdSetValueByPath(sPathInTarget.length());
     if(prepareTelg(lengthItem)) {
@@ -1269,7 +1272,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created because the telgram is full.
    */
-  public void cmdSetValueByPath(String sPathInTarget, float value, InspcAccessExecRxOrder_ifc actionOnRx)
+  public void cmdSetFloatByPath(String sPathInTarget, float value, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
     int lengthItem = InspcTelgInfoSet.lengthCmdSetValueByPath(sPathInTarget.length());
     if(prepareTelg(lengthItem)) {
@@ -1292,7 +1295,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    *                    + {@link ClassJc#REFLECTION_double} etc.
    * @return The order number. 0 if the cmd can't be created.
    */
-  public void cmdSetValueByPath(String sPathInTarget, double value, InspcAccessExecRxOrder_ifc actionOnRx)
+  public void cmdSetDoubleByPath(String sPathInTarget, double value, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
     int lengthItem = InspcTelgInfoSet.lengthCmdSetValueByPath(sPathInTarget.length());
     if(prepareTelg(lengthItem)) {
