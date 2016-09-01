@@ -380,11 +380,14 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         idxAllVars.put(sDataPath, var);
       } else {
         System.err.println("InspcMng - Variable target unknown; " + sDataPath); 
-        //TODO use dummy to prevent new requesting
+        var = varDummyForUnknownTarget;  //use dummy to prevent new requesting
       }
     }
     return var;
   }
+
+
+  InspcVariable varDummyForUnknownTarget = new InspcVariable(this, null, null);  //use dummy to prevent new requesting
  
   
   /**Returns a variable which's access to the target is established.
@@ -650,7 +653,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         sName = "";          //selects the root in the target.
       }
       sPathInTarget = sPathWithTarget.substring(posSepDevice +1);
-      return new InspcTargetAccessData(accessor, sDataPath, sPathInTarget, sStructPath, sName);
+      String sPathWithAlias = replacerAlias.searchAliasForValue(sPathWithTarget);
+      return new InspcTargetAccessData(accessor, sDataPath, sPathWithAlias, sPathInTarget, sStructPath, sName);
     } else {
       if(strict) throw new IllegalArgumentException("path should have the form \"device:internalPath\" or \"alias:subpath\", given: " + sDataPath);
       else return null;

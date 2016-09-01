@@ -1,6 +1,6 @@
 package org.vishia.inspcPC;
 
-
+import org.vishia.inspcPC.mng.InspcMng;
 
 /**This class assembles all data to access the target for any thing.
  * It contains only data, no functionality. It is used especially for orders of the {@link  org.vishia.inspcPC.accTarget.InspcTargetAccessor}
@@ -11,6 +11,8 @@ public class InspcTargetAccessData
 {
   /**Version, history and license.
    * <ul>
+   * <li>2015-03-21 Hartmut new {@link #sPathWithAlias} now stored for any variable. Filled in {@link InspcMng#getTargetAccessFromPath(String, boolean)}
+   *   using the {@link InspcReplAlias#searchAliasForValue(String)}
    * <li>2015-03-21 Hartmut created. It contains all data which was stored in the now deprecated InspcVarPathStructAcc
    *   but not the InspcStruct. Minimize Dependency in {@link  org.vishia.inspcPC.accTarget.InspcTargetAccessor}.  
    * </ul>
@@ -49,6 +51,8 @@ public class InspcTargetAccessData
   /**Path how it is necessary in the target. Especially without prefix "Target:..." */
   public final String sPathInTarget;
   
+  public final String sPathWithAlias;
+  
   /**Name of the field, only to show. */
   public final String sName;
 
@@ -58,9 +62,10 @@ public class InspcTargetAccessData
   /**Path like it is given, maybe with "Alias:...". */
   public final String sDataPath;
 
-  public InspcTargetAccessData(InspcAccess_ifc targetAccessor, String sDataPath, String sPathInTarget, String sParentPath, String sName)
+  public InspcTargetAccessData(InspcAccess_ifc targetAccessor, String sDataPath, String sPathWithAlias, String sPathInTarget, String sParentPath, String sName)
   { this.targetAccessor = targetAccessor;
     this.sDataPath = sDataPath;
+    this.sPathWithAlias = sPathWithAlias;
     this.sPathInTarget = sPathInTarget;
     this.sParentPath = sParentPath;
     this.sName = sName;

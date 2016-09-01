@@ -163,36 +163,7 @@ public static class Args
   
   
   
-ReplaceAlias_ifc replAlias = new ReplaceAlias_ifc(){
-
-  Map<String, String> repl;
-  
-  @Override public void addDataReplace(Map<String, String> src)
-  { repl = src;
-  }
-
-  @Override public void addDataReplace(String alias, String value)
-  {
-    // TODO Auto-generated method stub
-    
-  }
-
-  @Override public String replaceDataPathPrefix(String path)
-  {
-    if(repl == null) return path;
-    int sep = path.indexOf(':');
-    if(sep >0) {
-      String st = repl.get(path.substring(0, sep));
-      if(st !=null) { 
-        return st + path.substring(sep);
-      } else {
-        return path;  //no replacement done.
-      }
-    }
-    else return path;
-  }
-  
-};  
+ReplaceAlias_ifc replAlias = new InspcReplAlias();  
 
 
 public InspCmd(MainCmd_ifc console)

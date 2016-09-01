@@ -119,6 +119,10 @@ import org.vishia.byteData.VariableContainer_ifc;
     return var; 
   }
   
+  
+  /**Returns the existing variable, do not create a new one, returns null if this field has not a variable yet. */
+  public InspcVariable variableExisting(){ return var; }
+  
   //public InspcStruct substruct(){ return substruct; }
 }
   

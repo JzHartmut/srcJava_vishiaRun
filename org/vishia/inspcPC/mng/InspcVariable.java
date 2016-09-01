@@ -539,7 +539,8 @@ public class InspcVariable implements VariableAccessArray_ifc
   
   @Override public String toString(){ 
     StringBuilder u = new StringBuilder();
-    u.append("Variable: ").append(ds.sDataPath);
+    u.append("Variable: ");
+    if(ds !=null){ u.append(ds.sDataPath); }
     u.append(" m=").append(modeTarget)
       .append(" h=").append(Integer.toHexString(handleTarget));
     return u.toString();
