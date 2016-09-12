@@ -230,6 +230,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   /**The version history and license of this class.
    * <ul>
+   * <li>2016-09-12 Hartmut chg: {@link #cmdSetStringByPath(VariableAccessArray_ifc, String)}: Up to now float values should be sent as double 
+   *   because the old target systems from 2010, 2011 does not regard float.  
    * <li>2015-10-29 Hartmut chg: {@link #isOrSetReady(long)} now checks the timeout by its own {@link #cycle_timeout}.
    *   The last one can be changed in the {@link #setStateToUser(InspcPlugUser_ifc)} which acts with the graphical user interface.
    *   Therewith the timeout can be changed in the GUI especially for debugging situations.
@@ -1186,11 +1188,11 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     assert(var1.ds.targetAccessor == this);
     try{
         switch(var.getType()){
-          case 'D': {
+          case 'F': case 'D': {
             double val = Double.parseDouble(valueTrimmed); 
             cmdSetDoubleByPath(var1.ds.sPathInTarget, val, null); 
           } break;
-          case 'F': {
+          case '~': {  //TODO up to now the target expects a double value anytime. send double instead float.
             float val = Float.parseFloat(valueTrimmed); 
             cmdSetFloatByPath(var1.ds.sPathInTarget, val, null); 
           } break;

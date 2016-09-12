@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import org.vishia.bridgeC.MemSegmJc;
 import org.vishia.reflect.ClassJc;
 import org.vishia.reflect.FieldJc;
+import org.vishia.util.StringFunctions_C;
 
 /**Functionality to search an element for reflection access.
  * @author Hartmut Schorrig 
@@ -14,6 +15,9 @@ public class SearchElement
 
     /**Version, history and license.
    * <ul>
+   * <li>2016-09-12 Hartmut bugfix: {@link #searchObject(String, Object, FieldJc[], int[])}: An index should be read with {@link StringFunctions_C#parseIntRadix(CharSequence, int, int, int, int[])}
+   *   instead {@link Integer#parseInt(String, int)} because the first one is exception-free. An exception is an problem on target system in C. It occurs 
+   *   if the path is faulty by access from Inspector. 
    * <li>2015-10-29 Bugfix: It was hanging by "path.." 2 dots one after another. 
    * <li>2011-02-00 Hartmut created, converted from the C implementation.
    * <li>2006-00-00 Hartmut created for C/C++
@@ -119,7 +123,8 @@ public class SearchElement
 	            int posBracketEnd = sElement.indexOf(posAngleBracket >=0 ? '>' : ']', posBracket + 1 );
 	            if(posBracketEnd <0) { posBracketEnd = sElement.length(); } //if the ] is missing in the actual context
 	            //get index:
-	            idx = Integer.parseInt(sElement.substring(posBracket +1, posBracketEnd));
+	            idx = StringFunctions_C.parseIntRadix(sElement, posBracket +1, posBracketEnd- posBracketEnd+1, 10, null);  //without exception
+	            //idx = Integer.parseInt(sElement.substring(posBracket +1, posBracketEnd));
 	            sName = sElement.substring(0, posBracket);
 	          } else {
 	          	sName = sElement;

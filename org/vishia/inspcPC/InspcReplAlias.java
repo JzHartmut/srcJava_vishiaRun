@@ -40,7 +40,7 @@ public class InspcReplAlias implements ReplaceAlias_ifc
     if(sep >0) {
       String st = repl.get(path.substring(0, sep));
       if(st !=null) { 
-        return st + path.substring(sep);
+        return st + path.substring(sep+1);
       } else {
         return path;  //no replacement done.
       }
