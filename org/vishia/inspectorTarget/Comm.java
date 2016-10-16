@@ -68,7 +68,7 @@ public class Comm implements Runnable
 	{ this.cmdExecuter = cmdExecuter;
 	  /**use the existent factory, it is determined by linker or classLoader, which it is.
 	   * @java2c=dynamic-call. */
-		InterProcessCommFactory ipcFactory = InterProcessCommFactoryAccessor.getInstance();
+		InterProcessCommFactory ipcFactory = InterProcessCommFactory.getInstance();
 		/**The interProcessCommunication, depends from the factory and the own Address.
 		 * It is not socket anyway.
 		 * @java2c=dynamic-call.  */
@@ -181,7 +181,6 @@ public class Comm implements Runnable
    */
   public final int sendAnswer(@Java4C.PtrVal byte[] bufferAnswerData, int nrofBytesAnswer)  
   { int nrofSentBytes;
-  	/**@java2c=dynamic-call. */
   	@Java4C.DynamicCall InterProcessComm ipcMtbl = ipc;  //java2c: build Mtbl-pointer.
 		nrofSentBytes = ipcMtbl.send(bufferAnswerData, nrofBytesAnswer, myAnswerAddress);
 		if(nrofSentBytes < 0)
@@ -201,12 +200,10 @@ public class Comm implements Runnable
   /**Shutdown the communication, close the thread. This routine should be called 
    * either on shutdown of the whole system or on closing the inspector functionality.
    * The inspector functionality can be restarted calling {@link #start(Object)}.
-   * 
    */
   public void shutdown(){
-    /**@java2c=dynamic-call. */
     state = 'x';
-    InterProcessComm ipcMtbl = ipc; 
+    @Java4C.DynamicCall InterProcessComm ipcMtbl = ipc; 
     ipcMtbl.close();  //breaks waiting in receive socket
     //waits till the receive thread is finished.
     while(state !='z'){

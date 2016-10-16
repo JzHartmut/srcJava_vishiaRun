@@ -146,7 +146,8 @@ public class InterProcessCommRxThread
    * @return the address, null on failure.
    */
   public final Address_InterProcessComm createDstAddr(String sAddr){
-    return ipc.createAddress(sAddr);
+    @Java4C.DynamicCall InterProcessComm mipc = this.ipc;
+    return mipc.createAddress(sAddr);
   }
   
   
@@ -196,7 +197,8 @@ public class InterProcessCommRxThread
    * @return
    */
   public final int send(@Java4C.PtrVal byte[] data, int nrofBytesToSend, Address_InterProcessComm dstAddr){
-    return ipc.send(data, nrofBytesToSend, dstAddr);
+    @Java4C.DynamicCall InterProcessComm mipc = this.ipc;
+    return mipc.send(data, nrofBytesToSend, dstAddr);
   }
   
   

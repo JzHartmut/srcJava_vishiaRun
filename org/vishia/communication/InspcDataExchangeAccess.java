@@ -40,7 +40,7 @@ public final class InspcDataExchangeAccess
   /**Version, history and license.
    * <ul>
    * <li>2016-01-23 Hartmut new: {@link InspcSetValue#getType()} should return short, not byte, to detect the values of the type.
-   * <li>2016-01-23 Hartmut new: {@link InspcSetValue#getInt()} etc. not tests the given type and converts it. Till now the transmitter
+   * <li>2016-01-23 Hartmut new: {@link InspcSetValue#getInt()} etc. now tests the given type and converts it. Till now the transmitter
    *   has known the value type and send it proper. But that is not a common approach.
    * <li>2015-08-08 Hartmut new: {@link #nrofBytesForType(short)}, {@link InspcAnswerValueByHandle}. 
    *   The getValueByHandle is improved and tested. It is changed in communication yet.
@@ -664,7 +664,7 @@ public final class InspcDataExchangeAccess
      * If only a int value will be used, it were found in the bit 12..15.
      * @return The int value.
      */
-    @Java4C.Inline public final int getInt(){ 
+    @Java4C.NoStackTrace public final int getInt(){ 
       switch((short)getType()){  //unsigned int
         case InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_double: return (int)getDouble(8);
         case InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float: return (int)getFloat(12);
@@ -675,7 +675,7 @@ public final class InspcDataExchangeAccess
     /**A long value is provided in the bytes 8..15 in Big endian.
      * @return The long value.
      */
-    @Java4C.Inline public final long getLong(){ 
+    @Java4C.NoStackTrace public final long getLong(){ 
       switch((short)getType()){  //unsigned int
         case InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_double: return (int)getDouble(8);
         case InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float: return (int)getFloat(12);
@@ -685,7 +685,7 @@ public final class InspcDataExchangeAccess
     /**A float value is provided in the bytes 8..11 in Big endian.
      * @return The float value.
      */
-    @Java4C.Inline public final float getFloat(){ 
+    @Java4C.NoStackTrace public final float getFloat(){ 
       switch((short)getType()){  //unsigned int
         case InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_double: return (float)getDouble(8);
         case InspcDataExchangeAccess.kScalarTypes+ClassJc.REFLECTION_float: return getFloat(12);

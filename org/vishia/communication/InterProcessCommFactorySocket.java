@@ -22,6 +22,10 @@
  *******************************************************************************/ 
 package org.vishia.communication;
 
+/**
+ * @author Hartmut Schorrig
+ *
+ */
 public class InterProcessCommFactorySocket extends InterProcessCommFactory
 {
 	static{

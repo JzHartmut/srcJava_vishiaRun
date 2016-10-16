@@ -27,7 +27,7 @@ public abstract class InterProcessCommFactory
 
     /**Version, history and license. This String is visible in the about info.
    * <ul>
-   * <li>2015-08-16 JcHartmut: Define as abstract class instead interface without neccesity of changing an application,
+   * <li>2015-08-16 JcHartmut: Define as abstract class instead interface without necessity of changing an application,
    *   join with InterProcessCommFactoryAccessor, no need of 2 classes.
    * <li>2016-2011 some changes, see source files.
    * <li>2006-00-00 JcHartmut created

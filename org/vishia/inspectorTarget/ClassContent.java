@@ -240,10 +240,8 @@ public final class ClassContent implements CmdConsumer_ifc
       } else {
         /**not the root path, search the obj started from static_cast<ObjectJc*>(this) //targets[0]: */
         int idx;
-        /**@java2c=stackInstance, simpleArray.  */
-        final int[] idxP = new int[1];
-        /**@java2c=stackInstance, simpleArray.  */
-        final FieldJc[] fieldP = new FieldJc[1];
+        @Java4C.StackInstance @Java4C.SimpleArray final int[] idxP = new int[1];
+        @Java4C.StackInstance @Java4C.SimpleArray final FieldJc[] fieldP = new FieldJc[1];
         /**Search the field in its object, the referenced instance of the field is requested: */
         memObj.set(SearchElement.searchObject(sVariablePath, rootObj, fieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
         idx = idxP[0];
@@ -258,8 +256,8 @@ public final class ClassContent implements CmdConsumer_ifc
             clazz = null;
           } else { /**normal Object: */
             try{
-              /**Gets the real class of the field. @java2c=stackInstance, simpleArray. */
-              final ClassJc[] retClazz = new ClassJc[1];
+              /**Gets the real class of the field.  */
+              @Java4C.StackInstance @Java4C.SimpleArray final ClassJc[] retClazz = new ClassJc[1];
               field.getObjAndClass(memObj, retClazz, idx);  //index -1: if it is a container, no class is returned
               bQuestCollectionSize = false;  //the clazz may be null
               clazz = retClazz[0];
@@ -488,19 +486,12 @@ public final class ClassContent implements CmdConsumer_ifc
   ) 
   throws IllegalArgumentException, UnsupportedEncodingException 
   {
-    /**@java2c=nonPersistent.  */
     FieldJc theField = null;
-    /**@java2c=stackInstance, simpleArray.  */
-    final FieldJc[] theFieldP = new FieldJc[1];
+    @Java4C.StackInstance @Java4C.SimpleArray final FieldJc[] theFieldP = new FieldJc[1];
     final MemSegmJc theObject = new MemSegmJc();
-    /**@java2c=nonPersistent.  */
-    int memSegment = 0;
-    int idxOutput = 0;
-    int maxIdxOutput = 1200; //note: yet a full telegramm can be used.      
     try{
       int idx;
-      /**@java2c=stackInstance, simpleArray.  */
-      final int[] idxP = new int[1];
+      @Java4C.StackInstance @Java4C.SimpleArray final int[] idxP = new int[1];
       theObject.set(SearchElement.searchObject(sVariablePath, rootObj, theFieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
       theField = theFieldP[0];
       idx = idxP[0];
@@ -759,20 +750,14 @@ public final class ClassContent implements CmdConsumer_ifc
     /**@java2c=nonPersistent.  */
     String sVariablePath = cmd.getChildString(nrofBytesPath);
     int nOrderNr =cmd.getOrder();
-    /**@java2c=nonPersistent.  */
     FieldJc theField = null;
-    /**@java2c=stackInstance, simpleArray.  */
-    final FieldJc[] theFieldP = new FieldJc[1];
+    @Java4C.StackInstance @Java4C.SimpleArray final FieldJc[] theFieldP = new FieldJc[1];
     final MemSegmJc theObject = new MemSegmJc();  //In C an embedded type.
     /**@java2c=nonPersistent.  */
-    String sValue;
-    int memSegment = 0;
-    int idxOutput = 0;
-    int maxIdxOutput = 1200; //note: yet a full telegramm can be used.      
+    //String sValue;
     try{
       int idx;
-      /**@java2c=stackInstance, simpleArray.  */
-      final int[] idxP = new int[1];
+      @Java4C.StackInstance @Java4C.SimpleArray final int[] idxP = new int[1];
       theObject.set(SearchElement.searchObject(sVariablePath, rootObj, theFieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
       theField = theFieldP[0];
       idx = idxP[0];
@@ -837,21 +822,13 @@ public final class ClassContent implements CmdConsumer_ifc
     , InspcDataExchangeAccess.Inspcitem answerItem) 
   throws IllegalArgumentException 
   {
-    /**@java2c=nonPersistent.  */
     FieldJc theField = null;
-    /**@java2c=stackInstance, simpleArray.  */
-    final FieldJc[] theFieldP = new FieldJc[1];
+    @Java4C.StackInstance @Java4C.SimpleArray final FieldJc[] theFieldP = new FieldJc[1];
     final MemSegmJc theObject = new MemSegmJc();
-    /**@java2c=nonPersistent.  */
-    String sValue;
-    int memSegment = 0;
-    int idxOutput = 0;
-    int maxIdxOutput = 1200; //note: yet a full telegramm can be used.      
     int handle;
     int idx;
     try{
-      /**@java2c=stackInstance, simpleArray.  */
-      final int[] idxP = new int[1];
+      @Java4C.StackInstance @Java4C.SimpleArray final int[] idxP = new int[1];
       theObject.set(SearchElement.searchObject(sVariablePath, rootObj, theFieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
       theField = theFieldP[0];
       idx = idxP[0];
@@ -1085,7 +1062,7 @@ public final class ClassContent implements CmdConsumer_ifc
    */
   public float getFloatValueByHandle(int handle){ 
     @Java4C.SimpleArray @Java4C.StackInstance final byte[] answerBuffer1 = new byte[20];
-    @Java4C.PtrVal final byte[] answerBuffer = answerBuffer1; //for C: use a PtrVal as argument.
+    @Java4C.PtrVal  final byte[] answerBuffer; answerBuffer = answerBuffer1; //for C: use a PtrVal as argument.
     @Java4C.StackInstance InspcDataExchangeAccess.InspcAnswerValueByHandle answItem = new InspcDataExchangeAccess.InspcAnswerValueByHandle();
     answItem.assignClear(answerBuffer);
     short type = getValueByHandle(handle, answItem, null, 0, 0);
@@ -1104,7 +1081,7 @@ public final class ClassContent implements CmdConsumer_ifc
    */
   public int getIntValueByHandle(int handle){ 
     @Java4C.SimpleArray @Java4C.StackInstance final byte[] answerBuffer1 = new byte[20];
-    @Java4C.PtrVal final byte[] answerBuffer = answerBuffer1; //for C: use a PtrVal as argument.
+    @Java4C.PtrVal final byte[] answerBuffer; answerBuffer = answerBuffer1; //for C: use a PtrVal as argument.
     @Java4C.StackInstance InspcDataExchangeAccess.InspcAnswerValueByHandle answItem = new InspcDataExchangeAccess.InspcAnswerValueByHandle();
     answItem.assignClear(answerBuffer);
     short type = getValueByHandle(handle, answItem, null, 0, 0);
