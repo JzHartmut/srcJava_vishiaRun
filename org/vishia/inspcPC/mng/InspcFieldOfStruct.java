@@ -65,7 +65,7 @@ import org.vishia.byteData.VariableContainer_ifc;
      *   if an variable was created with {@link #var}. {@link InspcVariable#itsStruct}. 
      */
     public InspcFieldOfStruct(InspcVariable var, String type, int nrofArrayElements){
-      this.struct = var.struct();
+      this.struct = var.getOrCreateStructForNonLeafVariables();
       this.identifier = var.ds.sName;
       this.nameShow = identifier;
       this.type = type;

@@ -24,7 +24,10 @@ public final class ClassContent implements CmdConsumer_ifc
 
   /**Version, history and license.
    * <ul>
-   * <li>2015-08-08 Hartmut chg: getValueByHandle now works. Some changes. 
+   * <li>2016-16-28 Hartmut chg: Some changes for Java2C translation, test with InspcTargetProxy
+   * <li>2016-16-10 Hartmut chg: ClassContent: SimpleVariableRef is faulty for Java2C in , use Stackinstance, SimpleArray.
+   * <li>2016-01-25 Hartmut chg: refactoring getValueByHandle especially for a longer telegram. new txAnswerAndPrepareNewTelg(...),
+   *   addAnswerItemValueByHandle(...), completeAnswerItemByHandle(...),  
    * <li>2015-08-05 Hartmut new {@link #getValueByHandle(int, org.vishia.communication.InspcDataExchangeAccess.Inspcitem)} etc.
    *   to access data with path without a reflection item, directly in the same application. 
    * <li>2015-06-02 Hartmut bugfix: {@link #evaluateFieldGetFields(org.vishia.communication.InspcDataExchangeAccess.InspcDatagram, String, ClassJc, int, int, int, int)}:
@@ -373,12 +376,19 @@ public final class ClassContent implements CmdConsumer_ifc
      ,int  staticArraySize, int orderNr, int maxNrofAnswerBytes
    )
   {
+     String type; 
+     //int modifType;
+     if(typeField == null) {
+       type = "unknown"; //modifType = 0;
+     } else {
+       type = typeField.getName();
+       //modifType = typeField.getClass().getModifiers();
+     }
+     int lengthName = name.length(); //length_StringJc(&name);
+     int lengthType = type.length();
      int modifContainertype = modifiers & ModifierJc.m_Containertype;
-     boolean hasSubstructure = (modifiers & ModifierJc.mPrimitiv) ==0
+     boolean hasSubstructure = !typeField.isPrimitive() //    modifiers & ModifierJc.mPrimitiv) ==0
      || (modifContainertype !=0); 
-    String type = typeField == null ? "unknown" : typeField.getName();
-    int lengthName = name.length(); //length_StringJc(&name);
-    int lengthType = type.length();
     
     uArray.setLength(0);
     if(modifContainertype == ModifierJc.kUML_LinkedList)
@@ -454,8 +464,7 @@ public final class ClassContent implements CmdConsumer_ifc
   throws IllegalArgumentException, UnsupportedEncodingException 
   {
     int nrofBytesCmd = cmd.getLenInfo();
-    /**@java2c=stackInstance. */
-    InspcDataExchangeAccess.InspcSetValue setValue = new InspcDataExchangeAccess.InspcSetValue();
+    @Java4C.StackInstance InspcDataExchangeAccess.InspcSetValue setValue = new InspcDataExchangeAccess.InspcSetValue();
     cmd.addChild(setValue);
     int nrofBytesPath = nrofBytesCmd - InspcDataExchangeAccess.Inspcitem.sizeofHead 
                                      - InspcDataExchangeAccess.InspcSetValue.sizeofElement;

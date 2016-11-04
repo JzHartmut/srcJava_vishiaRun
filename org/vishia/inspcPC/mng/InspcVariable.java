@@ -216,7 +216,7 @@ public class InspcVariable implements VariableAccessArray_ifc
   
   /**It is is a structure, it maybe not null if it is requested.
    * null for a leaf variable, null if the structure was not requested till now.
-   * See {@link #struct()}. It creates.
+   * See {@link #getOrCreateStructForNonLeafVariables()}. It creates.
    */
   private InspcStruct itsStruct;
 
@@ -463,13 +463,21 @@ public class InspcVariable implements VariableAccessArray_ifc
    * 
    * @return Instance for the structure information of this variable.
    */
-  public InspcStruct struct() { 
+  public InspcStruct getOrCreateStructForNonLeafVariables() { 
     if(itsStruct == null) {
       itsStruct = new InspcStruct(this, ds.sParentPath);
     }
     return itsStruct; 
   }
   
+  
+  /**Gets the struct for a node (non leafe variable).
+   * If it is a leaf variable, this method returns null because the struct is only given for a node in the tree.
+   * It is possible that this method returns null on a non-leaf variable, if the struct is not defined till now.
+   * If it is guaranteed that this is a non-leaf-variable, invoke {@link #getOrCreateStructForNonLeafVariables()}.
+   * @return null on a leaf-variable, the defined struct (maybe null) for a non-leaf variable.
+   */
+  public InspcStruct getStruct(){ return itsStruct; }
   
   @Override public void setRefreshed(long time){ timeRefreshed = time; }
 
