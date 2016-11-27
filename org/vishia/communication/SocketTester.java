@@ -121,6 +121,7 @@ public class SocketTester extends MainCmd
     for(int i=0; i<data.length; i++){ data[i] = (byte)(i);}
     StringFormatter output = new StringFormatter(100);
     output.addHexLine(data, 0, 16, StringFormatter.k4right);
+    try{ output.close();} catch(IOException exc) {}
     report.reportln(Report.info, output.toString());
   }
 
@@ -301,6 +302,7 @@ public class SocketTester extends MainCmd
               StringFormatter output = new StringFormatter(120);
               output.addHexLine(bufferInput, idx, nBytes, StringFormatter.k1);
               main.writeInfoln(output.toString());
+              try{ output.close();} catch(IOException exc) {}
               length -= nBytes;
               idx += nBytes;
             }
@@ -351,6 +353,7 @@ public class SocketTester extends MainCmd
             StringFormatter output = new StringFormatter(120);
             output.addHexLine(data, idx, nBytes, StringFormatter.k4right);
             main.writeInfoln(output.toString());
+            try{ output.close();} catch(IOException exc) {}
             length -= nBytes;
             idx += nBytes;
           }

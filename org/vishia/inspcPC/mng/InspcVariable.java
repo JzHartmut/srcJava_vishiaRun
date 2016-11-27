@@ -339,6 +339,7 @@ public class InspcVariable implements VariableAccessArray_ifc
           } catch(ParseException exc){
             
           }
+          spValue.close();
         } else {
           System.out.println("InspcVariable - faulty type for setValue; " + cType);
         }
