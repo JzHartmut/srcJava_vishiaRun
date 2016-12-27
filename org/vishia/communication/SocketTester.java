@@ -144,7 +144,7 @@ public class SocketTester extends MainCmd
       */
       //comm = InterProcessCommFactoryAccessor.getInstance().create("UDP:0.0.0.0", nReceivePort);
       
-      InterProcessCommFactory ipcFactory = InterProcessCommFactoryAccessor.getInstance();
+      InterProcessCommFactory ipcFactory = InterProcessCommFactory.getInstance();
       comm = ipcFactory.create(sOwnAddress); //It creates and opens the UDP-Port.
       
       

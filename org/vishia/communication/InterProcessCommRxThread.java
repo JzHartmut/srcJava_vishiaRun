@@ -103,7 +103,7 @@ public class InterProcessCommRxThread
    * on the parameter of the ownAddrIpc and the possibilities. 
    * @param ownAddrIpc The address String for receiving data. This String determines the kind of InterProcessComm.
    *   Use "UDP:127.9.0.1:6000" to open an UDP-Communication for this example via loop-back on port 6000.
-   *   See {@link InterProcessCommFactoryAccessor}, {@link InterProcessCommFactorySocket}.
+   *   See {@link InterProcessCommFactory}, {@link InterProcessCommFactorySocket}.
    * @param execRxData aggregation of executer of all commands.
    */
   public InterProcessCommRxThread(String ownAddrIpc, InterProcessCommRx_ifc execRxData)
@@ -111,7 +111,7 @@ public class InterProcessCommRxThread
     this.execRxData = execRxData;
     /**use the existent factory, it is determined by linker or classLoader, which it is.
      * @java2c=dynamic-call. */
-    InterProcessCommFactory ipcFactory = InterProcessCommFactoryAccessor.getInstance();
+    InterProcessCommFactory ipcFactory = InterProcessCommFactory.getInstance();
     /**The interProcessCommunication, depends from the factory and the own Address.
      * It is not socket anyway.
      * @java2c=dynamic-call.  */

@@ -249,9 +249,10 @@ public final class ClassContent implements CmdConsumer_ifc
         memObj.set(SearchElement.searchObject(sVariablePath, rootObj, fieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
         idx = idxP[0];
         field = fieldP[0];
+        /**The memObj contains the reference to the Object which contains the field. */
         found = memObj.obj() != null && field !=null;
         if(found)
-        { /**Field is found. */
+        { /**Field and Object of Field is found. */
           modifiers = field.getModifiers();
           if(ModifierJc.isCollection(modifiers) && (idx < 0 || (ModifierJc.isStaticArray(modifiers) 
             && idx >= field.getStaticArraySize())))

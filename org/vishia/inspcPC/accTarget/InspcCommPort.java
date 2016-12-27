@@ -111,7 +111,7 @@ public class InspcCommPort implements Closeable
   public boolean open(String sOwnIpAddrP)
   {
     this.sOwnIpAddr = sOwnIpAddrP;
-    InterProcessCommFactory ipcFactory = InterProcessCommFactoryAccessor.getInstance();
+    InterProcessCommFactory ipcFactory = InterProcessCommFactory.getInstance();
     ipc = ipcFactory.create (sOwnIpAddrP);
     targetSenderAddr = ipc.createAddress();
     int ipcOk = ipc.open(null, true);
