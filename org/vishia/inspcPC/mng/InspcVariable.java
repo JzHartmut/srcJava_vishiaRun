@@ -498,8 +498,8 @@ public class InspcVariable implements VariableAccessArray_ifc
       || (timeLast) >= 5000  //requested for a longer time.
       ) {
       //request newly only if it was requested 
-      this.timeRequested = time; 
-      this.isRequested = false;
+      this.timeRequested = time;   //request it!
+      this.isRequested = false;    //it should be requested, but it is not requested yet.
     }
     if(run !=null){
       int catastrophicCount = 10;

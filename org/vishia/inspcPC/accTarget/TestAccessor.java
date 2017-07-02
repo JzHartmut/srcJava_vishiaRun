@@ -4,7 +4,6 @@ import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InspcDataExchangeAccess.Inspcitem;
 import org.vishia.inspcPC.InspcAccessExecRxOrder_ifc;
-import org.vishia.inspectorTarget.InspcTelgInfoSet;
 import org.vishia.msgDispatch.LogMessage;
 
 public class TestAccessor
@@ -38,7 +37,7 @@ public class TestAccessor
     String sPathInTarget = "workingThread.data.yCos.";
     
     Address_InterProcessComm addrTarget = targetCommPort.createTargetAddr(sIpTarget);
-    inspcAccessor = new InspcTargetAccessor("test", targetCommPort, addrTarget, null);
+    inspcAccessor = new InspcTargetAccessor("test", targetCommPort, addrTarget, 0.1f, 5.0f, null);
 
     //String sPathInTarget2 = "_DSP_.data1.bitField.bits-bit11."; 
     if(targetCommPort.open(sIpOwn))

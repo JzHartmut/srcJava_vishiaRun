@@ -2,6 +2,7 @@ package org.vishia.inspcPC.mng;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.EventObject;
 import java.util.List;
@@ -33,6 +34,7 @@ import org.vishia.util.CompleteConstructionAndStart;
 import org.vishia.util.ReplaceAlias_ifc;
 import org.vishia.util.StringFunctions;
 import org.vishia.util.StringFunctions_C;
+import org.vishia.util.StringPartScan;
 import org.vishia.util.ThreadRun;
 
 /**This class supports the communication via the inspector for example with reflection access. 
@@ -101,6 +103,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   /**Version, history and license.
    * <ul>
+   * <li>2017-07-02 Hartmut new: Argument for target can contain for ex. "UDP:192.168.15.101:60078, period = 0.5, timeout =0".
+   *   Especially with timeout=0 it does not invoke setReady() in {@link InspcTargetAccessor#isOrSetReady(long)}, need for step debug.
    * <li>2016-01-24 Hartmut chg: A request of a variable is not regarded if the request is older than a longer timer. 
    *   In the previous version a request is removed if it was older. This is more simple.
    * <li>2015-06-21 Hartmut new. invokes {@link InspcTargetAccessor#setStateToUser(InspcPlugUser_ifc)}. 
@@ -159,7 +163,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final int version = 0x20131211;
+  final static String version = "2017-07-02";
 
   
   /**The request of values from the target is organized in a cyclic thread. The thread sends
@@ -401,7 +405,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    */
   public VariableAccess_ifc accVariable(final String sDataPath, int maxtimeMilliseconds)
   {
-    VariableAccess_ifc var = getVariable(sDataPath);
+    VariableAccess_ifc var = getVariable(sDataPath);  //create the variable if proper.
     if(var == null) return null;
     long timeStart = System.currentTimeMillis();
     long time = timeStart - 3000; //firstly request
@@ -709,8 +713,28 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
     commPort.open(sOwnIpcAddr);
     for(Map.Entry<String, String> e : indexTargetIpcAddr.entrySet()){
       String name = e.getKey();
-      Address_InterProcessComm addrTarget = commPort.createTargetAddr(e.getValue());
-      InspcTargetAccessor accessor = new InspcTargetAccessor(name, commPort, addrTarget, threadEvent);
+      String val = e.getValue();
+      StringPartScan spval= new StringPartScan(val);
+      spval.lento(',').len0end();
+      String addr = spval.getCurrentPart(-1).toString().trim();
+      Address_InterProcessComm addrTarget = commPort.createTargetAddr(addr);
+      spval.fromEnd();
+      float period = 0.1f;
+      float timeout = 5.0f;
+      spval.scanStart(true);
+      try {
+        while(spval.scan(",").scanOk()) {
+          if(spval.scan("period").scan("=").scanFloatNumber(true).scanOk()) {
+            period = (float)spval.getLastScannedFloatNumber();
+          }
+          else if(spval.scan("timeout").scan("=").scanFloatNumber(true).scanOk()) {
+            timeout = (float)spval.getLastScannedFloatNumber();
+          }
+        }
+      } catch(ParseException exc) {
+        System.err.append(exc.getMessage());
+      }
+      InspcTargetAccessor accessor = new InspcTargetAccessor(name, commPort, addrTarget, period, timeout, threadEvent);
       indexTargetAccessor.put(name, accessor);
       listTargetAccessor.add(accessor);
     }
@@ -810,15 +834,10 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   @Override
   public void cmdSetValueByPath(String sDataPath, long value, int typeofValue, InspcAccessExecRxOrder_ifc actionOnRx)
   { //check which thread: The inspector thread itself:
-    if(false) {
-      InspcTargetAccessData acc = getTargetAccessFromPath(sDataPath, true);
-      acc.targetAccessor.cmdSetValueByPath(acc.sPathInTarget, value, typeofValue, actionOnRx);
-    } else {
-      InspcCmdStore cmd = new InspcCmdStore(this);
-      cmd.cmdSetValueByPath(sDataPath, value, typeofValue, actionOnRx);
-      cmdQueue.offer(cmd);
-    
-    }
+    InspcCmdStore cmd = new InspcCmdStore(this);
+    cmd.cmdSetValueByPath(sDataPath, value, typeofValue, actionOnRx);
+    cmdQueue.offer(cmd);
+  
   }
 
   @Override public void cmdSetStringByPath(VariableAccessArray_ifc var, String value)
@@ -841,43 +860,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   }
   
   
-  /**Command to set a value. It is queued and executed in the tx thread.
-   * @see org.vishia.inspcPC.InspcAccess_ifc#cmdSetValueByPath(java.lang.String, int)
-   */
-  //@Override
-  public int XXXcmdSetValueByPath(String sDataPath, int value)
-  { InspcCmdStore cmd = new InspcCmdStore(this);
-    cmd.cmdSetInt32ByPath(sDataPath, value, null);
-    cmdQueue.offer(cmd);
-    return 0;
-  }
 
 
-  //@Override 
-  public void XXXcmdSetValueByPath(VariableAccessArray_ifc var, String value)
-  { InspcCmdStore cmd = new InspcCmdStore(this);
-    cmd.cmdSetStringByPath(var, value);
-    cmdQueue.offer(cmd);
-    throw new RuntimeException("only valid for a defined target.");
-  }
-
-  
-  //@Override
-  public void XXXcmdSetValueByPath(String sDataPath, float value, InspcAccessExecRxOrder_ifc actionOnRx)
-  { InspcCmdStore cmd = new InspcCmdStore(this);
-    cmd.cmdSetFloatByPath(sDataPath, value, actionOnRx);
-    cmdQueue.offer(cmd);
-  }
-
-
-  //@Override
-  public void XXXcmdSetValueByPath(String sDataPath, double value, InspcAccessExecRxOrder_ifc actionOnRx)
-  { InspcCmdStore cmd = new InspcCmdStore(this);
-    cmd.cmdSetDoubleByPath(sDataPath, value, actionOnRx);
-    cmdQueue.offer(cmd);
-  }
-  
-  
   @Override public boolean isOrSetReady(long timeCurrent) { return false; }
   
   @Override public void addUserTxOrder(Runnable order) 

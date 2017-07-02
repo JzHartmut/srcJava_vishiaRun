@@ -230,6 +230,9 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   /**The version history and license of this class.
    * <ul>
+   * <li>2017-02-07 Hartmut chg: {@link #InspcTargetAccessor(String, InspcCommPort, Address_InterProcessComm, float, float, EventTimerThread)}
+   *   with arguments for timeout and perdiod. 
+   * <li>2017-02-07 Hartmut new: {@link #isOrSetReady(long)} regards timeout = 0: don't invoke {@link #setReady()}.   
    * <li>2016-09-12 Hartmut chg: {@link #cmdSetStringByPath(VariableAccessArray_ifc, String)}: Up to now float values should be sent as double 
    *   because the old target systems from 2010, 2011 does not regard float.  
    * <li>2015-10-29 Hartmut chg: {@link #isOrSetReady(long)} now checks the timeout by its own {@link #cycle_timeout}.
@@ -288,7 +291,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  final static String version = "2015-08-08";
+  final static String version = "2017-07-02";
 
   private static class DebugTxRx{ 
     //int[] posTelgItems = new int[200];
@@ -713,12 +716,12 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   final float[] cycle_timeout = new float[2];
   
   
-  public InspcTargetAccessor(String name, InspcCommPort commPort, Address_InterProcessComm targetAddr, EventTimerThread threadEvents)
+  public InspcTargetAccessor(String name, InspcCommPort commPort, Address_InterProcessComm targetAddr, float period, float timeout, EventTimerThread threadEvents)
   { this.name = name;
     this.commPort = commPort;
     this.targetAddr = targetAddr;
-    cycle_timeout[0] = 0.1f;
-    cycle_timeout[1] = 5.0f;
+    cycle_timeout[0] = period;
+    cycle_timeout[1] = timeout;
     accInfoDataGetValueByIdent = new ByteDataAccessBase(0);
     accInfoDataGetValueByIdent.setBigEndian(true);
     accInfoDataGetValueByIdent.assignClear(dataInfoDataGetValueByIdent);
@@ -861,7 +864,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	  }
 	  else {
 	    long timeLastTxWaitFor = timeCurrent - (long)(1000 * cycle_timeout[1]);
-	    long dtimeExpired = timeLastTxWaitFor - timeSend;  //timeExpired is the timeLast - wait time 
+	    long dtimeExpired = cycle_timeout[1] == 0 ? -1 : timeLastTxWaitFor - timeSend;  //timeExpired is the timeLast - wait time 
 	    if(  timeSend ==0  //a telegram was never sent, faulty bTaskPending 
 	      || dtimeExpired >=0 && !bRunInRxThread
 	      ) { //not ready for a longer time: 
@@ -1015,6 +1018,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 
       if(logTelg !=null){ 
         logTelg.sendMsg(identLogTelg+idLogGetValueByPath, "add cmdGetValueByPath %s, order = %d", sPathInTarget, new Integer(order)); 
+        System.out.println("req:" + sPathInTarget);
       }
       if(sPathInTarget.contains("xWCP_1"))
         Debugutil.stop();
