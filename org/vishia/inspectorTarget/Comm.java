@@ -113,6 +113,10 @@ public class Comm implements Runnable
 	{ while(state != 'x'){
 		  openComm(true);
 		  if(state == 'o'){
+		  	try {
+		  	  //short silent.
+          Thread.sleep(200);
+        } catch (InterruptedException e) {} //unneccessary
 		  	receiveAndExecute();
 		  } else {
 		  	state = 'E';

@@ -36,7 +36,6 @@ main(){
   
   //zmake $xmldir/*.xml := parseJava2Xml(..&src);
 
-  //zmake ../rpy/ccs.xmi := genJavaXml2XMI($xmldir&src);
   zmake ../rpy/vishiaRun.xmi := genXMI(..:&src, tmpxml=xmldir);
 
 }

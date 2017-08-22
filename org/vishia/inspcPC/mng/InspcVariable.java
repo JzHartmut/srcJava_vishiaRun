@@ -507,7 +507,7 @@ public class InspcVariable implements VariableAccessArray_ifc
         if(--catastrophicCount <0){ throw new IllegalArgumentExceptionJc("InspcVariable - requestValue catastrophicalCount", run.hashCode()); }
       }
       boolean offerOk = this.runOnRecv.offer(run);
-      if(ds.sDataPath.equals("CCS:_DSP_.ccs_1P.ccs_IB_priv.ictrl.pire_p.out.YD")) {
+      if(ds.sDataPath.equals("xxxpath")) {
         System.out.println("InspcVariable.execInspcRxOrder - requestValue, " + (this.timeRequested - System.currentTimeMillis())/1000.0f + ", " + ds.sDataPath);
         Debugutil.stop();
       }  

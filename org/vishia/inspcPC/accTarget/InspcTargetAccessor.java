@@ -1011,7 +1011,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
       infoAccess.setCmdGetValueByPath(sPathInTarget, order);
-      if(sPathInTarget.equals("_DSP_.ccs_1P.ccs_IB_priv.ictrl.pire_p.out.YD.")) {
+      if(sPathInTarget.equals("xxxpath")) {
         System.out.println("InspcTargetAccessor.cmdGetValueByPath - check, " +  sPathInTarget + ", " + infoAccess.toString());
         ///Debugutil.stop();
       }  

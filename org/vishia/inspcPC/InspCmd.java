@@ -18,6 +18,8 @@ import org.vishia.jztxtcmd.JZtxtcmd;
 import org.vishia.mainCmd.MainCmd;
 import org.vishia.mainCmd.MainCmdLogging_ifc;
 import org.vishia.mainCmd.MainCmd_ifc;
+import org.vishia.msgDispatch.LogMessage;
+import org.vishia.msgDispatch.LogMessageFile;
 import org.vishia.util.CalculatorExpr;
 import org.vishia.util.DataAccess;
 import org.vishia.util.IndexMultiTable;
@@ -267,6 +269,12 @@ public class InspCmd
     InspcMng inspcMng = new InspcMng(sOwnIpcAddr, idxTargetIpcAddr, args.cycletime, false, null);
     inspcMng.complete_ReplaceAlias_ifc(replAlias);
     inspcMng.startupThreads();
+    DataAccess.Variable<Object> vLog = vars.get("telglogfile");
+    if(vLog !=null) {
+      String sFileLog = vLog.value().toString();
+      LogMessage logTelg = new LogMessageFile(sFileLog, 10, 1, null, null, null);
+      inspcMng.setLogForTargetComm(logTelg, 1000);
+    }
     // create devices:
 
     // executer.initialize(script, false, null);
