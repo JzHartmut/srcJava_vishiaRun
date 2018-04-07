@@ -224,6 +224,8 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   private ConcurrentLinkedQueue<InspcCmdStore> cmdQueue = new ConcurrentLinkedQueue<>();
   
   boolean retryDisabledVariable;
+  
+  int clearRequestedVariable;
 
   long millisecTimeoutOrders = 5000;
   
@@ -278,6 +280,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   public void setmodeRetryDisabledVariables(boolean retry){ retryDisabledVariable = retry; }
   
+
+  public void clearRequestedVariables() { clearRequestedVariable = 5; }
+
   public void setmodeGetValueByIndex(boolean byIndex){ bUseGetValueByHandle = byIndex; }
   
   
@@ -491,9 +496,12 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
       nrofVarsAll +=1;
       if(var instanceof InspcVariable){
         InspcVariable varInspc = (InspcVariable)var;
-        if(varInspc.ds.sPathInTarget.equals("this$0.inspcMng"))
+        if(varInspc.ds.sPathInTarget.startsWith("env.xU_net.[1]"))
           Assert.stop();
         //handle only variable which are requested:
+        if(this.clearRequestedVariable >0) {
+          var.setRefreshed(timeCurr + 1000);
+        }
         if(var.isRequestedValue(timeCurr - 2000, retryDisabledVariable) ){              
           //Note that several targets are ready or not in the same time.
           //Therefore for any variable isOrSetReady should be checked.
@@ -508,6 +516,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
           
         }
       }
+    }
+    if(this.clearRequestedVariable >0) { 
+      this.clearRequestedVariable -=1; 
     }
     if(nrofVarsReq >0){
       //System.out.println("InspcMng.procComm - variables requested; " + nrofVarsReq + "; all=" + nrofVarsAll);

@@ -5,10 +5,12 @@ set DST_priv=docuSrcJavaPriv_vishiaRun
 
 set SRC=-subpackages org.vishia 
 
-set SRCPATH=..;..\..\srcJava_vishiaBase
+set SRCPATH=..;..\..\..\ZBNF\srcJava_vishiaBase
+
+set CLASSPATH=xxxxx
 
 echo set linkpath
-set LINKPATH=-link ../docuSrcJava_vishiaBase
+set LINKPATH=-link ../../docuSrcJava_vishiaBase
 
-..\..\srcJava_vishiaBase\_make\+genjavadocbase.bat
+..\..\..\ZBNF\srcJava_vishiaBase\_make\+genjavadocbase.bat
 

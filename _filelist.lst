@@ -1,7 +1,7 @@
 2012-11-18 21:16:36  x     _bzrGetCmpn-NAME.bat                     ::           . 65 -1976813263 
 2012-11-14 06:18:26  x     _bzrOtherCmpnVersions.txt                ::           .796 -1506935260 
 2015-08-09 22:45:07  x     _bzr_version.txt                         ::           .176 -1562470019 
-2017-08-22 22:53:22  x     _filelist.lst                            ::           .  0  0000000000 
+2018-04-07 16:24:28  x     _filelist.lst                            ::           .  0  0000000000 
 2011-08-25 06:14:30  x     bzrGet_vishiaRun.bat                     ::           . 35 -0964060138 
 2012-04-25 12:31:14  x     revisions_srcJava_vishiaRun.txt          ::         12.026  0417654483 
 2012-11-19 21:16:54  x     test.bat                                 ::           .225 -0791171393 
@@ -11,7 +11,7 @@
 2013-11-29 16:05:49  x     SocketTester.manifest                    ::           . 51  1607973022 
 2012-08-12 22:29:46  x     genDownload.sh                           ::           . 79  0439517562 
 2017-07-29 11:10:30  x     genXMI_vishiaRun.bat                     ::          1.292  0045683111 
-2015-02-19 22:55:39  x     genjavadoc.bat                           ::           .280 -0953383910 
+2018-01-06 20:54:43  x     genjavadoc.bat                           ::           .320  0455118382 
 2012-03-03 22:58:26  x     genjavadoc.sh                            ::           .884  0556073243 
 2011-03-22 07:46:54  x     makejar_GenReflectProAgentExplorerXml.bat ::          2.021  0140353042 
 2013-11-29 16:09:38  x     makejar_SocketTester.bat                 ::           .950 -1853003935 
@@ -45,6 +45,7 @@
 2015-08-16 00:31:37  x     InterProcessCommRx_ifc.java              ::          2.647 -0155243035 
 2016-01-23 14:05:01  x     InterProcessComm_SocketImpl.java         ::          8.597 -2060850095 
 2016-12-22 21:49:36  x     SocketTester.java                        ::         12.666  0015780196 
+2018-03-08 21:04:13  x     TCPexampleSimple.java                    ::          2.483  1045791131 
 
 ============================== org/vishia/curves/ ==================================================
 2016-02-21 21:50:38  x     ReadCurves_ifc.java                      ::          2.160  1520319870 
@@ -66,6 +67,7 @@
 2016-01-11 21:42:46  x     InspcRxOk.java                           ::          2.122  0619127907 
 2016-09-01 22:45:51  x     InspcTargetAccessData.java               ::          3.261  0342962367 
 2016-01-07 21:55:43  x     UserInspcPlug_ifc.java                   ::          2.271 -0962705071 
+2018-01-06 20:44:22  x     package-info.java                        ::           .110  0563075688 
 
 ============================== org/vishia/inspcPC/accTarget/ =======================================
 2015-03-21 23:36:51  x     InspcAccessCheckerRxTelg.java            ::          4.412  1670508660 
@@ -77,8 +79,8 @@
 
 ============================== org/vishia/inspcPC/mng/ =============================================
 2016-06-16 09:04:19  x     InspcCmdStore.java                       ::          6.226 -1228141487 
-2016-11-03 12:03:39  x     InspcFieldOfStruct.java                  ::          5.395  0856204352 
-2017-07-02 23:41:55  x     InspcMng.java                            ::         35.526 -0766011057 
+2018-04-05 22:12:10  x     InspcFieldOfStruct.java                  ::          5.491 -0739987864 
+2018-04-04 22:27:22  x     InspcMng.java                            ::         35.824 -1719083970 
 2016-01-06 10:36:23  x     InspcStruct.java                         ::          7.479 -2108504887 
 2017-07-29 11:11:09  x     InspcVariable.java                       ::         29.017  1260662167 
 
@@ -98,8 +100,9 @@
 2017-07-13 18:54:34  x     Comm.java                                ::          7.625  0084185148 
 2015-08-07 12:00:51  x     InspcDataInfo.java                       ::          4.206  0343101669 
 2015-05-31 20:49:11  x     InspcTelgInfoSet.java                    ::          8.311  1508497226 
-2015-08-07 20:16:20  x     Inspector.java                           ::          2.226 -0149137122 
+2018-01-10 21:17:13  x     Inspector.java                           ::          3.889 -1422071013 
 2016-09-12 22:54:47  x     SearchElement.java                       ::          8.274  1641347458 
+2018-01-06 19:31:16  x     package-info.java                        ::           .206 -1130507472 
 
 ============================== org/vishia/inspectorTarget/example/ =================================
 2015-03-28 14:14:21  x     ExampleInspector.java                    ::          2.208  1333384864 
@@ -114,7 +117,7 @@
 
 ============================== org/vishia/reflect/ =================================================
 2015-08-07 21:15:37  x     ClassJc.java                             ::          9.932 -1286575741 
-2016-01-07 19:50:07  x     FieldJc.java                             ::         35.104  1320216361 
+2018-04-04 21:35:49  x     FieldJc.java                             ::         35.760  1725729487 
 2016-01-24 20:28:32  x     FieldJcVariableAccess.java               ::          8.108 -1942052976 
 2016-01-25 15:03:32  x     FieldVariableAccess.java                 ::           .365  1764546608 
 2011-02-21 17:25:36  x     MemAccessArrayDebugJc.java               ::          1.201 -0012685299 

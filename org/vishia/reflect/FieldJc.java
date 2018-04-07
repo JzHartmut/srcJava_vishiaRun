@@ -447,8 +447,7 @@ public class FieldJc
      { length = getArraylengthUML_Map(adr);
      } break; 
      case ModifierJc.kObjectArrayJc:
-     { Object[] array = (Object[])(adr.obj());  //it is known that it is an ObjectArrayJc
-       length = array.length;
+     { length = getLength(adr.obj());
      } break; 
      case ModifierJc.kStaticArray:
      { //memory location of the field inside obj
@@ -472,8 +471,24 @@ public class FieldJc
    return length;
   }  
   
-  
-  
+  int getLength(Object objArray) {
+    Class clazz = objArray.getClass();
+    String sType = clazz.getName();
+    char ctype = sType.charAt(sType.length()-1);
+    int length;
+    switch(ctype) {
+    case 'F': length = ((float[])objArray).length; break;
+    case 'D': length = ((double[])objArray).length; break;
+    case 'B': length = ((byte[])objArray).length; break;
+    case 'S': length = ((short[])objArray).length; break;
+    case 'I': length = ((int[])objArray).length; break;
+    case 'J': length = ((long[])objArray).length; break;
+    case 'C': length = ((char[])objArray).length; break;
+    case 'Z': length = ((boolean[])objArray).length; break;
+    default: length = ((Object[])objArray).length; break;
+    }
+    return length;
+  }
   
   /**Returns the real Class and the referenced Object appropriate to the field in the given Object.
    * The field should be a reference field, not a primitive. 

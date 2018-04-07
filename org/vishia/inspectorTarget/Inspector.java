@@ -1,5 +1,44 @@
 package org.vishia.inspectorTarget;
 
+import org.vishia.communication.InterProcessComm;
+import org.vishia.communication.InterProcessCommFactory;
+import org.vishia.communication.InterProcessComm_SocketImpl;
+
+/**This is the main class for the Inspector for Java and C.
+ * The inspector helps inspect data via reflection. It is a service. 
+ * It uses an {@link InterProcessComm} implementation for communication with any client.
+ * 
+ * To use the Inspector in Java you should insert the following lines on start of an Java program:
+ * <pre>
+ * class MyTestClass {
+ * 
+ *   void startRoutine() {
+ *     //Instantiate the InterprocessComm implementation for sockets
+ *     new org.vishia.communication.InterProcessCommFactorySocket();
+ *     //Instance for Inspector service:
+ *     Inspector inspc = new Inspector("UDP:0.0.0.0:60094");
+ *     inspc.start(this);
+ *   }
+ *   
+ *   void terminateRoutine() {
+ *     Inspector.get().shutdown(this);
+ *   }
+ *   
+ *   
+ *   ......
+ * </pre>
+ * <ul>
+ * <li>The {@link InterProcessComm_SocketImpl} instantiates a singleton referred with {@link InterProcessCommFactory#getInstance()}
+ *   for socket communication. This is recommended on PC platforms.
+ * <li>The {@link #start(Object)} routine initiates the Inspector service with the given instance as root instance.
+ * <li>The {@link #shutdown()} is necessary especially if a Java frame still runs but the application with the Inspector should be terminate.
+ *   It closes the communication, close the socket. If the whole Java application is end as process on the operation system, the communication is closed from the system already. 
+ * <li>That is all. Now the socket communication can access via UDP with the given IP and Port.
+ * </ul> 
+ *     
+ * @author Hartmut Schorrig
+ *
+ */
 public class Inspector
 {
   

@@ -105,7 +105,8 @@ import org.vishia.byteData.VariableContainer_ifc;
   public InspcVariable variable(InspcVariable parent, VariableContainer_ifc container) {
     if(var == null){
       String sParentPath = parent.ds.sDataPath;
-      String sPathVar = sParentPath + (sParentPath.endsWith(":") ? "" : '.') + identifier;
+      //if identifier is only an index, append without '.'
+      String sPathVar = sParentPath + (identifier.charAt(0)== '[' ? "" : (sParentPath.endsWith(":") ? "" : '.')) + identifier;
       var = (InspcVariable)container.getVariable(sPathVar);
       
       if(nrofArrayElements >0) {
