@@ -437,6 +437,10 @@ public final class InspcDataExchangeAccess
     
     
     /**Sets the head data and sets the length of the ByteDataAccess-element.
+     * This routine should invoked at last after alle children are added because the element will be freeze.
+     * Especially {@link ByteDataAccessBase#bExpand} is set to false. 
+     * That is because the length in head should match to the real length of the element.
+     * 
      * @param length The length in head, the length of the info element
      * @param cmd The cmd of the info element
      * @param order The order number to assign the answer.

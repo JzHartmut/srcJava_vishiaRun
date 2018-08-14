@@ -772,17 +772,19 @@ public final class ClassContent implements CmdConsumer_ifc
       theField = theFieldP[0];
       idx = idxP[0];
       answer.addChild(answerItem);
-      answerItem.setInfoHead(0, InspcDataExchangeAccess.Inspcitem.kAnswerValue, nOrderNr);
       if(theObject.obj() != null && theField !=null)
       { 
         int addr = theField.getMemoryIdent(theObject, idxP[0]);
         answerItem.addChildInteger(1, InspcDataExchangeAccess.kReferenceAddr);  //Set the number of char-bytes in 1 byte
         answerItem.addChildInteger(4, addr); 
-        
+        answerItem.addChildInteger(3, 0);     //align to 4 
+        int nBytesItem = answerItem.getLength();
+        answerItem.setInfoHead(nBytesItem, InspcDataExchangeAccess.Inspcitem.kAnswerValue, nOrderNr);
       } else {
-        answerItem.setCmd(InspcDataExchangeAccess.Inspcitem.kFailedValue);
+        answerItem.setInfoHead(InspcDataExchangeAccess.Inspcitem.sizeofHead, InspcDataExchangeAccess.Inspcitem.kFailedValue, nOrderNr);
+        //answerItem.setCmd(InspcDataExchangeAccess.Inspcitem.kFailedValue);
       }
-      answerItem.setLength(answerItem.getLength());  //the length of the answerItems in byte.
+      //answerItem.setLength(answerItem.getLength());  //the length of the answerItems in byte.
       
     }catch(Exception exc){
       /**Unexpected ...*/

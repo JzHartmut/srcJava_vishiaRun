@@ -493,9 +493,17 @@ public class FieldJc
   /**Returns the real Class and the referenced Object appropriate to the field in the given Object.
    * The field should be a reference field, not a primitive. 
    * It means, this.getType().isPrimitive() should return false.
+   * <br>
+   * If 
+   * <br>
+   * Elsewhere, for ordinary fields, the retClazz is the 
    * @param instanceM The reference to the Object, where the field is located in. It may be located
    *        in a extern hardware.
-   * @param retClazz The really type of retObj, not only the this.getType().
+   * @param retClazz The really type of retObj, not only the this.getType(). The really type is gotten
+   *   from the referenced Object of that field. Only if this field is a special FieldJc instance 
+   *   to access the super data, it's {@link #name} is "super", then this operation returns instanceM itself 
+   *   and set retClazz to the ClassJc type of the superclass.
+   *   With them the reflection Access for Inspc presents the fields of the superclass as tree. 
    * @param idx Given index if the field is an array-field.
    * @return The object which is referenced. It may be null contain a null-reference.
    *        The referenced object may be located in a extern hardware, though instanceM is locally.
