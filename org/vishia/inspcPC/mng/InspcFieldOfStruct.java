@@ -45,13 +45,13 @@ import org.vishia.byteData.VariableContainer_ifc;
      *   The {@link InspcStruct} instance of this field which contains the sub fields will be referenced
      *   if an variable was created with {@link #var}. {@link InspcVariable#itsStruct}. 
      */
-    public InspcFieldOfStruct(InspcStruct parent, String nameShow, String identifier, String type, int nrofArrayElements){
+    public InspcFieldOfStruct(InspcStruct parent, String nameShow, String identifier, String type, int nrofArrayElements, boolean hasSubstruct){
       this.struct = parent;
       this.nameShow = nameShow;
       this.identifier = identifier;
       this.type = type;
       this.nrofArrayElements = nrofArrayElements;
-      this.hasSubstruct = hasSubstruct();
+      this.hasSubstruct = hasSubstruct;
     }
     
     
@@ -64,18 +64,18 @@ import org.vishia.byteData.VariableContainer_ifc;
      *   The {@link InspcStruct} instance of this field which contains the sub fields will be referenced
      *   if an variable was created with {@link #var}. {@link InspcVariable#itsStruct}. 
      */
-    public InspcFieldOfStruct(InspcVariable var, String type, int nrofArrayElements){
+    public InspcFieldOfStruct(InspcVariable var, String type, int nrofArrayElements, boolean hasSubstruct){
       this.struct = var.getOrCreateStructForNonLeafVariables();
       this.identifier = var.ds.sName;
       this.nameShow = identifier;
       this.type = type;
       this.var = var;
       this.nrofArrayElements = nrofArrayElements;
-      this.hasSubstruct = hasSubstruct();
+      this.hasSubstruct = hasSubstruct;
     }
     
     
-   boolean hasSubstruct() {
+   boolean XXXhasSubstruct() {  //note: not used yet, the substruct info come from target with type...
      if(type == null){
        return true;  //a parent node
      }

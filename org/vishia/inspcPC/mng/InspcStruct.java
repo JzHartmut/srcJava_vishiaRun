@@ -24,6 +24,12 @@ public final class InspcStruct
   
   /**Version, history and license.
    * <ul>
+   * <li>2018-09-08 Hartmut chh: in {@link #rxActionGetFields(org.vishia.communication.InspcDataExchangeAccess.Inspcitem, long, LogMessage, int)}
+   *   The property 'hasSubStruct', important for forcing getFields etc. depends now no more on the type itself (no substruct for scalar)
+   *   but from the "..." after the type in the received telegram from the target. It means the target determines whether it has a substruct. Not the type.
+   *   That is the original behavior since 2006. It is better in special situations: 
+   *   A complex type don't may have sub structs if the reflection of that type are given but are hidden by access rights. It is a decision of the target,
+   *   not one of the type. The trigger for this change (back to the root) was: An access to a target via proxy with void type has failed. 
    * <li>2015-03-20 Hartmut {@link #varOfStruct} 
    * <li>2013-12-20 Hartmut created. 
    * </ul>
@@ -165,7 +171,7 @@ public final class InspcStruct
           nrofArrayElements = 0;
         }
         String type = sField.substring(posSepNameType+1, posTypeEnd > posSepNameType ? posTypeEnd : sField.length());
-        InspcFieldOfStruct field = new InspcFieldOfStruct(this, nameShow, name, type, nrofArrayElements); //, posTypeEnd >0);
+        InspcFieldOfStruct field = new InspcFieldOfStruct(this, nameShow, name, type, nrofArrayElements, posTypeEnd >0);
         fields.add(field);
         bUpdated = true;
         //build all variables   
