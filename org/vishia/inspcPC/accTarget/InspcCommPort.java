@@ -6,11 +6,8 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.vishia.communication.Address_InterProcessComm;
-import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessCommFactory;
-import org.vishia.communication.InterProcessCommFactoryAccessor;
-import org.vishia.reflect.FieldJc;
 import org.vishia.util.Assert;
 
 /**This class is one communication port for a target communication.
@@ -123,6 +120,7 @@ public class InspcCommPort implements Closeable
     } else {
       receiveThread.start();   //start it after ipc is ok.
     }
+    
     return ipcOk == 0;
   }
   

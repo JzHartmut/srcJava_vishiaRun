@@ -130,26 +130,26 @@ import org.vishia.util.Debugutil;
  * <li>With a next {@link #send()} this sequence is repeated.
  * </ul>
  * <pre>
- * InspcMng                  this                                                 "
- *  |                          |                                                  "
- *  ~                          ~                                                  "
- *  +procComm():               |                                                  "
- *  +-evalRxTelgInspcThread()->|[rxDatagram]
- *  +                          |-evaluateOneDatagram()-+            Requestor     "              
- *  +                          +<----------------------+                  |       "         
- *  +                          +----execInspcRxOrder(datagramitem, ...)-->|       "                          
- *  +                          +----execInspcRxOrder(datagramitem, ...)-->|       "                          
- *  +                          +----execInspcRxOrder(datagramitem, ...)-->|       "                          
- *  +                          +----execInspcRxOrder(datagramitem, ...)-->|       "                          
- *  +                          +                                          |       "
- *  +                          +                                                  "
- *  +                          +                               commPort      ipc  "
- *  +                          +                                 |            |   "
- *  +                          +---send(txBuffer)--------------->|...........>|   "
- *  +<.........................+                                 |            |   "
- *  |                          |                                 |            |   "
- *  |                          |                                 |            |   "
- *  ~                          ~                                 ~            ~====
+ * InspcMng                                this                                                 "
+ *  |                                        |                                                  "
+ *  ~                                        ~                                                  "
+ *  +procComm():                             |                                                  "
+ *  +-{@link #evaluateRxTelgInspcThread()}-->|[rxDatagram]                                      "
+ *  +                                        |-evaluateOneDatagram()-+            Requestor     "
+ *  +                                        +<----------------------+                  |       "
+ *  +                                        +----execInspcRxOrder(datagramitem, ...)-->|       "
+ *  +                                        +----execInspcRxOrder(datagramitem, ...)-->|       "
+ *  +                                        +----execInspcRxOrder(datagramitem, ...)-->|       "
+ *  +                                        +----execInspcRxOrder(datagramitem, ...)-->|       "
+ *  +                                        +                                          |       "
+ *  +                                        +                                                  "
+ *  +                                        +                               commPort      ipc  "
+ *  +                                        +                                 |            |   "
+ *  +                                        +---send(txBuffer)--------------->|...........>|   "
+ *  +<.......................................+                                 |            |   "
+ *  |                                        |                                 |            |   "
+ *  |                                        |                                 |            |   "
+ *  ~                                        ~                                 ~            ~====
  * </pre>
  * The communication is still pending yet. Next requests from user level are deferred till this repetition
  * of {@link #send()} and {@link #evaluateRxTelgInspcThread()} is currently.
@@ -230,6 +230,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   /**The version history and license of this class.
    * <ul>
+   * <li>2018-10-19 Hartmut new: Preparation for encryption/passwd, {@link #setPwdCycle(String, String, float, float)} from Gui, 
+   *   {@link #setReady()} is public because called from Gui. Better for single-step-debug in target with timeout = 0. 
    * <li>2017-02-07 Hartmut chg: {@link #InspcTargetAccessor(String, InspcCommPort, Address_InterProcessComm, float, float, EventTimerThread)}
    *   with arguments for timeout and perdiod. 
    * <li>2017-02-07 Hartmut new: {@link #isOrSetReady(long)} regards timeout = 0: don't invoke {@link #setReady()}.   
@@ -291,7 +293,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * 
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    */
-  final static String version = "2017-07-02";
+  final static String version = "2018-10-19";
 
   private static class DebugTxRx{ 
     //int[] posTelgItems = new int[200];
@@ -462,7 +464,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   
   /**Identifier especially for debugging. */
-  final String name;
+  public final String name;
   
   /**Free String to write, for debug stop. */
   String dbgNameStopTx;
@@ -708,12 +710,17 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
 	final Address_InterProcessComm targetAddr;
 	
-	int nEncryption = 0;
 	
+	
+	
+  int nEncryptionAcc = 0, nEncryptionAccNew;
+  
+  int nEncryptionChg = 0, nEncryptionChgNew;
+  
   private final InspcCommPort commPort;	
 	
   
-  final float[] cycle_timeout = new float[2];
+  public final float[] cycle_timeout = new float[2];
   
   
   public InspcTargetAccessor(String name, InspcCommPort commPort, Address_InterProcessComm targetAddr, float period, float timeout, EventTimerThread threadEvents)
@@ -741,6 +748,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     states = new States(threadEvents);	
     stateIdle = states.getState(States.StateIdle.class);
     stateWaitAnswer = states.getState(States.StateWaitReceive.class);
+    
     //The factory should be loaded already. Then the instance is able to get. Loaded before!
   }
 
@@ -770,6 +778,27 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	}
 	
 	
+	
+	/**Set information from the GUI
+	 * @param pwdAccess should be "" if no change
+	 * @param pwdChange should be "" if no change
+	 * @param timeCycle
+	 * @param timeout
+	 */
+	public final void setPwdCycle(String pwdAccess, String pwdChange, float timeCycle, float timeout) {
+    boolean setPwd = false;
+    if(pwdAccess.length() >0) { this.nEncryptionAccNew = Integer.parseInt(pwdAccess); setPwd = true; }
+    if(pwdChange.length() >0) { this.nEncryptionChgNew = Integer.parseInt(pwdChange); setPwd = true; }
+    this.cycle_timeout[0] = timeCycle;
+    this.cycle_timeout[1] = timeout;
+    if(setPwd) {
+      cmdGetFields("?access", actionPwdRx);
+    }
+    //cmdGetFields("?access", actionPwdRx);
+	}
+	
+	
+	
   /**Adds any program snippet which is executed while preparing the telegram for data request from target.
    * After execution the order will be removed.
    * @param order the program snippet.
@@ -794,7 +823,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    *         If this routine returns false, the info can't be place in this telegram.
    *         It should be send firstly. The current order should be processed after them.
    */
-  private boolean prepareTelg(int lengthNewInfo)
+  private boolean prepareTelg(int lengthNewInfo, int nEncryption)
   { if(evFill.occupy(null, false)) {
       states.processEvent(evFill);    //set state to fill
     } else; //don't send the event, it is in queue already from last prepareTelg invocation.
@@ -863,15 +892,16 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	    bReady = !getFieldsData.bGetFieldsPending; //true;
 	  }
 	  else {
+	    //Note: This is a usual case if the cycle in InspcMng.procComm() calls this routine to check whether all is ready. It is not so.
 	    long timeLastTxWaitFor = timeCurrent - (long)(1000 * cycle_timeout[1]);
 	    long dtimeExpired = cycle_timeout[1] == 0 ? -1 : timeLastTxWaitFor - timeSend;  //timeExpired is the timeLast - wait time 
 	    if(  timeSend ==0  //a telegram was never sent, faulty bTaskPending 
 	      || dtimeExpired >=0 && !bRunInRxThread
 	      ) { //not ready for a longer time: 
+	      //This is the timeout handling for pending requests.
 	      //forgot a pending request:
           //if(logTelg !=null) 
         System.err.println("InspcTargetAccessor.isReady - recover after timeout target; " + toString());
-        bRequestWhileTaskPending = false;
         synchronized(this){
           Debugutil.stop();  //possibility to wait in debug
 	      }
@@ -894,7 +924,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	/**Sets the communication cycle of ready (idle) state,
 	 * called either inside {@link #isOrSetReady(long)} on time expired or if the last rx telegram was processed successfully.
 	 */
-	private void setReady()
+	public void setReady()
 	{
     for(int ixRx = 0; ixRx < _tdata.rxNrofDatagramsForOneSend; ++ixRx) {
       _tdata.rxDatagram [ixRx] = null;  //garbage it.
@@ -915,6 +945,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       debugData1.clearAll();
     }
     bTaskPending.set(false);
+    bRequestWhileTaskPending = false;
+    
 	}
 	
 	
@@ -977,7 +1009,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     //if(states.isInState(stateFilling))
       stop();
     int lengthItem = InspcTelgInfoSet.lengthCmdGetFields(sPathInTarget.length());
-    if(prepareTelg(lengthItem)) {
+    int nEncryption = nEncryptionAcc;
+    if(sPathInTarget.equals("?access")) { nEncryption = nEncryptionAccNew; }
+    if(sPathInTarget.equals("?change")) { nEncryption = nEncryptionChgNew; }
+    if(prepareTelg(lengthItem, nEncryption)) {
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       InspcTelgInfoSet infoAccess = newTxitem();
       txAccess.addChild(infoAccess);
@@ -1005,7 +1040,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   public int cmdGetValueByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order = 5;
     int lengthItem = InspcTelgInfoSet.lengthCmdGetValueByPath(sPathInTarget.length());
-    if(prepareTelg(lengthItem)) {
+    if(prepareTelg(lengthItem, nEncryptionAcc)) {
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       InspcTelgInfoSet infoAccess = newTxitem();
       txAccess.addChild(infoAccess);
@@ -1040,7 +1075,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   { final int order;
     final int zPath = sPathInTarget.length();
     final int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
-    prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + zPath + restChars);
+    prepareTelg(InspcDataExchangeAccess.Inspcitem.sizeofHead + zPath + restChars, nEncryptionAcc);
     order = orderGenerator.getNewOrder();
     setExpectedOrder(order, actionOnRx);
     InspcTelgInfoSet infoAccess = newTxitem();
@@ -1081,7 +1116,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     if(ixIdent5GetValueByIdent > 0 && isOrSetReady(System.currentTimeMillis())){
       int lengthInfo = accInfoDataGetValueByIdent.getLength();
       //It prepares the telg head.
-      if(prepareTelg(lengthInfo)){  //It finishes an existing telegram if there is not enough space for the idents-info
+      if(prepareTelg(lengthInfo, nEncryptionAcc)){  //It finishes an existing telegram if there is not enough space for the idents-info
         int order = 0xabcdef01; //not neccessary. //orderGenerator.getNewOrder();
         //setExpectedOrder(order, actionRx4ValueByIdent);
         InspcTelgInfoSet infoAccess = newTxitem();
@@ -1132,7 +1167,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     int zPath = sPathInTarget.length();
     int restChars = 4 - (zPath & 0x3);  //complete to a 4-aligned length
     int zInfo = InspcDataExchangeAccess.Inspcitem.sizeofHead + InspcDataExchangeAccess.InspcSetValue.sizeofElement + zPath + restChars; 
-    if(prepareTelg(zInfo )){
+    if(prepareTelg(zInfo , nEncryptionChg)){
       InspcTelgInfoSet infoAccess = newTxitem();
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
@@ -1235,7 +1270,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   public int cmdSetValueByPath(String sPathInTarget, int value)
   { int order;
     int lengthItem = InspcTelgInfoSet.lengthCmdSetValueByPath(sPathInTarget.length());
-    if(prepareTelg(lengthItem)) {
+    if(prepareTelg(lengthItem, nEncryptionChg)) {
       InspcTelgInfoSet infoAccess = newTxitem();
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
@@ -1258,7 +1293,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   public void cmdSetInt32ByPath(String sPathInTarget, int value, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
     int lengthItem = InspcTelgInfoSet.lengthCmdSetValueByPath(sPathInTarget.length());
-    if(prepareTelg(lengthItem)) {
+    if(prepareTelg(lengthItem, nEncryptionChg)) {
       InspcTelgInfoSet infoAccess = newTxitem();
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
@@ -1281,7 +1316,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   public void cmdSetFloatByPath(String sPathInTarget, float value, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
     int lengthItem = InspcTelgInfoSet.lengthCmdSetValueByPath(sPathInTarget.length());
-    if(prepareTelg(lengthItem)) {
+    if(prepareTelg(lengthItem, nEncryptionChg)) {
       InspcTelgInfoSet infoAccess = newTxitem();
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
@@ -1304,7 +1339,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   public void cmdSetDoubleByPath(String sPathInTarget, double value, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
     int lengthItem = InspcTelgInfoSet.lengthCmdSetValueByPath(sPathInTarget.length());
-    if(prepareTelg(lengthItem)) {
+    if(prepareTelg(lengthItem, nEncryptionChg)) {
       InspcTelgInfoSet infoAccess = newTxitem();
       txAccess.addChild(infoAccess);
       order = orderGenerator.getNewOrder();
@@ -1325,7 +1360,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   @Override public boolean cmdGetAddressByPath(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
     int lengthItem = InspcTelgInfoSet.lengthCmdGetAddressByPath(sPathInTarget.length());
-    if(prepareTelg(lengthItem)) {
+    if(prepareTelg(lengthItem, nEncryptionAcc)) {
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       InspcTelgInfoSet infoAccess = newTxitem();
       txAccess.addChild(infoAccess);
@@ -1427,7 +1462,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     int lengthDatagram = _tdata.tx[_tdata.txixSend].nrofBytesTelg;
     //tx[ixTxSend].nrofBytesTelg = -1; //is sent
     if(lengthDatagram >0) {
-      int ok = commPort.send(this, _tdata.tx[_tdata.txixSend].buffer, lengthDatagram);
+      int ok = commPort.send(this, _tdata.tx[_tdata.txixSend].buffer, lengthDatagram);  //send more as one telegram, the next after the answer
       synchronized(this){
         if(ok == 96)
           Debugutil.stop();
@@ -1580,7 +1615,6 @@ public class InspcTargetAccessor implements InspcAccess_ifc
                      //invoke callbacksOnAnswer if stored. 
         setReady();    
         //Now new send telegrams can be prepared. Firstly it would check whether there are 
-        bRequestWhileTaskPending = false;
         if(logTelg !=null && bWriteDebugSystemOut) System.out.println("InspcTargetAccessor.Test - All received; ");
       }  
     }
@@ -1948,6 +1982,28 @@ public class InspcTargetAccessor implements InspcAccess_ifc
     @Override public Runnable callbackOnAnswer(){return null; }  //empty
   };
 	
+  
+  
+  /**This class supplies the method to set the variable value from a received info block. 
+   */
+  @SuppressWarnings("synthetic-access") 
+  InspcAccessExecRxOrder_ifc actionPwdRx = new InspcAccessExecRxOrder_ifc()
+  {
+     /**This method is called If a answer value by handle was received and the ixHandle has referred this variable.
+     * It prepares the value presentation.
+     * @see org.vishia.inspcPC.InspcAccessExecRxOrder_ifc#execInspcRxOrder(org.vishia.communication.InspcDataExchangeAccess.Inspcitem)
+     */
+    @Override public void execInspcRxOrder(InspcDataExchangeAccess.Inspcitem accAnswerItem, long time, LogMessage log, int identLog)
+    {
+      stop();
+    }
+
+    @Override public Runnable callbackOnAnswer(){return null; }  //empty
+ }; 
+
+  
+  
+  
 	void stop(){}
 
 

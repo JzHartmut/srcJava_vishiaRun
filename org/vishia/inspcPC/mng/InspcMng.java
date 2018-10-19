@@ -103,6 +103,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
 
   /**Version, history and license.
    * <ul>
+   * <li>2018-10-19 Hartmut {@link #targetAccDbg}, {@link #openComm()} invokes now user.registerTarget(name, val, accessor); for the GUI
    * <li>2017-07-02 Hartmut new: Argument for target can contain for ex. "UDP:192.168.15.101:60078, period = 0.5, timeout =0".
    *   Especially with timeout=0 it does not invoke setReady() in {@link InspcTargetAccessor#isOrSetReady(long)}, need for step debug.
    * <li>2016-01-24 Hartmut chg: A request of a variable is not regarded if the request is older than a longer timer. 
@@ -163,7 +164,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  final static String version = "2017-07-02";
+  final static String version = "2018-10-19";
 
   
   /**The request of values from the target is organized in a cyclic thread. The thread sends
@@ -218,6 +219,11 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   private final Map<String, InspcTargetAccessor> indexTargetAccessor = new TreeMap<String, InspcTargetAccessor>();
   
   private final List<InspcTargetAccessor> listTargetAccessor = new ArrayList<InspcTargetAccessor>();
+  
+  
+  /**{@link #listTargetAccessor} also as array, because Reflection access does not work for ArrayList yet. */
+  private InspcTargetAccessor targetAccDbg;
+  
   
   private Map<String, String> indexFaultDevice;
   
@@ -746,8 +752,12 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         System.err.append(exc.getMessage());
       }
       InspcTargetAccessor accessor = new InspcTargetAccessor(name, commPort, addrTarget, period, timeout, threadEvent);
+      user.registerTarget(name, val, accessor);
       indexTargetAccessor.put(name, accessor);
       listTargetAccessor.add(accessor);
+      if(name.equals("Sim94")) {
+        targetAccDbg = accessor; 
+      }
     }
   }
   

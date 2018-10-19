@@ -141,6 +141,8 @@ public final class ClassJc
   
   private final String name;
   
+  
+  /**It is private, use {@link #fromClass(Class)}*/
   private ClassJc(Class<?> clazz)
   { this.clazz = clazz;
     modifier = clazz.getModifiers();
@@ -199,6 +201,11 @@ public final class ClassJc
   }
   
   
+  /**This operation asserts, that a ClassJc instance for one type is only existent one time.
+   * It uses the static array {@link #allClasses} which stores existent class by name. 
+   * @param clazz
+   * @return ClassJc instance for the given clazz.
+   */
   public static ClassJc fromClass(Class<?> clazz)
   {
     String className = clazz.getName();
@@ -284,4 +291,9 @@ public final class ClassJc
     getSuperClass();  //only for check bSuperClassChecked
     return superField;
   }
+  
+  
+  
+  @Override public String toString() { return clazz.toString(); }
+  
 }

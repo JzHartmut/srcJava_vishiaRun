@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.vishia.bridgeC.MemSegmJc;
+import org.vishia.util.Debugutil;
 import org.vishia.util.Java4C;
 
 /**This class extends the capability of the Java standard class java/lang/reflect/Field.
@@ -65,6 +66,8 @@ public class FieldJc
   
   /**Version, history and license.
    * <ul>
+   * <li>2018-10-19 Hartmut ctor: '[L' is an Object[]. Use fieldType.getComponentType() for reference type. 
+   *   {@link #getObjAndClass(MemSegmJc, ClassJc[], int...)}: correct access to an Object[] with given ix.
    * <li>2012-08-23 Hartmut {@link #getFloat(MemSegmJc, int...)} now supports non-static arrays too. Experience.
    * <li>2008-00-00 Hartmut created
    * </ul>
@@ -269,6 +272,8 @@ public class FieldJc
     field.setAccessible(true);
     modifier = field.getModifiers();
     this.name = field.getName();
+    if(this.name.contains("debugRxTx"))
+      Debugutil.stop();
     Class fieldType = field.getType();
     String sTypeName = fieldType.getName();
     if(fieldType.isPrimitive()){
@@ -309,18 +314,18 @@ public class FieldJc
         while( (typeChar = sTypeName.charAt(ixArray)) == '['){
           ixArray +=1;
         } //count depths of array.
-        this.cPrimitveType = typeChar;
+        this.cPrimitveType = typeChar == 'L'? 0 : typeChar;  //'L' is for Object-based arrays, non primitive
         
         switch(typeChar){
         case 'B': type = ClassJc.primitive("byte"); break;
         case 'S': type = ClassJc.primitive("short"); break;
         case 'I': type = ClassJc.primitive("int"); break;
         case 'J': type = ClassJc.primitive("long"); break;
-        case 'L': type = ClassJc.primitive("long"); break;  //it is wrong. J is correct.
         case 'F': type = ClassJc.primitive("float"); break;
         case 'D': type = ClassJc.primitive("double"); break;
         case 'Z': type = ClassJc.primitive("boolean"); break;
         case 'C': type = ClassJc.primitive("char"); break;
+        case 'L': type = ClassJc.fromClass(fieldType.getComponentType()); break;  
         default:
           throw new IllegalArgumentException("FieldJc-Exception; unexpected typeChar;" + typeChar);
         }//switch
@@ -514,7 +519,12 @@ public class FieldJc
     Object retObj = null;
     Object currObject = instanceM.obj();
     //Class<?> typeField = field.getType();
+    //int modifier = type.modifier;
     String nameType = type.getName();
+//    if((modifier & ModifierJc.kObjectArrayJc) !=0) { //  nameType.startsWith("["))
+//      Object objArray = field.get(currObject);
+//      //Object obj = currObject[0];//currObject[idx[0]];
+//    }  
     if(nameType.startsWith("["))
     { /**its an Object-Array */
       Object[] objArray = (Object[])instanceM.obj();
@@ -527,10 +537,14 @@ public class FieldJc
     }
     else
     {
-      int modifier = field.getModifiers();
       field.setAccessible(true);
       try{ 
         retObj = field.get(currObject);
+        int ixix = -1;
+        while(++ixix < idx.length && idx[ixix] >=0 ) {
+          Object[] objArray = (Object[])retObj;
+          retObj = objArray[idx[ixix]];    
+        }
         if(retObj !=null){
           clazz = ClassJc.getClass(retObj);
         } else {
@@ -974,5 +988,12 @@ public class FieldJc
   int getArraylengthUML_Map(MemSegmJc instance){ return 0; }
   
   
+  
+  
+  
   //public Class<?> getType(){ return field.getClass(); }
+
+
+  @Override public String toString() { return field.toString(); }
+
 }
