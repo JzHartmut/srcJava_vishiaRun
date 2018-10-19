@@ -10,11 +10,14 @@ import org.vishia.inspcPC.accTarget.InspcTargetAccessor;
 public interface InspcPlugUser_ifc// extends GralPlugUser_ifc
 {
   
+  
+  
+  
   /**One of the state which should be shown in the application. */
   enum TargetState{ inactive, idle, waitReceive, receive, openError}; 
   
   /**Show the state of target communication. */
-  void showStateInfo(String key, TargetState state, int count, float[] cycle_timeout);
+  void showStateInfo(String key, TargetState state, int count, int AccLevels, float[] cycle_timeout);
   
   void setInspcComm(InspcAccess_ifc inspcMng);
   

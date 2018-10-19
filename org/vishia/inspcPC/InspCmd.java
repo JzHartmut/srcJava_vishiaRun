@@ -271,9 +271,9 @@ public class InspCmd
     inspcMng.startupThreads();
     DataAccess.Variable<Object> vLog = vars.get("telglogfile");
     if(vLog !=null) {
-      String sFileLog = vLog.value().toString();
-      LogMessage logTelg = new LogMessageFile(sFileLog, 10, 1, null, null, null);
-      inspcMng.setLogForTargetComm(logTelg, 1000);
+      inspcMng.sFileLog = vLog.value().toString();
+      //LogMessage logTelg = new LogMessageFile(sFileLog, 10, 1, null, null, null);
+      //inspcMng.setLogForTargetComm(logTelg, 1000);
     }
     // create devices:
 

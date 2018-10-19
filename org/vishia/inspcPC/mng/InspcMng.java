@@ -192,8 +192,7 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   
   Runnable XXXcallbackShowingTargetCommState;
   
-  /**If true then writes a log of all send and received telegrams. */
-  LogMessage logTelg;
+  public String sFileLog;
   
   boolean bWriteDebugSystemOut;  //if(logTelg !=null && bWriteDebugSystemOut)
   
@@ -328,19 +327,6 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
   }
    */
   
-  
-  
-  /**Enables or disables the logging of communication activity.
-   * @param log null then log is off. Any log output.
-   * @param ident base identification for the messages.
-   */
-  public void setLogForTargetComm(LogMessage log, int ident){
-    this.logTelg = log;
-    this.identLogTelg = ident;
-    for(InspcTargetAccessor target: listTargetAccessor){
-      target.setLog(log, ident);
-    }
-  }
   
   
   

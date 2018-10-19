@@ -14,7 +14,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.vishia.byteData.ByteDataAccessBase;
-import org.vishia.byteData.ByteDataAccessSimple;
 import org.vishia.byteData.VariableAccessArray_ifc;
 import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
@@ -230,6 +229,8 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   /**The version history and license of this class.
    * <ul>
+   * <li>2018-10-19 Hartmut chg: Handling Password. See {@link #addCmdAccessCheck}
+   * <li>2018-10-19 Hartmut chg: Log changed, The log is target-specific able to switch on/off 
    * <li>2018-10-19 Hartmut new: Preparation for encryption/passwd, {@link #setPwdCycle(String, String, float, float)} from Gui, 
    *   {@link #setReady()} is public because called from Gui. Better for single-step-debug in target with timeout = 0. 
    * <li>2017-02-07 Hartmut chg: {@link #InspcTargetAccessor(String, InspcCommPort, Address_InterProcessComm, float, float, EventTimerThread)}
@@ -713,9 +714,12 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
 	
 	
-  int nEncryptionAcc = 0, nEncryptionAccNew;
+  int nEncryptionAcc = 0, nEncryptionChg = 0, nEncryptionAccNew;
   
-  int nEncryptionChg = 0, nEncryptionChgNew;
+  /**Return value from CheckPwd_Inspc#check(int). it is 0..4 in bit 7..0 for change and 0..4 in bit 3..0 for access. 
+   * T
+   * */
+  int accLevels = 0;
   
   private final InspcCommPort commPort;	
 	
@@ -785,14 +789,23 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	 * @param timeCycle
 	 * @param timeout
 	 */
-	public final void setPwdCycle(String pwdAccess, String pwdChange, float timeCycle, float timeout) {
+	public final void setPwdCycle(String pwdAccess, float timeCycle, float timeout) {
     boolean setPwd = false;
-    if(pwdAccess.length() >0) { this.nEncryptionAccNew = Integer.parseInt(pwdAccess); setPwd = true; }
-    if(pwdChange.length() >0) { this.nEncryptionChgNew = Integer.parseInt(pwdChange); setPwd = true; }
+    if(pwdAccess.length() >0) { 
+      this.nEncryptionAccNew = Integer.parseInt(pwdAccess); 
+      if(this.nEncryptionAccNew == 0) {
+        this.nEncryptionAcc = this.nEncryptionChg = 0;  //reset pwdn
+        this.accLevels = 0;
+      } else {
+        setPwd = true;  //send check telg.
+      }
+    }
     this.cycle_timeout[0] = timeCycle;
     this.cycle_timeout[1] = timeout;
     if(setPwd) {
-      cmdGetFields("?access", actionPwdRx);
+      addUserTxOrder(addCmdAccessCheck);
+    } else {
+      accLevels &= ~0x1ff00;  //remove showing faulty accessLevels
     }
     //cmdGetFields("?access", actionPwdRx);
 	}
@@ -1003,6 +1016,36 @@ public class InspcTargetAccessor implements InspcAccess_ifc
    * @param actionOnRx this action will be executed on receiving the item.
    * @return The order number. 0 if the cmd can't be created.
    */
+  private int cmdAccessCheck()
+  { int order;
+    //states.applyEvent(evFill);
+    //if(states.isInState(stateFilling))
+      stop();
+    int lengthItem = InspcDataExchangeAccess.Inspcitem.sizeofHead;
+    if(prepareTelg(lengthItem, nEncryptionAcc)) {
+      //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
+      InspcTelgInfoSet accItemCmd = newTxitem();
+      txAccess.addChild(accItemCmd);
+      order = orderGenerator.getNewOrder();
+      txAccess.addChildInt(4, nEncryptionAccNew);
+      accItemCmd.setInfoHead(lengthItem +4, accItemCmd.kAccessCheck, order);
+      if(logTelg !=null){ 
+        logTelg.sendMsg(identLogTelg+idLogGetFields, "add cmdAccessCheck , order = %d", new Integer(order)); 
+      }
+      setExpectedOrder(order, actionPwdRx);
+    } else {
+      //too much info blocks
+      order = 0;
+    }
+    return order;
+  }
+  
+  
+  /**Adds the info block to send 'get fields by path'
+   * @param sPathInTarget The path in the target with the target specific rules.
+   * @param actionOnRx this action will be executed on receiving the item.
+   * @return The order number. 0 if the cmd can't be created.
+   */
   @Override public int cmdGetFields(String sPathInTarget, InspcAccessExecRxOrder_ifc actionOnRx)
   { int order;
     //states.applyEvent(evFill);
@@ -1010,8 +1053,6 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       stop();
     int lengthItem = InspcTelgInfoSet.lengthCmdGetFields(sPathInTarget.length());
     int nEncryption = nEncryptionAcc;
-    if(sPathInTarget.equals("?access")) { nEncryption = nEncryptionAccNew; }
-    if(sPathInTarget.equals("?change")) { nEncryption = nEncryptionChgNew; }
     if(prepareTelg(lengthItem, nEncryption)) {
       //InspcTelgInfoSet infoGetValue = new InspcTelgInfoSet();
       InspcTelgInfoSet infoAccess = newTxitem();
@@ -1406,7 +1447,7 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       InspcPlugUser_ifc.TargetState stateUser;
       if(bTaskPending.get()){ stateUser = InspcPlugUser_ifc.TargetState.waitReceive; }
       else { stateUser = InspcPlugUser_ifc.TargetState.idle; }
-      user.showStateInfo(name, stateUser, _tdata.nSeqNumber, cycle_timeout);
+      user.showStateInfo(name, stateUser, _tdata.nSeqNumber, accLevels, cycle_timeout);
     }
   }
   
@@ -1984,9 +2025,21 @@ public class InspcTargetAccessor implements InspcAccess_ifc
 	
   
   
-  /**This class supplies the method to set the variable value from a received info block. 
+  /**Adds a telegram for password-check. 
+    * See {@link #actionPwdRx} */
+  Runnable addCmdAccessCheck = new Runnable() {
+    @Override public void run()
+    { cmdAccessCheck();
+    }
+  };
+  
+  
+  
+  /**This class handles a received access level for a new password. The target answers with the resulting access rights. 
+   * If the password is faulty, it returns 0 as access rights (Access level without password). 
+   * The valid password for further requests will be changed only if the access rights are higher with the new Password.
+   * So a accidentally relegation can be prevent. The password 0 demotes immediately without such an telegram. See {@link #setPwdCycle(String, float, float)}.
    */
-  @SuppressWarnings("synthetic-access") 
   InspcAccessExecRxOrder_ifc actionPwdRx = new InspcAccessExecRxOrder_ifc()
   {
      /**This method is called If a answer value by handle was received and the ixHandle has referred this variable.
@@ -1995,7 +2048,21 @@ public class InspcTargetAccessor implements InspcAccess_ifc
      */
     @Override public void execInspcRxOrder(InspcDataExchangeAccess.Inspcitem accAnswerItem, long time, LogMessage log, int identLog)
     {
-      stop();
+      accLevels &= ~0x1ff00;
+      int accessLevelsNew = accAnswerItem.getChildInt(4);
+      if(  (accessLevelsNew & 0xf) < (accLevels & 0xf)) {
+        accLevels |= 0x10000;
+      }
+      if(  (accessLevelsNew & 0xf0) < (accLevels & 0xf0)) {
+        accLevels |= 0x10000;
+      }
+      if((accLevels & 0x10000 ) ==0) {
+        //only if no damage occurs
+        accLevels = accessLevelsNew;
+        nEncryptionAcc = nEncryptionChg = nEncryptionAccNew;
+      } else {
+        accLevels |= (accessLevelsNew & 0xff)<<8;
+      }
     }
 
     @Override public Runnable callbackOnAnswer(){return null; }  //empty

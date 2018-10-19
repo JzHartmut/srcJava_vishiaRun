@@ -39,6 +39,7 @@ public final class InspcDataExchangeAccess
   
   /**Version, history and license.
    * <ul>
+   * <li>2016-01-23 Hartmut new: {@link Inspcitem#kAccessCheck}
    * <li>2016-01-23 Hartmut new: {@link InspcSetValue#getType()} should return short, not byte, to detect the values of the type.
    * <li>2016-01-23 Hartmut new: {@link InspcSetValue#getInt()} etc. now tests the given type and converts it. Till now the transmitter
    *   has known the value type and send it proper. But that is not a common approach.
@@ -93,7 +94,7 @@ public final class InspcDataExchangeAccess
    * @author Hartmut Schorrig = hartmut.schorrig@vishia.de
    * 
    */
-  public static final String version = "2015-08-05";
+  public static final String version = "2016-10-19";
   
   
   
@@ -256,6 +257,8 @@ public final class InspcDataExchangeAccess
 		    Der Aufbau des Strings ist bei ,,kAnswerFieldMethod,, beschrieben.
      */
     public final static int kGetFields = 0x10;
+    
+    public final static int kAccessCheck = 0x11;
     
     
     /**Antwort auf Aufforderung zur Rueckgabe einer Liste von Attributen, Assoziationen oder Methoden.
@@ -437,7 +440,7 @@ public final class InspcDataExchangeAccess
     
     
     /**Sets the head data and sets the length of the ByteDataAccess-element.
-     * This routine should invoked at last after alle children are added because the element will be freeze.
+     * This routine should invoked at last after all children are added because the element will be freeze.
      * Especially {@link ByteDataAccessBase#bExpand} is set to false. 
      * That is because the length in head should match to the real length of the element.
      * 
