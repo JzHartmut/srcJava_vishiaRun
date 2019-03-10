@@ -15,6 +15,9 @@ public class SearchElement
 
     /**Version, history and license.
    * <ul>
+   * <li>2019-03-01 Hartmut some chg adequate and similar to the translated C-routines (no re-translating Java2C yet done but similar changed):
+   *   {@link #searchObject(String, ClassJc, MemSegmJc, FieldJc[], int[])} with separated class and instance reference.  
+   * <li>2019-01-20 Hartmut searchObject searches in base classes too. Same as in C. It is used for Simulink especially but it is commonly proper.   
    * <li>2016-09-12 Hartmut bugfix: {@link #searchObject(String, Object, FieldJc[], int[])}: An index should be read with {@link StringFunctions_C#parseIntRadix(CharSequence, int, int, int, int[])}
    *   instead {@link Integer#parseInt(String, int)} because the first one is exception-free. An exception is an problem on target system in C. It occurs 
    *   if the path is faulty by access from Inspector. 
@@ -90,14 +93,14 @@ public class SearchElement
 	 *        @pjava2c=simpleVariableRef.
 	 * @return The address and segment of the Object, which contains the retField[0].
 	 */
-	public static MemSegmJc searchObject(final String sPath, final Object startObj, final FieldJc[] retField, final int[] retIdx)
+	public static MemSegmJc searchObject(final String sPath, ClassJc startClazz, MemSegmJc startAddr, /*final Object startObj, */final FieldJc[] retField, final int[] retIdx)
 	{
 		final MemSegmJc currentObj = new MemSegmJc(); //default if nothing is found
 	  String sName = null;
 	  String sElement = null;
-	  ClassJc clazz = ClassJc.getClass(startObj);
+	  ClassJc clazz = startClazz; //ClassJc.getClass(startObj);
 	  /**@xx java2c=stackInstance */
-	  final MemSegmJc nextObj = new MemSegmJc(startObj,0);  //the source Object for the next access
+	  final MemSegmJc nextObj = new MemSegmJc(startAddr);  //the source Object for the next access
 	  FieldJc field = null;
 	  int idx = -1;
 	  int posSep;
@@ -133,7 +136,9 @@ public class SearchElement
 	          if(sName.equals("super")){
 	            field = clazz.getSuperField();
 	          } else {
-	            field = clazz.getDeclaredField(sName);
+	            do { //since 2019.01.20 searches in base classes too.
+	              field = clazz.getDeclaredField(sName);
+	            } while(field == null && (clazz = clazz.getSuperClass()) !=null);  //search sName in all super classes too
 	          }
 	          sName = null; //clear_StringJc(&sName);
 	

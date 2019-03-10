@@ -24,6 +24,12 @@ public final class ClassContent implements CmdConsumer_ifc
 
   /**Version, history and license.
    * <ul>
+   * <li>2019-03-01 Hartmut some chg adequate and similar to the translated C-routines (no re-translating Java2C yet done but similar changed):
+   *   <ul><li>{@link #rootClass}, {@link #rootAddr} instead {@link #XXXrootObj}: In C it is possible to have a rootAddr outside the own code, in a target proxy.
+   *     In C it is possible to have a non-Object.based instance with separate reflection info (Class).
+   *   <li>new {@link #setRootObject(ClassJc, MemSegmJc)}
+   *   <li>call {@link SearchElement#searchObject(String, ClassJc, MemSegmJc, FieldJc[], int[])} with separated class and instance reference.
+   *   </ul>  
    * <li>2016-16-28 Hartmut chg: Some changes for Java2C translation, test with InspcTargetProxy
    * <li>2016-16-10 Hartmut chg: ClassContent: SimpleVariableRef is faulty for Java2C in , use Stackinstance, SimpleArray.
    * <li>2016-01-25 Hartmut chg: refactoring getValueByHandle especially for a longer telegram. new txAnswerAndPrepareNewTelg(...),
@@ -83,9 +89,17 @@ public final class ClassContent implements CmdConsumer_ifc
   
   /**The Object from which the user-given path starts to search. 
    * See {@link SearchElement#searchObject(String, Object, FieldJc[], int[])}.
-   * @java2c=simpleRef. */
-  private Object rootObj;
+   * @java2c=simpleRef. 
+   * In C ist is a void* because it is possible to start with a non-Object instance. 
+   * */
+  private Object XXXrootObj;
+  
+  /**The class to the rootAddr. */
+  private ClassJc rootClass;
 
+  /**For C usage: It can be in an extended memory area. It can be a non-Object instance. */
+  private MemSegmJc rootAddr;
+  
   /**Association to produce the answer of a request. It is possible to send more as one answer telegram. 
    * @java2c=simpleRef. */
   private AnswerComm_ifc answerComm;
@@ -132,7 +146,18 @@ public final class ClassContent implements CmdConsumer_ifc
    */
   public final void setRootObject(Object rootObj)
   {
-    this.rootObj = rootObj;
+    this.rootClass = ClassJc.fromClass(rootObj.getClass());
+    this.rootAddr = new MemSegmJc(rootObj, 0);
+  }
+  
+    
+  /**Sets the Object which is the root for all data.
+   * @param rootObj
+   */
+  public final void setRootObject(ClassJc rootClazz, MemSegmJc rootAddr)
+  {
+    this.rootClass = rootClazz;
+    this.rootAddr.set(rootAddr);
   }
   
     
@@ -235,18 +260,18 @@ public final class ClassContent implements CmdConsumer_ifc
       if(sVariablePath.length() == 0 || sVariablePath.equals("."))
       { /**root path: */
         found = true; 
-        clazz = ClassJc.getClass(rootObj);  //the main class itself contains some pointer yet.
+        clazz = rootClass; //ClassJc.getClass(rootObj);  //the main class itself contains some pointer yet.
         field = null;
         bQuestCollectionSize = false;  //not at root level
         modifiers = 0;
-        memObj.setAddrSegm(rootObj, 0);
+        memObj.setAddrSegm(rootAddr); //rootObj, 0);
       } else {
         /**not the root path, search the obj started from static_cast<ObjectJc*>(this) //targets[0]: */
         int idx;
         @Java4C.StackInstance @Java4C.SimpleArray final int[] idxP = new int[1];
         @Java4C.StackInstance @Java4C.SimpleArray final FieldJc[] fieldP = new FieldJc[1];
         /**Search the field in its object, the referenced instance of the field is requested: */
-        memObj.set(SearchElement.searchObject(sVariablePath, rootObj, fieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
+        memObj.set(SearchElement.searchObject(sVariablePath, rootClass, rootAddr, fieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
         idx = idxP[0];
         field = fieldP[0];
         /**The memObj contains the reference to the Object which contains the field. */
@@ -502,7 +527,7 @@ public final class ClassContent implements CmdConsumer_ifc
     try{
       int idx;
       @Java4C.StackInstance @Java4C.SimpleArray final int[] idxP = new int[1];
-      theObject.set(SearchElement.searchObject(sVariablePath, rootObj, theFieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
+      theObject.set(SearchElement.searchObject(sVariablePath, rootClass, rootAddr, theFieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
       theField = theFieldP[0];
       idx = idxP[0];
       if(theObject.obj() != null && theField !=null)
@@ -768,7 +793,7 @@ public final class ClassContent implements CmdConsumer_ifc
     try{
       int idx;
       @Java4C.StackInstance @Java4C.SimpleArray final int[] idxP = new int[1];
-      theObject.set(SearchElement.searchObject(sVariablePath, rootObj, theFieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
+      theObject.set(SearchElement.searchObject(sVariablePath, rootClass, rootAddr, theFieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
       theField = theFieldP[0];
       idx = idxP[0];
       answer.addChild(answerItem);
@@ -841,7 +866,7 @@ public final class ClassContent implements CmdConsumer_ifc
     int idx;
     try{
       @Java4C.StackInstance @Java4C.SimpleArray final int[] idxP = new int[1];
-      theObject.set(SearchElement.searchObject(sVariablePath, rootObj, theFieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
+      theObject.set(SearchElement.searchObject(sVariablePath, rootClass, rootAddr, theFieldP, idxP));  //Note for Java2C: set should be used because memObj is an embedded instance.
       theField = theFieldP[0];
       idx = idxP[0];
       if(theObject.obj() != null && theField !=null)

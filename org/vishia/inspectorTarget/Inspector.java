@@ -1,8 +1,10 @@
 package org.vishia.inspectorTarget;
 
+import org.vishia.bridgeC.MemSegmJc;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessCommFactory;
 import org.vishia.communication.InterProcessComm_SocketImpl;
+import org.vishia.reflect.ClassJc;
 
 /**This is the main class for the Inspector for Java and C.
  * The inspector helps inspect data via reflection. It is a service. 
@@ -90,14 +92,22 @@ public class Inspector
 	}
 	
 	
-	/**Start the execution. */
-	public void start(Object rootObj)
-	{
-		classContent.setRootObject(rootObj);
-		comm.start();
-		
-	}
-	
+  /**Start the execution. */
+  public void start(Object rootObj)
+  {
+    classContent.setRootObject(rootObj);
+    comm.start();
+    
+  }
+  
+  /**Start the execution. */
+  public void start(ClassJc rootClazz, MemSegmJc rootAddr)
+  {
+    classContent.setRootObject(rootClazz, rootAddr);
+    comm.start();
+    
+  }
+  
 	/**Shutdown the communication, close the thread. This routine should be called 
 	 * either on shutdown of the whole system or on closing the inspector functionality.
 	 * The inspector functionality can be restarted calling {@link #start(Object)}.
