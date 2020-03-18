@@ -44,7 +44,7 @@ public class ExampleInspector
   
   int sizeList;
   
-  private final Inspector inspector = new Inspector("UDP:0.0.0.0:60078");
+  private final Inspector inspector = new Inspector("UDP:192.168.1.69:20320");  //60092");
 	
 	public final static void main(String[] args)
 	{
