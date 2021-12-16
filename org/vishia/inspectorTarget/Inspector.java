@@ -41,8 +41,10 @@ import org.vishia.reflect.ClassJc;
  * @author Hartmut Schorrig
  *
  */
+//tag::class_Inspector_Head[]
 public class Inspector
 {
+//end::class_Inspector_Head[]
   
   /**Version and history
    * <ul>
@@ -54,6 +56,7 @@ public class Inspector
    */
   public static final String version = "2015-08-05"; 
 
+//tag::class_Inspector_Data[]
   private static Inspector singleton; 
   
 	/**The sub module ClassContent should be accessible from outside to offer methods of it in the application itself.
@@ -66,6 +69,7 @@ public class Inspector
 	
 	/**The communication class. @java2c=embedded Type:Comm. */
 	private final Comm comm;
+//end::class_Inspector_Data[]
 	
 	/**
 	 * @param commOwnAddr forex "UDP:0.0.0.0:60078"
