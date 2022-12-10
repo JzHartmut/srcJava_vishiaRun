@@ -665,4 +665,10 @@ public class InspcVariable implements VariableAccessArray_ifc
           
   }
 
+
+  @Override public int[] getLastRefreshTimeShort () {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
 }

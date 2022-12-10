@@ -250,6 +250,11 @@ public class FieldJcVariableAccess implements VariableAccessArray_ifc
 
   @Override public String setString(String value) { return setString(value, 0); }
 
+  @Override public int[] getLastRefreshTimeShort () {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
   
   
 
