@@ -19,9 +19,11 @@ import org.vishia.communication.Address_InterProcessComm;
 import org.vishia.communication.InspcDataExchangeAccess;
 import org.vishia.communication.InterProcessComm;
 import org.vishia.communication.InterProcessComm_SocketImpl;
-import org.vishia.event.EventCmdtypeWithBackEvent;
-import org.vishia.event.EventTimeout;
+import org.vishia.event.TimeOrder;
 import org.vishia.event.EventTimerThread;
+import org.vishia.event.EventWithDst;
+import org.vishia.event.Payload;
+import org.vishia.event.TimeOrderCmd;
 import org.vishia.inspcPC.InspcAccessExecRxOrder_ifc;
 import org.vishia.inspcPC.InspcAccess_ifc;
 import org.vishia.inspcPC.InspcPlugUser_ifc;
@@ -524,21 +526,43 @@ public class InspcTargetAccessor implements InspcAccess_ifc
   
   enum Cmd{ fill, send, lastAnswer};
   
-  class Ev extends EventCmdtypeWithBackEvent<Cmd, Ev>{ Ev(Cmd cmd){ super(cmd); } };
-  
-  Ev evFill = new Ev(Cmd.fill);
-  
-  Ev evSend = new Ev(Cmd.send);
-  
-  Ev evLastAnswer = new Ev(Cmd.lastAnswer);
-  
+  static class EvData implements Payload {
+    Cmd cmd;
 
+    public EvData(Cmd cmd) {
+      super();
+      this.cmd = cmd;
+    }
+
+    @Override public EvData clean () {
+      // TODO Auto-generated method stub
+      return this;
+    }
+
+    @Override public byte[] serialize () {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override public boolean deserialize ( byte[] data ) {
+      // TODO Auto-generated method stub
+      return false;
+    }
+    
+  }
+  
+ 
+  EventWithDst<EvData, Payload> evFill = new EventWithDst<EvData, Payload>("fill", null, null, null, new EvData(Cmd.fill));
+  
+  EventWithDst<EvData, Payload> evSend = new EventWithDst<EvData, Payload>("fill", null, null, null, new EvData(Cmd.send));
+  
+  EventWithDst<EvData, Payload> evLastAnswer = new EventWithDst<EvData, Payload>("fill", null, null, null, new EvData(Cmd.lastAnswer));
   
   
   class States extends StateMachine
   {
     
-    States(EventTimerThread thread){ super("InspcTargetAccessor", thread); }
+    States(EventTimerThread thread){ super("InspcTargetAccessor", thread, thread); }
     
     
     class StateInactive extends StateSimple {
@@ -571,7 +595,10 @@ public class InspcTargetAccessor implements InspcAccess_ifc
       Trans addRequest_Filling = new Trans(StateFilling.class);
     
       @Override protected Trans checkTrans(EventObject ev){
-        if(ev instanceof EventTimeout) return timeout;
+        if((ev instanceof EventWithDst) && true) { //TODO   (((EventWithDst<?>)ev).isTimeout())) {
+          return this.timeout;
+        }
+        //if(ev instanceof EventTimeout) return timeout;
         else if(ev == evFill) return addRequest_Filling;
         else return null;
       }

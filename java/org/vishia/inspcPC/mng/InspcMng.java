@@ -738,7 +738,9 @@ public class InspcMng implements CompleteConstructionAndStart, VariableContainer
         System.err.append(exc.getMessage());
       }
       InspcTargetAccessor accessor = new InspcTargetAccessor(name, commPort, addrTarget, period, timeout, threadEvent);
-      user.registerTarget(name, val, accessor);
+      if(user !=null) {
+        user.registerTarget(name, val, accessor);
+      }
       indexTargetAccessor.put(name, accessor);
       listTargetAccessor.add(accessor);
       if(name.equals("Sim94")) {
