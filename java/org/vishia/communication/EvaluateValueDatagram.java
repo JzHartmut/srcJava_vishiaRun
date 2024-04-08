@@ -43,6 +43,12 @@ public class EvaluateValueDatagram {
   }
 
   
+  /**Reads a record consist of timshort on pos 4, and some float values starting from pos 8 till the length of the item. 
+   * @param binData
+   * @param nrofBytes length of the item
+   * @param from one item with 2 byte offset, 2 byte cmd and 4 byte timeshort or just current number (order number) 
+   * @return
+   */
   public float[] readFloatFromDatagram (byte[] binData, int nrofBytes, int from) {
     this.accessOamVariable.assignData(binData, nrofBytes, from, System.currentTimeMillis());
     this.accessOamVariable.dataAccess.setBigEndian(true);
